@@ -17,9 +17,29 @@
 
 ## Скриншоты
 
-| Dracula | Visual Studio Dark (C/C++) | Visual Studio Light Modern |
+Нажмите на снимок, чтобы открыть его в полном размере.
+
+### v8-chroma
+
+| Коллекция тем и предпросмотр | Настройки в отдельном профиле |
+|---|---|
+| [<img src="assets/screenshots/app-themes.jpg" alt="v8-chroma: коллекция тем и предпросмотр Dracula" width="420">](assets/screenshots/app-themes.jpg) | [<img src="assets/screenshots/app-settings.jpg" alt="v8-chroma: настройки приложения в отдельном профиле" width="420">](assets/screenshots/app-settings.jpg) |
+
+### Конфигуратор
+
+Все 13 пресетов и стандартное оформление на одном примере кода в 1С 8.3.27.
+
+| Ayu Dark | Darcula | Dracula |
 |---|---|---|
-| [<img src="assets/screenshots/configurator-dracula.jpg" alt="Конфигуратор в теме Dracula" width="280">](assets/screenshots/configurator-dracula.jpg) | [<img src="assets/screenshots/configurator-visual-studio-dark.jpg" alt="Конфигуратор в теме Visual Studio Dark" width="280">](assets/screenshots/configurator-visual-studio-dark.jpg) | [<img src="assets/screenshots/configurator-visual-studio-light.jpg" alt="Конфигуратор в теме Visual Studio Light Modern" width="280">](assets/screenshots/configurator-visual-studio-light.jpg) |
+| [<img src="assets/screenshots/configurator-ayu-dark.jpg" alt="Конфигуратор в теме Ayu Dark" width="280">](assets/screenshots/configurator-ayu-dark.jpg) | [<img src="assets/screenshots/configurator-darcula.jpg" alt="Конфигуратор в теме Darcula" width="280">](assets/screenshots/configurator-darcula.jpg) | [<img src="assets/screenshots/configurator-dracula.jpg" alt="Конфигуратор в теме Dracula" width="280">](assets/screenshots/configurator-dracula.jpg) |
+| **GitHub Dark Default** | **GitHub Light Default** | **Monokai** |
+| [<img src="assets/screenshots/configurator-github-dark-default.jpg" alt="Конфигуратор в теме GitHub Dark Default" width="280">](assets/screenshots/configurator-github-dark-default.jpg) | [<img src="assets/screenshots/configurator-github-light-default.jpg" alt="Конфигуратор в теме GitHub Light Default" width="280">](assets/screenshots/configurator-github-light-default.jpg) | [<img src="assets/screenshots/configurator-monokai.jpg" alt="Конфигуратор в теме Monokai" width="280">](assets/screenshots/configurator-monokai.jpg) |
+| **Night Owl** | **Noctis Minimus** | **One Dark Pro** |
+| [<img src="assets/screenshots/configurator-night-owl.jpg" alt="Конфигуратор в теме Night Owl" width="280">](assets/screenshots/configurator-night-owl.jpg) | [<img src="assets/screenshots/configurator-noctis-minimus.jpg" alt="Конфигуратор в теме Noctis Minimus" width="280">](assets/screenshots/configurator-noctis-minimus.jpg) | [<img src="assets/screenshots/configurator-one-dark-pro.jpg" alt="Конфигуратор в теме One Dark Pro" width="280">](assets/screenshots/configurator-one-dark-pro.jpg) |
+| **Shades of Purple** | **Visual Studio Dark (C/C++)** | **Visual Studio Light Modern** |
+| [<img src="assets/screenshots/configurator-shades-of-purple.jpg" alt="Конфигуратор в теме Shades of Purple" width="280">](assets/screenshots/configurator-shades-of-purple.jpg) | [<img src="assets/screenshots/configurator-visual-studio-dark.jpg" alt="Конфигуратор в теме Visual Studio Dark (C/C++)" width="280">](assets/screenshots/configurator-visual-studio-dark.jpg) | [<img src="assets/screenshots/configurator-visual-studio-light.jpg" alt="Конфигуратор в теме Visual Studio Light Modern" width="280">](assets/screenshots/configurator-visual-studio-light.jpg) |
+| **Winter is Coming (Dark Blue)** | **Стандартная** | |
+| [<img src="assets/screenshots/configurator-winter-is-coming-dark-blue.jpg" alt="Конфигуратор в теме Winter is Coming (Dark Blue)" width="280">](assets/screenshots/configurator-winter-is-coming-dark-blue.jpg) | [<img src="assets/screenshots/configurator-standard.jpg" alt="Конфигуратор со стандартным оформлением" width="280">](assets/screenshots/configurator-standard.jpg) | |
 
 <details>
   <summary>Сервис → Параметры в теме Dracula</summary>
