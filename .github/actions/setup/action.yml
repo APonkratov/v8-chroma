@@ -13,20 +13,19 @@ runs:
     - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
       with:
         python-version: 3.14.5
+        cache: ${{ inputs.native == 'true' && 'pip' || '' }}
+        cache-dependency-path: scripts/requirements-ci.txt
     - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable branch
       with:
         toolchain: 1.97.1
         targets: ${{ inputs.target }}
         components: rustfmt, clippy
-    - name: Fetch locked Rust dependencies
-      shell: bash
-      env:
-        RUST_TARGET: ${{ inputs.target }}
-      run: cargo +1.97.1 fetch --locked --target "$RUST_TARGET"
     - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
       if: inputs.native == 'true'
       with:
         node-version: 24.13.0
+        cache: npm
+        cache-dependency-path: ui/package-lock.json
     - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
       if: inputs.native == 'true'
       with:
@@ -35,3 +34,32 @@ runs:
       if: inputs.native == 'true'
       shell: bash
       run: python -m pip install --disable-pip-version-check -r scripts/requirements-ci.txt
+    - name: Cache native Rust dependencies
+      if: inputs.native == 'true'
+      uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+      with:
+        key: ${{ inputs.target }}-${{ github.workflow }}
+        env-vars: VCToolsVersion WindowsSDKVersion
+        cache-bin: 'false'
+        cache-workspace-crates: 'false'
+        cache-on-failure: 'true'
+        save-if: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref_type == 'tag') }}
+    # Core jobs need only their selected dependency graph. Avoid cache helpers
+    # that run cargo metadata --all-features for the whole desktop workspace.
+    - name: Cache core Cargo downloads
+      if: inputs.native != 'true'
+      uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+      with:
+        path: |
+          ~/.cargo/registry/cache
+          ~/.cargo/registry/index
+          ~/.cargo/git/db
+        key: core-downloads-v1-${{ runner.os }}-${{ runner.arch }}-${{ inputs.target }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: |
+          core-downloads-v1-${{ runner.os }}-${{ runner.arch }}-${{ inputs.target }}-
+    - name: Fetch locked native Rust dependencies
+      if: inputs.native == 'true'
+      shell: bash
+      env:
+        RUST_TARGET: ${{ inputs.target }}
+      run: cargo +1.97.1 fetch --locked --target "$RUST_TARGET"
