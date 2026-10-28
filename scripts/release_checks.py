@@ -9,7 +9,7 @@ import tomllib
 ROOT = Path(__file__).resolve().parents[1]
 NUMBER = r"(?:0|[1-9][0-9]*)"
 TAG = re.compile(rf"v({NUMBER}\.{NUMBER}\.{NUMBER}(?:-rc\.[1-9][0-9]*)?)")
-SYSTEM_DLLS = set("""advapi32 avrt bcrypt bcryptprimitives cfgmgr32 comctl32 comdlg32
+SYSTEM_DLLS = set("""advapi32 avrt bcrypt bcryptprimitives cfgmgr32 combase comctl32 comdlg32
 crypt32 d2d1 d3d11 dbghelp dnsapi dwmapi dwrite dxgi gdi32 gdiplus hid imm32
 iphlpapi kernel32 kernelbase msimg32 msvcrt ncrypt netapi32 normaliz ntdll ole32
 oleacc oleaut32 opengl32 powrprof propsys psapi rpcrt4 secur32 setupapi shell32

@@ -65,9 +65,10 @@ class ReleaseChecks(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "app.exe"
             for delayed in (False, True):
-                path.write_bytes(fixture("KERNEL32.dll", delayed))
-                self.assertEqual(release.verify_binary(path), ["kernel32.dll"])
-                for name in ["WebView2Loader.dll", "VCRUNTIME140.dll", "libstdc++-6.dll", "../kernel32.dll"]:
+                for name in ["KERNEL32.dll", "COMBASE.dll"]:
+                    path.write_bytes(fixture(name, delayed))
+                    self.assertEqual(release.verify_binary(path), [name.lower()])
+                for name in ["WebView2Loader.dll", "VCRUNTIME140.dll", "libstdc++-6.dll", "../kernel32.dll", "combase-helper.dll"]:
                     path.write_bytes(fixture(name, delayed))
                     with self.assertRaises(ValueError, msg=name):
                         release.verify_binary(path)
