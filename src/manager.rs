@@ -462,7 +462,7 @@ mod tests {
         let mut results = vec![];
         for mode in ["ENTERPRISE", "DESIGNER"] {
             let temp = tempfile::Builder::new()
-                .prefix("themes-Команда UI ")
+                .prefix("themes-Команда-主题 UI ")
                 .tempdir()
                 .context("Create Unicode directory for WMI fixture")?;
             let exe = temp.path().join("1cv8.exe");
@@ -563,7 +563,9 @@ mod tests {
             },
         };
         let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-        let temp = tempfile::tempdir()?;
+        let temp = tempfile::Builder::new()
+            .prefix("themes-Команда-主题 UI ")
+            .tempdir()?;
         let directory = temp.path().join("session");
         fs::create_dir_all(&directory)?;
         let directory = win::canonical(&directory)?;

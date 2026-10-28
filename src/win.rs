@@ -19,6 +19,7 @@ use windows_sys::Win32::{
         Diagnostics::{Debug::WriteProcessMemory, ToolHelp::*},
         LibraryLoader::*,
         Memory::*,
+        ProcessStatus::K32GetModuleFileNameExW,
         RemoteDesktop::ProcessIdToSessionId,
         Threading::*,
     },
@@ -190,6 +191,15 @@ impl Process {
                 ),
                 "module snapshot",
             )?;
+            let reader = Handle::new(
+                OpenProcess(
+                    PROCESS_QUERY_INFORMATION | PROCESS_VM_READ,
+                    0,
+                    self.identity.pid,
+                ),
+                "OpenProcess for module paths",
+            )?;
+            self.alive()?;
             let mut item: MODULEENTRY32W = std::mem::zeroed();
             item.dwSize = size_of::<MODULEENTRY32W>() as u32;
             let mut ok = Module32FirstW(snapshot.0, &mut item);
@@ -197,25 +207,31 @@ impl Process {
             if ok == 0 {
                 check(ok, "Module32FirstW")?;
             }
+            let mut buffer = vec![0u16; 32768];
             while ok != 0 {
-                let name = String::from_utf16_lossy(
-                    &item.szModule[..item
-                        .szModule
-                        .iter()
-                        .position(|x| *x == 0)
-                        .unwrap_or(item.szModule.len())],
+                // Toolhelp can replace characters outside the system ANSI code
+                // page with '?' even in MODULEENTRY32W. Read the Unicode path
+                // from the module itself; keep discovery's handle read-limited.
+                let length = K32GetModuleFileNameExW(
+                    reader.0,
+                    item.hModule,
+                    buffer.as_mut_ptr(),
+                    buffer.len() as u32,
                 );
-                let path = OsString::from_wide(
-                    &item.szExePath[..item
-                        .szExePath
-                        .iter()
-                        .position(|x| *x == 0)
-                        .unwrap_or(item.szExePath.len())],
+                if length == 0 {
+                    return Err(std::io::Error::last_os_error()).context("K32GetModuleFileNameExW");
+                }
+                ensure!(
+                    (length as usize) < buffer.len() - 1,
+                    "Путь модуля не помещается в буфер"
                 );
-                modules.insert(
-                    name.to_lowercase(),
-                    (item.modBaseAddr as usize, canonical(Path::new(&path))?),
-                );
+                let path = canonical(Path::new(&OsString::from_wide(&buffer[..length as usize])))?;
+                let name = path
+                    .file_name()
+                    .context("Имя файла модуля отсутствует")?
+                    .to_string_lossy()
+                    .to_lowercase();
+                modules.insert(name, (item.modBaseAddr as usize, path));
                 ok = Module32NextW(snapshot.0, &mut item);
             }
             ensure!(
