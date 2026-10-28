@@ -457,14 +457,21 @@ mod tests {
     fn real_wmi_rejects_enterprise_and_unversioned_designer() -> Result<()> {
         use windows_sys::Win32::System::Threading::{EVENT_MODIFY_STATE, OpenEventW, SetEvent};
         let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        fs::create_dir_all(root.join("evidence"))
+            .context("Create WMI fixture evidence directory")?;
         let mut results = vec![];
         for mode in ["ENTERPRISE", "DESIGNER"] {
             let temp = tempfile::Builder::new()
                 .prefix("themes-Команда UI ")
-                .tempdir()?;
+                .tempdir()
+                .context("Create Unicode directory for WMI fixture")?;
             let exe = temp.path().join("1cv8.exe");
-            fs::copy(root.join("tests/fixtures/mode_host.exe"), &exe)?;
-            let mut child = std::process::Command::new(&exe).arg(mode).spawn()?;
+            fs::copy(root.join("tests/fixtures/mode_host.exe"), &exe)
+                .with_context(|| format!("Copy WMI fixture to {}", exe.display()))?;
+            let mut child = std::process::Command::new(&exe)
+                .arg(mode)
+                .spawn()
+                .with_context(|| format!("Launch {mode} fixture {}", exe.display()))?;
             let result = (|| -> Result<_> {
                 let row = discover()?
                     .into_iter()
@@ -483,9 +490,13 @@ mod tests {
                     attach(child.id(), "dracula").is_err(),
                     "Недопустимый процесс получил тему"
                 );
-                let process = Process::open(child.id(), false)?;
+                let process =
+                    Process::open(child.id(), false).context("Open WMI fixture process")?;
                 ensure!(
-                    !process.modules()?.contains_key("themeprobe.dll"),
+                    !process
+                        .modules()
+                        .context("Enumerate WMI fixture modules")?
+                        .contains_key("themeprobe.dll"),
                     "DLL загружена в исключённый процесс"
                 );
                 Ok(serde_json::json!({"mode":mode,"candidate":row,"no_dll":true}))
@@ -499,13 +510,17 @@ mod tests {
                 "Open mode test exit",
             )?;
             ensure!(unsafe { SetEvent(event.0) } != 0, "Signal mode test exit");
-            ensure!(child.wait()?.success(), "Mode host exit failed");
+            ensure!(
+                child.wait().context("Wait for WMI fixture exit")?.success(),
+                "Mode host exit failed"
+            );
             results.push(result?);
         }
         fs::write(
             root.join("evidence/wmi-exclusions.json"),
             serde_json::to_vec_pretty(&results)?,
-        )?;
+        )
+        .context("Write WMI fixture evidence")?;
         Ok(())
     }
     #[test]

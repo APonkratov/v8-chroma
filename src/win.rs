@@ -35,7 +35,9 @@ pub fn wide(value: &OsStr) -> Vec<u16> {
     value.encode_wide().chain(Some(0)).collect()
 }
 pub fn canonical(path: &Path) -> Result<PathBuf> {
-    let path = path.canonicalize()?;
+    let path = path
+        .canonicalize()
+        .with_context(|| format!("Нормализация пути {}", path.display()))?;
     let text = path.to_str().context("Путь не представлен в Unicode")?;
     Ok(PathBuf::from(text.strip_prefix(r"\\?\").unwrap_or(text)))
 }
