@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "ayu-dark",
+  "name": "Ayu Dark",
+  "colors": {
+    "editor.background": "#10141C",
+    "text": "#BFBDB6",
+    "panel": "#1B1F29",
+    "border": "#1B1F29",
+    "selection.background": "#193155",
+    "selection.text": "#BFBDB6",
+    "line": "#161A24",
+    "comment": "#5A6673",
+    "keyword": "#FF8F40",
+    "string": "#AAD94C",
+    "number": "#D2A6FF",
+    "directive": "#FF8F40",
+    "accent": "#E6B450",
+    "error": "#D95757",
+    "warning": "#E6B450",
+    "disabled": "#5A6673",
+    "hover": "#262C38"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": true
+  }
+}

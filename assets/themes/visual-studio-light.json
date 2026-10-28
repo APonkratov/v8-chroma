@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "visual-studio-light",
+  "name": "Visual Studio Light Modern",
+  "colors": {
+    "editor.background": "#FFFFFF",
+    "text": "#3B3B3B",
+    "panel": "#F8F8F8",
+    "border": "#CECECE",
+    "selection.background": "#E5EBF1",
+    "selection.text": "#000000",
+    "line": "#E5EBF1",
+    "comment": "#008000",
+    "keyword": "#0000FF",
+    "string": "#A31515",
+    "number": "#098658",
+    "directive": "#AF00DB",
+    "accent": "#005FB8",
+    "error": "#F85149",
+    "warning": "#895503",
+    "disabled": "#767676",
+    "hover": "#F2F2F2"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": false
+  }
+}

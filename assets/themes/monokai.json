@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "monokai",
+  "name": "Monokai",
+  "colors": {
+    "editor.background": "#272822",
+    "text": "#F8F8F2",
+    "panel": "#30312B",
+    "border": "#49483E",
+    "selection.background": "#49483E",
+    "selection.text": "#F8F8F2",
+    "line": "#32332D",
+    "comment": "#75715E",
+    "keyword": "#F92672",
+    "string": "#E6DB74",
+    "number": "#AE81FF",
+    "directive": "#A6E22E",
+    "accent": "#66D9EF",
+    "error": "#FF6188",
+    "warning": "#FD971F",
+    "disabled": "#8A8778",
+    "hover": "#414339"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": true
+  }
+}

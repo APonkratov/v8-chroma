@@ -1,0 +1,127 @@
+One Dark Pro palette adaptation for 1C:EDT
+Source: Binaryify/OneDark-Pro, version 3.20.3
+Commit: ce79c5f7116607d635e06b7ef4413d85a77905e4
+https://github.com/Binaryify/OneDark-Pro/blob/ce79c5f7116607d635e06b7ef4413d85a77905e4/themes/OneDark-Pro.json
+Copyright (c) 2013-2022 Binaryify
+License: MIT; full notice in licenses/one-dark-pro-LICENSE.txt
+
+The palette is adapted to the 17 roles of this plugin. Transparent selection
+is composited on the editor background; selection text uses the upstream list
+foreground. The directive, accent and disabled roles combine EDT/BSL targets.
+No upstream icons, fonts, stylesheets or executable code are included.
+
+Dracula palette adaptation for 1C:EDT
+Source: dracula/visual-studio-code, version 2.25.1 (base, not Soft)
+Commit: a08a206f2c8420ba3c05f0e8d01d43b2f933fdf8
+https://github.com/dracula/visual-studio-code/blob/a08a206f2c8420ba3c05f0e8d01d43b2f933fdf8/src/dracula.yml
+Copyright (c) 2016 Dracula Theme
+License: MIT; full notice in licenses/dracula-LICENSE.txt
+
+The palette is adapted to the 17 roles of this plugin. Line and hover alpha
+are composited on the editor and panel backgrounds. Directive uses the
+constant color; warning uses the upstream warning validation border color.
+No upstream icons, fonts, stylesheets or executable code are included.
+
+GitHub Dark Default palette adaptation for 1C:EDT
+Source: primer/github-vscode-theme, version 6.3.5
+Commit: cd78e5e4e7bcf132a6f428ae0f32264bb1b729cf
+https://github.com/primer/github-vscode-theme/blob/cd78e5e4e7bcf132a6f428ae0f32264bb1b729cf/src/theme.js
+https://github.com/primer/github-vscode-theme/blob/cd78e5e4e7bcf132a6f428ae0f32264bb1b729cf/src/colors.js
+Copyright (c) 2020 Primer
+License: MIT; full notice in licenses/github-theme-LICENSE.txt
+
+Color dependency: @primer/primitives 7.10.0, pinned by the source yarn.lock
+https://unpkg.com/@primer/primitives@7.10.0/dist/json/colors/dark.json
+Copyright (c) 2018 GitHub Inc.
+License: MIT; full notice in licenses/primer-primitives-LICENSE.txt
+
+The 17 roles include source dark overrides, composited selection/line/hover,
+and shared EDT/BSL accent and directive mappings. No upstream executable code,
+icons, fonts or stylesheets are included.
+
+Winter is Coming (Dark Blue) palette adaptation for 1C:EDT
+Source: johnpapa/vscode-winteriscoming, version 1.5.0
+Commit: 260547834cb6ac37dd5b8bb5842cc1c8d3164946
+https://github.com/johnpapa/vscode-winteriscoming/blob/260547834cb6ac37dd5b8bb5842cc1c8d3164946/themes/WinterIsComing-dark-blue-color-theme.json
+Copyright (c) 2015-2017 JohnPapa.net, LLC
+License: MIT; full notice in licenses/winter-is-coming-LICENSE.txt
+
+The 17 RGB roles adapt the Dark Blue variant. The EDT panel/divider role
+uses upstream list.inactiveSelectionBackground (#0E293F) for separation
+from the editor background (#011627). Line alpha is composited
+on the editor background; selection text uses the editor foreground.
+Directive uses keyword, accent uses the UI link, disabled uses line numbers,
+and hover uses editor hover highlight. Native BSL font styles are retained.
+No upstream executable code, icons, fonts or stylesheets are included.
+
+Night Owl palette adaptation for 1C:EDT
+Source: sdras/night-owl-vscode-theme, version 2.1.1 (dark)
+Commit: cc291eba7976b20d7c66bde6883c27b902196b07
+https://github.com/sdras/night-owl-vscode-theme/blob/cc291eba7976b20d7c66bde6883c27b902196b07/themes/Night%20Owl-color-theme.json
+Copyright (c) 2018 Sarah Drasner
+License: MIT; full notice in licenses/night-owl-LICENSE.txt
+
+The 17 RGB roles retain native BSL font styles. Panel/dividers use upstream
+list.inactiveSelectionBackground (#0E293F), distinct from editor #011627.
+Line/hover alpha is composited on the editor background. Directive adapts
+C# Region; the shared accent uses Library blue (#82AAFF), not the later
+support.function green. The original muted comment color is retained.
+No upstream executable code, icons, fonts or stylesheets are included.
+
+Ayu Dark (Bordered) palette adaptation for 1C:EDT
+Source: ayu-theme/vscode-ayu, version 1.4.1
+Commit: 2c6feb7215bf7ca6c8c9a51066f255025df3a5b9
+https://github.com/ayu-theme/vscode-ayu/blob/2c6feb7215bf7ca6c8c9a51066f255025df3a5b9/ayu-dark.json
+Copyright (c) 2016 Ike Kurghinyan
+License: MIT; full notice in licenses/ayu-LICENSE.txt
+
+The 17 RGB roles adapt the bordered dark variant. EDT panel/dividers use
+editorGroup.border (#1B1F29), distinct from editor #10141C. Hover alpha
+is composited on this adapted panel; selection on the editor background.
+Directive uses Storage; the shared accent retains the gold UI link.
+Disabled uses the opaque comment color, not disabledForeground alpha.
+Original muted comments and native BSL font styles are retained.
+No upstream executable code, icons, fonts or stylesheets are included.
+
+Shades of Purple palette adaptation for 1C:EDT
+Source: ahmadawais/shades-of-purple-vscode, version 7.3.6 (base, not Super Dark)
+Commit: e8eb49f33e5db05ceba6677367b33ddb27ad821c
+https://github.com/ahmadawais/shades-of-purple-vscode/blob/e8eb49f33e5db05ceba6677367b33ddb27ad821c/themes/shades-of-purple-color-theme.json
+Copyright (c) 2015-∞ Ahmad Awais
+License: MIT; full notice in licenses/shades-of-purple-LICENSE.txt
+
+The 17 RGB roles use sidebar background for EDT panel/dividers, not the
+upstream panel background. Selection alpha is composited on the editor;
+error and hover alpha on the adapted panel. Number uses Constant, directive
+uses Storage, and the shared accent retains the purple UI link.
+Original comment/accent colors and native BSL font styles are retained.
+No upstream executable code, icons, fonts or stylesheets are included.
+
+Noctis Minimus palette adaptation for 1C:EDT
+Source: liviuschera/noctis, version 10.43.3 (Minimus, not base Noctis)
+Commit: 4a82370b2c064e36726c23e94f27ed3782bd6ecd
+https://github.com/liviuschera/noctis/blob/4a82370b2c064e36726c23e94f27ed3782bd6ecd/themes/minimus.json
+Copyright (c) 2018 Liviu Schera
+License: MIT; full notice in licenses/noctis-LICENSE.txt
+
+The 17 RGB roles use editorGroup.border (#101213) for EDT panel/dividers.
+Number is lightened from #7068B1 to #8E87C5 (4.56:1 against editor #1B2932).
+Selection/line alpha is composited on the editor background. Directive uses
+MISC; shared accent retains the UI link. Disabled uses descriptionForeground.
+Original muted comments and native BSL font styles are retained.
+No upstream executable code, icons, fonts or stylesheets are included.
+
+Visual Studio Dark (C/C++) palette adaptation for 1C:EDT
+Source: microsoft/vscode-cpptools, C/C++ Themes version 2.1.0
+Variant: Dark (Visual Studio - C/C++), not 2017 Dark
+Commit: eb981644369c99d39054578a769af572c24bd1eb
+https://github.com/microsoft/vscode-cpptools/blob/eb981644369c99d39054578a769af572c24bd1eb/Themes/themes/cpptools_dark_vs_new.json
+Copyright (c) Microsoft Corporation. All rights reserved.
+License: MIT; full notice in licenses/visual-studio-dark-cpp-LICENSE.txt
+
+The 17 RGB roles adapt common C/C++ categories to BSL, without C++ semantic
+scopes. Panel uses menu background; selection and line use inactive editor
+selection. Directive uses the macro-name color. Missing UI states are
+adapted from available source colors; warning uses the warm string color,
+not an upstream VS Code warning color. Native BSL font styles are retained.
+No upstream executable code, icons, fonts or stylesheets are included.

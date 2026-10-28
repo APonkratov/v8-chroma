@@ -1,0 +1,40 @@
+# Rust, frontend and native build outputs.
+/target/
+**/node_modules/
+/ui/dist/
+/ui/src-tauri/gen/
+/native/bin/
+/tests/fixtures/
+/assets/ThemeProbe.dll
+/dist/
+/build/
+/native/CMakeUserPresets.json
+/artifacts/
+
+# Local diagnostics and test data never belong in public history.
+/evidence/
+/work/
+/tmp/
+/design/concepts/
+*.dmp
+*.1CD
+*.dt
+*.cf
+*.cfe
+*.log
+*.exe
+*.dll
+*.pdb
+*.a
+__pycache__/
+*.pyc
+
+# Machine-specific environment and editor files.
+.env
+.env.*
+!.env.example
+.idea/
+.vs/
+.vscode/
+Thumbs.db
+Desktop.ini

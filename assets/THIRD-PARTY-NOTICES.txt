@@ -1,0 +1,59 @@
+Palette input: edt-themes-0.1.15.zip supplied by the user.
+Plugin: ru.litonchik.edt.themes_0.1.15.202610181940.jar
+EDT Themes copyright (c) 2026 litonchik, MIT.
+
+Dracula palette adaptation for 1C:EDT
+Source: dracula/visual-studio-code, version 2.25.1 (base, not Soft)
+Commit: a08a206f2c8420ba3c05f0e8d01d43b2f933fdf8
+https://github.com/dracula/visual-studio-code/blob/a08a206f2c8420ba3c05f0e8d01d43b2f933fdf8/src/dracula.yml
+Copyright (c) 2016 Dracula Theme
+License: MIT, see palettes/dracula-LICENSE.txt.
+EDT adaptation license: palettes/edt-themes-LICENSE.txt.
+
+The palette is adapted to the 17 roles of the EDT plugin. Line and hover alpha
+are composited on editor and panel backgrounds. Directive uses the constant
+color; warning uses the upstream warning validation border color.
+v8-chroma uses the RGB palette as input and independently maps observed
+1C Designer drawing colors to the available roles. It does not implement a
+complete token-level Dracula theme. No upstream icons or fonts are included.
+
+Native release build: CMake/Ninja with MSVC on Windows x64. Zig 0.15.2 and
+MinGW are optional developer toolchains. Compilers are not distributed.
+Runtime/library notices are retained in licenses/.
+DarkConfig source code and binaries are not included or used.
+
+Additional EDT adaptations in this release: Ayu Dark, Darcula, GitHub Dark
+Default, Monokai, Night Owl, Noctis Minimus, One Dark Pro, Shades of Purple,
+Visual Studio Dark (C/C++), Winter Is Coming Dark Blue.
+Unmodified palette inputs: palettes/edt/palettes/.
+All supplied upstream notices and licenses: palettes/edt/third-party-notices.txt
+and palettes/edt/licenses/. File hashes and archive provenance:
+palettes/edt/provenance.json. Darcula and Monokai are supplied as MIT-licensed
+palette data by EDT Themes; the archive does not document separate upstream
+sources for these two palettes. No IntelliJ IDEA or Sublime Text code is used.
+Generated JSON and the Rust render mapping adapt selection, hover and other
+states for 1C controls; the original palette inputs remain unchanged.
+
+GitHub Light Default: primer/github-vscode-theme, commit
+cd78e5e4e7bcf132a6f428ae0f32264bb1b729cf, plus @primer/primitives 7.10.0.
+Copyright (c) 2020 Primer; Copyright (c) 2018 GitHub Inc.; MIT.
+Sources and full licenses: palettes/light-sources/github-theme-LICENSE.txt,
+palettes/light-sources/primer-primitives-LICENSE.txt.
+
+Visual Studio Light Modern: microsoft/vscode, commit
+ab8f31f0c0b1a4dd86d8dbee1248542f5806574d; MIT.
+Copyright (c) 2015 - present Microsoft Corporation.
+Full license: palettes/light-sources/vscode-LICENSE.txt.
+Source URLs, immutable revisions, hashes and adaptation notes for both light
+themes are retained in palettes/light-sources/provenance.json.
+No downloaded theme JavaScript, JAR code, fonts or icons are executed/bundled
+as part of the theme picker. Upstream source files are retained as reference data.
+
+Application dependency notices are assembled by scripts/collect_licenses.py
+when building a release. The generated THIRD-PARTY-NOTICES.txt includes license
+texts and exact-version source links, including unmodified MPL-2.0 dependencies.
+It follows normal Rust dependencies and production npm dependencies; build/dev-only
+subtrees are excluded. No separately maintained dependency inventory is required.
+Microsoft WebView2 SDK 1.0.3800.47 loader LICENSE and NOTICE are retained under
+licenses/webview2-sdk/ in the source repository and included in release notices.
+WebView2 Runtime is a separate prerequisite and is not redistributed here.

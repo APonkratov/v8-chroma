@@ -1,0 +1,47 @@
+# Нативный движок v8-chroma
+
+Сборкой C++ управляет CMake; основной генератор — Ninja. Код подключения
+и перехватов поддерживает Windows x64. Остальные платформы
+проверяют переносимое Rust-ядро отдельно.
+
+## Сборка
+
+Для основной сборки нужны CMake 3.25+, Ninja, MSVC и Windows SDK.
+Из x64 Developer Command Prompt или Developer PowerShell, в корне проекта:
+
+```text
+python -m pip install -r scripts/requirements-ci.txt
+python scripts/build.py native
+```
+
+Или непосредственно из этого каталога:
+
+```text
+cmake --preset windows-msvc
+cmake --build --preset windows-msvc
+cmake --install ../build/native/windows-msvc --prefix .. --config Release
+```
+
+CMake описывает движок, mock DLL и тестовые процессы отдельными целями.
+Ninja пересобирает изменённые файлы и их зависимости. `V8_CHROMA_BUILD_FIXTURES`
+управляет сборкой тестовых программ. MSVC использует статический CRT.
+Установка размещает движок в `../assets/ThemeProbe.dll` для встраивания в Rust,
+а свои fixtures — в игнорируемых `bin/` и `../tests/fixtures/`.
+
+Для разработки также есть preset `windows-mingw` (g++ в PATH) и `windows-zig`.
+Последний читает абсолютный путь компилятора из переменной окружения `ZIG`.
+Все три варианта используют один CMakeLists.txt. CI использует MSVC.
+Личные пути можно задавать в игнорируемом CMakeUserPresets.json.
+
+## Проверки
+
+Из корня проекта `python scripts/build.py check` собирает native, затем запускает
+проверки протокола, UI, Rust и сценарии на собственных процессах/fixtures.
+
+Для проверок на Cairo установленной 1С добавьте `--cairo <platform-bin>/cairo.dll`.
+Проверяются растровые элементы, выделение и production IAT на 13 темах и
+диагностическом профиле. Платформенная DLL не распространяется проектом.
+
+Протокол v2 имеет размер 4752 байта; его изменения требуют согласования
+C++, Rust и независимых goldens. Уже загруженный движок не заменяется повторной
+инъекцией; его обновление может требовать штатного перезапуска конфигуратора.

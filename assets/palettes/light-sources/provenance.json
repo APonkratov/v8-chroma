@@ -1,0 +1,26 @@
+{
+  "github-light-default": {
+    "repository": "primer/github-vscode-theme",
+    "commit": "cd78e5e4e7bcf132a6f428ae0f32264bb1b729cf",
+    "primer_version": "7.10.0",
+    "source": "https://github.com/primer/github-vscode-theme/blob/cd78e5e4e7bcf132a6f428ae0f32264bb1b729cf/src/theme.js",
+    "adaptation": "17-role adaptation; fg.default override from colors.js; composite editor selection 20% accent on editor; hover 50% gray[1] on panel; no upstream code executed"
+  },
+  "visual-studio-light": {
+    "repository": "microsoft/vscode",
+    "commit": "ab8f31f0c0b1a4dd86d8dbee1248542f5806574d",
+    "source": "https://github.com/microsoft/vscode/blob/ab8f31f0c0b1a4dd86d8dbee1248542f5806574d/extensions/theme-defaults/themes/light_modern.json",
+    "adaptation": "Light Modern UI plus Light+/Light VS token colors. Shared selection uses editor inactive selection background and dark text for 1C controls. Line uses same role; warning from chat.editedFileForeground."
+  },
+  "files_sha256": {
+    "github-colors.js": "d45100e84ee24fe488c56714f2ee59274f5332e73459d1b55bd0dc9c477ecfd9",
+    "github-theme-LICENSE.txt": "e2c871bb6effe9f6ec8d94d6596db33c4bfe4dd94969a6a9a2fb0473ebe6442e",
+    "github-theme.js": "a1fa66e9bb4b8fcf5ca8d627e5462d91b7a0187ee0ce99243d358824dc7c7256",
+    "light_modern.json": "831b47d624e9acd6f09da58a699889415be7e45fccffb01177bc718b20e7e25c",
+    "light_plus.json": "26fbb053bec8ce2b65706d5fcb993da8c19174cfdbf35a49b465236b5ed26203",
+    "light_vs.json": "6f7f63c47a40409984b0bb97832b98fb67a0b27d5bd9a6932a30bdbc7e53f959",
+    "primer-light.json": "5a77cc1f4a04f73355cbac8724c9a89cad1f7587ad6ce9a874fc7d9e3c43e430",
+    "primer-primitives-LICENSE.txt": "e63582a78dddebe610b6cb59f0e7f5f761c1bb6a1c9551443beddc64fe525c3a",
+    "vscode-LICENSE.txt": "9480271317925265e806a9a196aaa33410a962fa9d4d1e248a4a5187bc8c9df9"
+  }
+}

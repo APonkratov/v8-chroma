@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "github-dark-default",
+  "name": "GitHub Dark Default",
+  "colors": {
+    "editor.background": "#0D1117",
+    "text": "#E6EDF3",
+    "panel": "#161B22",
+    "border": "#30363D",
+    "selection.background": "#142744",
+    "selection.text": "#E6EDF3",
+    "line": "#171B22",
+    "comment": "#8B949E",
+    "keyword": "#FF7B72",
+    "string": "#A5D6FF",
+    "number": "#79C0FF",
+    "directive": "#FF7B72",
+    "accent": "#2F81F7",
+    "error": "#F85149",
+    "warning": "#D29922",
+    "disabled": "#7D8590",
+    "hover": "#1F242C"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": true
+  }
+}

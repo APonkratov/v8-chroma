@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "noctis-minimus",
+  "name": "Noctis Minimus",
+  "colors": {
+    "editor.background": "#1B2932",
+    "text": "#C5CDD3",
+    "panel": "#101213",
+    "border": "#496D83",
+    "selection.background": "#2A404D",
+    "selection.text": "#EBF7FF",
+    "line": "#1D3443",
+    "comment": "#5E7887",
+    "keyword": "#C88DA2",
+    "string": "#72C09F",
+    "number": "#8E87C5",
+    "directive": "#5998C0",
+    "accent": "#5998C0",
+    "error": "#B96346",
+    "warning": "#C09159",
+    "disabled": "#6496B4",
+    "hover": "#00558A"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": true
+  }
+}

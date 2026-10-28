@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "night-owl",
+  "name": "Night Owl",
+  "colors": {
+    "editor.background": "#011627",
+    "text": "#D6DEEB",
+    "panel": "#0E293F",
+    "border": "#5F7E97",
+    "selection.background": "#1D3B53",
+    "selection.text": "#FFFFFF",
+    "line": "#072435",
+    "comment": "#637777",
+    "keyword": "#C792EA",
+    "string": "#ECC48D",
+    "number": "#F78C6C",
+    "directive": "#FFCB8B",
+    "accent": "#82AAFF",
+    "error": "#EF5350",
+    "warning": "#B39554",
+    "disabled": "#5F7E97",
+    "hover": "#2D2D5E"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": true
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "winter-is-coming-dark-blue",
+  "name": "Winter is Coming (Dark Blue)",
+  "colors": {
+    "editor.background": "#011627",
+    "text": "#A7DBF7",
+    "panel": "#0E293F",
+    "border": "#219FD5",
+    "selection.background": "#103362",
+    "selection.text": "#A7DBF7",
+    "line": "#042444",
+    "comment": "#999999",
+    "keyword": "#00BFF9",
+    "string": "#BCF0C0",
+    "number": "#8DEC95",
+    "directive": "#00BFF9",
+    "accent": "#219FD5",
+    "error": "#EF5350",
+    "warning": "#FFCA28",
+    "disabled": "#219FD5",
+    "hover": "#0C4994"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": true
+  }
+}

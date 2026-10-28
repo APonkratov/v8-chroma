@@ -1,0 +1,34 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {"major": 3, "minor": 25, "patch": 0},
+  "configurePresets": [
+    {
+      "name": "base", "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/../build/native/${presetName}",
+      "cacheVariables": {"CMAKE_BUILD_TYPE": "Release"}
+    },
+    {
+      "name": "windows-msvc", "inherits": "base",
+      "displayName": "Windows x64 / MSVC (Developer Command Prompt)",
+      "cacheVariables": {"CMAKE_CXX_COMPILER": "cl"},
+      "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows"}
+    },
+    {
+      "name": "windows-mingw", "inherits": "base",
+      "displayName": "Windows x64 / MinGW (development)",
+      "cacheVariables": {"CMAKE_CXX_COMPILER": "g++"},
+      "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows"}
+    },
+    {
+      "name": "windows-zig", "inherits": "base",
+      "displayName": "Windows x64 / Zig (optional development toolchain)",
+      "toolchainFile": "${sourceDir}/cmake/zig.cmake"
+    }
+  ],
+  "buildPresets": [
+    {"name": "windows-msvc", "configurePreset": "windows-msvc"},
+    {"name": "windows-mingw", "configurePreset": "windows-mingw"},
+    {"name": "windows-zig", "configurePreset": "windows-zig"}
+  ]
+}

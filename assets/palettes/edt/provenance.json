@@ -1,0 +1,124 @@
+{
+  "archive": "edt-themes-0.1.15.zip",
+  "archive_sha256": "1ffdbecc9c7f5a7acb3742893645fb6efa51fd7b1dc7a9dffe55ab361b221fc4",
+  "jar_member": "plugins/ru.litonchik.edt.themes_0.1.15.202610181940.jar",
+  "jar_sha256": "8cc4a5c7c46d863893e3a2d7082050a858b100fec1f1243404a0bfffa9de42a8",
+  "files": [
+    {
+      "file": "assets/palettes/edt/licenses/ayu-LICENSE.txt",
+      "archive_member": "resources/licenses/ayu-LICENSE.txt",
+      "sha256": "b2c797d3cd2f1c96c609ec99485f08a5ac1dfdec80c9cffdec11d35feb37ab52"
+    },
+    {
+      "file": "assets/palettes/edt/licenses/dracula-LICENSE.txt",
+      "archive_member": "resources/licenses/dracula-LICENSE.txt",
+      "sha256": "f08d0bba7f8906ed4e7a76d7e555a883968d83eb550ae298ce893a65aee15dff"
+    },
+    {
+      "file": "assets/palettes/edt/licenses/edt-themes-LICENSE.txt",
+      "archive_member": "resources/licenses/edt-themes-LICENSE.txt",
+      "sha256": "b139a3f3cbb1c7d40e9f85fd0f898afac21a7938f0e4930632409456860712af"
+    },
+    {
+      "file": "assets/palettes/edt/licenses/github-theme-LICENSE.txt",
+      "archive_member": "resources/licenses/github-theme-LICENSE.txt",
+      "sha256": "e2c871bb6effe9f6ec8d94d6596db33c4bfe4dd94969a6a9a2fb0473ebe6442e"
+    },
+    {
+      "file": "assets/palettes/edt/licenses/night-owl-LICENSE.txt",
+      "archive_member": "resources/licenses/night-owl-LICENSE.txt",
+      "sha256": "7167d2a386e197ad4bf85f9bc60653ddce195bfc1243733dc92975e77dc94968"
+    },
+    {
+      "file": "assets/palettes/edt/licenses/noctis-LICENSE.txt",
+      "archive_member": "resources/licenses/noctis-LICENSE.txt",
+      "sha256": "65dc11e7f91a5fb378631d57d227ec9ec1da05e1e4c5382672f9dff53c073c6f"
+    },
+    {
+      "file": "assets/palettes/edt/licenses/one-dark-pro-LICENSE.txt",
+      "archive_member": "resources/licenses/one-dark-pro-LICENSE.txt",
+      "sha256": "b4bdb28c670386f4fa093650b0bb8773714ce53171a2d1a9adb81756119200f1"
+    },
+    {
+      "file": "assets/palettes/edt/licenses/primer-primitives-LICENSE.txt",
+      "archive_member": "resources/licenses/primer-primitives-LICENSE.txt",
+      "sha256": "e63582a78dddebe610b6cb59f0e7f5f761c1bb6a1c9551443beddc64fe525c3a"
+    },
+    {
+      "file": "assets/palettes/edt/licenses/shades-of-purple-LICENSE.txt",
+      "archive_member": "resources/licenses/shades-of-purple-LICENSE.txt",
+      "sha256": "13887101ed76a0be45b0ff6655d515ae81afeededa12be7230efa3813ebc618b"
+    },
+    {
+      "file": "assets/palettes/edt/licenses/visual-studio-dark-cpp-LICENSE.txt",
+      "archive_member": "resources/licenses/visual-studio-dark-cpp-LICENSE.txt",
+      "sha256": "fe2be20a112a1c3a4601c89e443d694e8c35e1f8524398ac98228e0904fe9ec3"
+    },
+    {
+      "file": "assets/palettes/edt/licenses/winter-is-coming-LICENSE.txt",
+      "archive_member": "resources/licenses/winter-is-coming-LICENSE.txt",
+      "sha256": "b7a442f1cff6032e73bd3ecc502578db64fcae191fcb48e844e0f15bd3dd91f2"
+    },
+    {
+      "file": "assets/palettes/edt/palettes/ayu-dark.properties",
+      "archive_member": "resources/palettes/ayu-dark.properties",
+      "sha256": "b8cdf811519ca8f5757797df8b2ea711833b90951ecb7dfa39b1bbddd671f662"
+    },
+    {
+      "file": "assets/palettes/edt/palettes/darcula.properties",
+      "archive_member": "resources/palettes/darcula.properties",
+      "sha256": "3bd59b35e8cfbbfdd06f9fca9c5218472231832f25f7caefd14a22778d68de6e"
+    },
+    {
+      "file": "assets/palettes/edt/palettes/dracula.properties",
+      "archive_member": "resources/palettes/dracula.properties",
+      "sha256": "a48c2802d64d7a5d832c87bb293d85f9f76a44f036b2a9e457bb17a3addd7a32"
+    },
+    {
+      "file": "assets/palettes/edt/palettes/github-dark-default.properties",
+      "archive_member": "resources/palettes/github-dark-default.properties",
+      "sha256": "e3d3c4dbdea845a31f5b4a12318b5b9f443ea229b284d19d03320a2e9c2eaa7d"
+    },
+    {
+      "file": "assets/palettes/edt/palettes/monokai.properties",
+      "archive_member": "resources/palettes/monokai.properties",
+      "sha256": "a29fcbfafdc7a43219f0f489889715ead5ce6a68cdf49f4df45d3bfa3b5f4bdb"
+    },
+    {
+      "file": "assets/palettes/edt/palettes/night-owl.properties",
+      "archive_member": "resources/palettes/night-owl.properties",
+      "sha256": "ada7794b16a5a5a50f6880f2f81f0c1bc8d6e567eef5394dc89b421200a6b749"
+    },
+    {
+      "file": "assets/palettes/edt/palettes/noctis-minimus.properties",
+      "archive_member": "resources/palettes/noctis-minimus.properties",
+      "sha256": "124227abfa5e2b2ad881e0a74803b027dbb71239ecb4b1b6a590045e91efd6c8"
+    },
+    {
+      "file": "assets/palettes/edt/palettes/one-dark-pro.properties",
+      "archive_member": "resources/palettes/one-dark-pro.properties",
+      "sha256": "a7a16b3879d7df8264ab85b6f1c0de9802a355318d60ceb7761a4bded1a28e45"
+    },
+    {
+      "file": "assets/palettes/edt/palettes/shades-of-purple.properties",
+      "archive_member": "resources/palettes/shades-of-purple.properties",
+      "sha256": "99f10df620409a2499f084c48fc172694cad8e2ecb14621db58678c3e90e8ec9"
+    },
+    {
+      "file": "assets/palettes/edt/palettes/visual-studio-dark-cpp.properties",
+      "archive_member": "resources/palettes/visual-studio-dark-cpp.properties",
+      "sha256": "21c9f9f68bffc8c540b501ada99b11f34f74b2fb222c3b7af6538fbb0211b117"
+    },
+    {
+      "file": "assets/palettes/edt/palettes/winter-is-coming-dark-blue.properties",
+      "archive_member": "resources/palettes/winter-is-coming-dark-blue.properties",
+      "sha256": "26157552008edb317b7126a3ac143a51a0803330dbf13d4aef23e3bcf5c2ea4c"
+    },
+    {
+      "file": "assets/palettes/edt/third-party-notices.txt",
+      "archive_member": "resources/third-party-notices.txt",
+      "sha256": "439ebb37bf2613d27647640395fdad4353f0b7d87f644e7f8ba1badb11742c14"
+    }
+  ],
+  "note": "Only palette data and license/notice files are included; Java classes and JARs are not distributed."
+}

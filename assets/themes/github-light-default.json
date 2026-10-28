@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "github-light-default",
+  "name": "GitHub Light Default",
+  "colors": {
+    "editor.background": "#FFFFFF",
+    "text": "#1F2328",
+    "panel": "#F6F8FA",
+    "border": "#D0D7DE",
+    "selection.background": "#CEE1F8",
+    "selection.text": "#1F2328",
+    "line": "#F5F7F9",
+    "comment": "#6E7781",
+    "keyword": "#CF222E",
+    "string": "#0A3069",
+    "number": "#0550AE",
+    "directive": "#CF222E",
+    "accent": "#0969DA",
+    "error": "#CF222E",
+    "warning": "#9A6700",
+    "disabled": "#656D76",
+    "hover": "#F0F3F6"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": false
+  }
+}

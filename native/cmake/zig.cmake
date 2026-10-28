@@ -1,0 +1,7 @@
+set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR AMD64)
+set(V8_CHROMA_ZIG_TOOLCHAIN ON CACHE BOOL "Use Zig's bundled static runtimes")
+if(NOT DEFINED ENV{ZIG} OR NOT EXISTS "$ENV{ZIG}")
+    message(FATAL_ERROR "Set ZIG to the absolute path of the optional Zig compiler.")
+endif()
+set(CMAKE_CXX_COMPILER "$ENV{ZIG}" c++ -target x86_64-windows-gnu)

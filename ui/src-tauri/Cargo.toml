@@ -1,0 +1,31 @@
+[package]
+name = "v8-chroma-app"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "MIT"
+repository = "https://github.com/APonkratov/v8-chroma"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+v8-chroma-core = { path = "../.." }
+anyhow = "1"
+dunce = "1"
+windows-sys = { version = "0.61", features = ["Win32_System_Com", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-single-instance = "2"
+tauri-plugin-autostart = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[[bin]]
+name = "v8-chroma"
+path = "src/main.rs"

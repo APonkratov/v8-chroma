@@ -1,0 +1,67 @@
+[
+  {
+    "theme": "ayu-dark",
+    "bytes": 4752,
+    "sha256": "7ee8aab288cb9a7272a8ab2770f52ab545b9497cb4ddb494e32d8426eaccaeec"
+  },
+  {
+    "theme": "darcula",
+    "bytes": 4752,
+    "sha256": "5d50f2e45f904d0c48c6f257865142de1c9118fa40679150853b503ae9613482"
+  },
+  {
+    "theme": "dracula",
+    "bytes": 4752,
+    "sha256": "f6c533660e2fc4c193f3bfbd28fee21fb6a7d320b51fcccfe3318cd30ed3d73f"
+  },
+  {
+    "theme": "github-dark-default",
+    "bytes": 4752,
+    "sha256": "d6844ce8c4844306c02d7322a2380b49a7aa1e91d7e97303a259f3b96e7c6441"
+  },
+  {
+    "theme": "github-light-default",
+    "bytes": 4752,
+    "sha256": "fc6a8a9b72065824c58e33462e6adc2d02e6b002599133b844a368fe00850b38"
+  },
+  {
+    "theme": "monokai",
+    "bytes": 4752,
+    "sha256": "c66b3cd22de9ddb8e3c7407d695753546ed83308c62dec00f6c5c256d7097d54"
+  },
+  {
+    "theme": "night-owl",
+    "bytes": 4752,
+    "sha256": "55d1d296f86134915d77d10ceecf19f06f2f10f0f64a42a2b9bc5e1e8632e469"
+  },
+  {
+    "theme": "noctis-minimus",
+    "bytes": 4752,
+    "sha256": "90ba0dbf1b44fc127d216e5c80cb5a9e5501fe5758cf183b4ce06667cc5cb416"
+  },
+  {
+    "theme": "one-dark-pro",
+    "bytes": 4752,
+    "sha256": "7a84cee18bbc0f3003cca75ab7581cb365c532908fffb83113fafa656d6b126a"
+  },
+  {
+    "theme": "shades-of-purple",
+    "bytes": 4752,
+    "sha256": "611ebd152dfbd702ab6a23242cd1da46c4bb50388e5fe8006dab6d3abf076cdf"
+  },
+  {
+    "theme": "visual-studio-dark-cpp",
+    "bytes": 4752,
+    "sha256": "1872e4bae708f165321ffb1fd38b548f23b7846b41d8b30aa66175760639d205"
+  },
+  {
+    "theme": "visual-studio-light",
+    "bytes": 4752,
+    "sha256": "e7f0d804713632fb5c66b99e4187af72c2d024bfdb00fcf1ec70583605c70ffb"
+  },
+  {
+    "theme": "winter-is-coming-dark-blue",
+    "bytes": 4752,
+    "sha256": "abadb32b60d95eb742126a36c388d22035882879f23ab8f6b299ebd8fe3680f9"
+  }
+]

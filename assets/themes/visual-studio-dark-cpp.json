@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "visual-studio-dark-cpp",
+  "name": "Visual Studio Dark (C/C++)",
+  "colors": {
+    "editor.background": "#1E1E1E",
+    "text": "#DADADA",
+    "panel": "#303031",
+    "border": "#404040",
+    "selection.background": "#3A3D41",
+    "selection.text": "#DADADA",
+    "line": "#3A3D41",
+    "comment": "#57A64A",
+    "keyword": "#569CD6",
+    "string": "#CE9178",
+    "number": "#B5CEA8",
+    "directive": "#BEB7FF",
+    "accent": "#007ACC",
+    "error": "#F44747",
+    "warning": "#CE9178",
+    "disabled": "#A6A6A6",
+    "hover": "#383B3D"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": true
+  }
+}

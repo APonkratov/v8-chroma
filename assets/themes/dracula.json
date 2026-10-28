@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "dracula",
+  "name": "Dracula",
+  "colors": {
+    "editor.background": "#282A36",
+    "text": "#F8F8F2",
+    "panel": "#343746",
+    "border": "#191A21",
+    "selection.background": "#44475A",
+    "selection.text": "#F8F8F2",
+    "line": "#353747",
+    "comment": "#6272A4",
+    "keyword": "#FF79C6",
+    "string": "#F1FA8C",
+    "number": "#BD93F9",
+    "directive": "#BD93F9",
+    "accent": "#8BE9FD",
+    "error": "#FF5555",
+    "warning": "#FFB86C",
+    "disabled": "#6272A4",
+    "hover": "#3B3E4F"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": true
+  }
+}

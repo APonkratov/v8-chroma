@@ -1,0 +1,106 @@
+[
+  {
+    "ecosystem": "rust",
+    "name": "alloc-stdlib",
+    "version": "0.3.0",
+    "file": "licenses/overrides/rust/alloc-stdlib-0.3.0/LICENSE",
+    "source": "https://raw.githubusercontent.com/dropbox/rust-alloc-no-stdlib/0a81fd6928ea3b33c8cd484aa4575d50ffb98012/LICENSE"
+  },
+  {
+    "ecosystem": "rust",
+    "name": "webview2-com",
+    "version": "0.39.1",
+    "file": "licenses/overrides/rust/webview2-com-0.39.1/LICENSE",
+    "source": "https://raw.githubusercontent.com/wravery/webview2-rs/edc2caf886175ccaebe86078c9cfe1ae2a187328/LICENSE"
+  },
+  {
+    "ecosystem": "rust",
+    "name": "webview2-com-macros",
+    "version": "0.8.1",
+    "file": "licenses/overrides/rust/webview2-com-macros-0.8.1/LICENSE",
+    "source": "https://raw.githubusercontent.com/wravery/webview2-rs/dffa41a8a46d3f5565eefbff2de57d38d399f158/LICENSE"
+  },
+  {
+    "ecosystem": "rust",
+    "name": "webview2-com-sys",
+    "version": "0.39.1",
+    "file": "licenses/overrides/rust/webview2-com-sys-0.39.1/LICENSE",
+    "source": "https://raw.githubusercontent.com/wravery/webview2-rs/edc2caf886175ccaebe86078c9cfe1ae2a187328/LICENSE"
+  },
+  {
+    "ecosystem": "rust",
+    "name": "tauri-plugin",
+    "version": "2.7.2",
+    "file": "licenses/overrides/rust/tauri-plugin-2.7.2/LICENSE-MIT",
+    "source": "https://raw.githubusercontent.com/tauri-apps/tauri/59b63ab500da9859f12d8888c3298bc29bba0b92/LICENSE-MIT"
+  },
+  {
+    "ecosystem": "rust",
+    "name": "selectors",
+    "version": "0.38.0",
+    "file": "licenses/overrides/rust/selectors-0.38.0/LICENSE",
+    "source": "https://www.mozilla.org/MPL/2.0/",
+    "note": "Standard MPL-2.0 text from cssparser 0.37.0; selectors source files carry the MPL-2.0 header."
+  },
+  {
+    "ecosystem": "sdk",
+    "name": "Microsoft.Web.WebView2",
+    "version": "1.0.3800.47",
+    "file": "licenses/webview2-sdk/LICENSE.txt",
+    "source": "https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/1.0.3800.47/microsoft.web.webview2.1.0.3800.47.nupkg",
+    "archive_member": "LICENSE.txt"
+  },
+  {
+    "ecosystem": "sdk",
+    "name": "Microsoft.Web.WebView2",
+    "version": "1.0.3800.47",
+    "file": "licenses/webview2-sdk/NOTICE.txt",
+    "source": "https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/1.0.3800.47/microsoft.web.webview2.1.0.3800.47.nupkg",
+    "archive_member": "NOTICE.txt"
+  },
+  {
+    "ecosystem": "npm",
+    "name": "is-reference",
+    "version": "3.0.3",
+    "file": "licenses/overrides/npm/is-reference-3.0.3/LICENSE",
+    "source": "https://github.com/Rich-Harris/is-reference/tree/8bb053129bfabe2f6a7d7ed050159d67ebe82829",
+    "note": "MIT declaration and author from package.json; standard MIT text supplied because upstream omits a license file."
+  },
+  {
+    "ecosystem": "npm",
+    "name": "locate-character",
+    "version": "3.0.0",
+    "file": "licenses/overrides/npm/locate-character-3.0.0/LICENSE",
+    "source": "https://github.com/Rich-Harris/locate-character/tree/4f08a59ec248121f7002abd02ee7b94e8eda06bc",
+    "note": "MIT declaration and author from package.json; standard MIT text supplied because upstream omits a license file."
+  },
+  {
+    "ecosystem": "toolchain-runtime",
+    "name": "Rust standard library",
+    "version": "1.97.1",
+    "file": "licenses/rust-stdlib/LICENSE-MIT",
+    "source": "https://raw.githubusercontent.com/rust-lang/rust/1.97.1/LICENSE-MIT"
+  },
+  {
+    "ecosystem": "toolchain-runtime",
+    "name": "Rust standard library",
+    "version": "1.97.1",
+    "file": "licenses/rust-stdlib/LICENSE-APACHE",
+    "source": "https://raw.githubusercontent.com/rust-lang/rust/1.97.1/LICENSE-APACHE"
+  },
+  {
+    "ecosystem": "toolchain-runtime",
+    "name": "Rust standard library",
+    "version": "1.97.1",
+    "file": "licenses/rust-stdlib/COPYRIGHT",
+    "source": "https://raw.githubusercontent.com/rust-lang/rust/1.97.1/COPYRIGHT"
+  },
+  {
+    "ecosystem": "toolchain-runtime",
+    "name": "Rust standard library third-party notices",
+    "version": "1.97.1",
+    "file": "licenses/rust-stdlib/COPYRIGHT-library.txt",
+    "source": "https://static.rust-lang.org/dist/rust-1.97.1-x86_64-pc-windows-msvc.tar.xz",
+    "note": "Text export retaining all text and external hyperlinks from COPYRIGHT-library.html shipped with the compiler."
+  }
+]

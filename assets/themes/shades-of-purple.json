@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "shades-of-purple",
+  "name": "Shades of Purple",
+  "colors": {
+    "editor.background": "#2D2B55",
+    "text": "#FFFFFF",
+    "panel": "#222244",
+    "border": "#25254B",
+    "selection.background": "#7448B0",
+    "selection.text": "#FFFFFF",
+    "line": "#1F1F41",
+    "comment": "#B362FF",
+    "keyword": "#FF9D00",
+    "string": "#A5FF90",
+    "number": "#FF628C",
+    "directive": "#FAD000",
+    "accent": "#B362FF",
+    "error": "#E43938",
+    "warning": "#FAD000",
+    "disabled": "#A599E9",
+    "hover": "#202041"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": true
+  }
+}

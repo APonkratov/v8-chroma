@@ -1,0 +1,36 @@
+{
+  "format_version": 1,
+  "id": "one-dark-pro",
+  "name": "One Dark Pro",
+  "colors": {
+    "editor.background": "#282C34",
+    "text": "#ABB2BF",
+    "panel": "#21252B",
+    "border": "#3E4452",
+    "selection.background": "#3D4556",
+    "selection.text": "#D7DAE0",
+    "line": "#2C313C",
+    "comment": "#7F848E",
+    "keyword": "#C678DD",
+    "string": "#98C379",
+    "number": "#D19A66",
+    "directive": "#E5C07B",
+    "accent": "#61AFEF",
+    "error": "#C24038",
+    "warning": "#D19A66",
+    "disabled": "#7F848E",
+    "hover": "#2C313A"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": true
+  }
+}
