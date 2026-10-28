@@ -29,8 +29,9 @@ jobs:
       - name: CMake, native, protocol, UI and Rust checks
         run: python scripts/build.py check
       - name: Build and verify executables
-        shell: bash
-        run: python scripts/build.py release --tag "$RELEASE_TAG"
+        # Git Bash prepends its Unix link.exe ahead of the MSVC linker.
+        shell: pwsh
+        run: python scripts/build.py release --tag "$env:RELEASE_TAG"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-windows-x64
