@@ -17,7 +17,6 @@
 
 ## Скриншоты
 
-Нажмите на снимок, чтобы открыть его в полном размере.
 
 ### v8-chroma
 
@@ -26,8 +25,6 @@
 | [<img src="assets/screenshots/app-themes.jpg" alt="v8-chroma: коллекция тем и предпросмотр Dracula" width="420">](assets/screenshots/app-themes.jpg) | [<img src="assets/screenshots/app-settings.jpg" alt="v8-chroma: настройки приложения в отдельном профиле" width="420">](assets/screenshots/app-settings.jpg) |
 
 ### Конфигуратор
-
-Все 13 пресетов и стандартное оформление на одном примере кода в 1С 8.3.27.
 
 | Ayu Dark | Darcula | Dracula |
 |---|---|---|
@@ -41,13 +38,6 @@
 | **Winter is Coming (Dark Blue)** | **Стандартная** | |
 | [<img src="assets/screenshots/configurator-winter-is-coming-dark-blue.jpg" alt="Конфигуратор в теме Winter is Coming (Dark Blue)" width="280">](assets/screenshots/configurator-winter-is-coming-dark-blue.jpg) | [<img src="assets/screenshots/configurator-standard.jpg" alt="Конфигуратор со стандартным оформлением" width="280">](assets/screenshots/configurator-standard.jpg) | |
 
-<details>
-  <summary>Сервис → Параметры в теме Dracula</summary>
-
-![Окно «Параметры», вкладка «Модули» в теме Dracula](assets/screenshots/parameters-dracula.jpg)
-
-</details>
-
 ## Требования и совместимость
 
 Windows x64, установленная платформа 1С и Microsoft Edge WebView2 Runtime.
@@ -58,8 +48,6 @@ Windows x64, установленная платформа 1С и Microsoft Edge
 Файлы платформы на диске не изменяются. При обновлении самого движка уже открытый
 конфигуратор может потребовать одного штатного перезапуска.
 
-Кроссплатформенный UI Tauri не означает поддержку перекраски на Linux или macOS.
-
 ## Установка и запуск
 
 Скачайте `v8-chroma.exe` со
@@ -68,8 +56,7 @@ Windows x64, установленная платформа 1С и Microsoft Edge
 ZIP и установка DLL рядом с EXE для работы не требуются: движок встроен и
 извлекается в пользовательский каталог.
 
-Сверьте результат со строкой EXE в SHA256SUMS.txt. WebView2 Runtime для GUI
-нужен отдельно; при его отсутствии установите
+WebView2 Runtime для GUI нужен отдельно; при его отсутствии установите
 [Evergreen Runtime от Microsoft](https://developer.microsoft.com/en-us/microsoft-edge/webview2/).
 
 Выберите тему в интерфейсе. По умолчанию Dracula автоматически применяется
@@ -78,7 +65,7 @@ ZIP и установка DLL рядом с EXE для работы не тре�
 в настройках или меню трея. Чтобы вернуть обычное оформление, сначала примените «Стандартную»
 тему. Завершение менеджера само по себе не выгружает движок из конфигуратора.
 
-Автозапуск добровольный. После перемещения EXE выключите и снова включите его
+Автозапуск опциональный. После перемещения EXE выключите и снова включите его
 в настройках, чтобы обновить путь.
 
 ## Темы
@@ -135,7 +122,6 @@ GitHub Actions выполняет проверки PR и сборку EXE по s
 
 Спасибо автору [статьи о смене оформления конфигуратора на Инфостарте](https://infostart.ru/1c/tools/2823573/)
 за идею, которая вдохновила создание v8-chroma.
-Авторам EDT Themes и исходных цветовых схем — за палитры, адаптированные для конфигуратора.
 
 ## Лицензии
 
