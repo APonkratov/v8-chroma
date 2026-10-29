@@ -14,6 +14,6 @@ struct ProbeConfig {
     wchar_t targetDir[260];
     wchar_t logPath[520];
     ColorMap maps[256];
-    DWORD iconMode, iconPack; // 0=stock, 1=light, 2=dark; pack 1=8.3.27.2325
+    DWORD iconMode, iconPack; // 0=stock, 1=light, 2=dark; pack 1=known image fingerprints
 };
 static_assert(sizeof(RenderColors)==40 && sizeof(ProbeConfig)==4760, "Protocol v3 layout mismatch");

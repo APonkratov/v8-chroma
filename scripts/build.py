@@ -74,6 +74,7 @@ def check(toolchain, target, preset, cairo):
     with tempfile.TemporaryDirectory(prefix="icon-bootstrap-") as temporary:
         for mode in (1, 2):
             run(ROOT / "tests/fixtures/icon_bootstrap_test.exe", Path(temporary) / "colors.csv", mode)
+            run(ROOT / "tests/fixtures/icon_bootstrap_test.exe", Path(temporary) / "available.csv", mode, "available")
     basic_checks()
     cargo(toolchain, "fmt", "--all", "--check")
     npm("ci", "--no-audit", "--no-fund")

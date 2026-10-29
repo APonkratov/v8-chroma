@@ -1,5 +1,5 @@
-// Production bootstrap with a deterministic failing icon component. The icon
-// module's own fixture separately checks real preparation failures and cleanup.
+// Production bootstrap on an 8.5 host, with available/failing icon components.
+// The icon module's fixture separately checks real image matching and cleanup.
 #include "../src/protocol.h"
 #include "../src/icon_theme.h"
 #include <stdio.h>
@@ -16,16 +16,20 @@ extern "C" __declspec(dllimport) FrameResult frame_probe();
 extern "C" __declspec(dllimport) BOOL graphics_probe(const ProbeConfig*);
 extern "C" __declspec(dllimport) void graphics_icon_probe();
 
-static unsigned preparations, iconDraws;
+struct IconState { unsigned mode; };
+static IconState prepared;
+static unsigned preparations, iconDraws, activeMode;
+static bool available;
 bool initializeIconTheme(HMODULE) { return true; }
 IconState* prepareIconTheme(unsigned mode,DWORD& error) {
     ++preparations;
-    error=mode?ERROR_NOT_ENOUGH_MEMORY:ERROR_INVALID_PARAMETER;
-    return nullptr;
+    error=available?ERROR_SUCCESS:(mode?ERROR_NOT_ENOUGH_MEMORY:ERROR_INVALID_PARAMETER);
+    prepared.mode=mode;
+    return available?&prepared:nullptr;
 }
-void activateIconTheme(IconState*) {}
+void activateIconTheme(IconState* state) { activeMode=state?state->mode:0; }
 void discardIconTheme(IconState*) {}
-IconStats iconStats() { return {}; }
+IconStats iconStats() { IconStats stats={}; stats.mode=activeMode; return stats; }
 void drawIconSource(void* c,void* p,void(__cdecl* original)(void*,void*)) {
     ++iconDraws; original(c,p);
 }
@@ -42,14 +46,21 @@ static bool snapshotMatches(const wchar_t* path,unsigned generation) {
     if (!file) return false;
     char bytes[16384]={}; fread(bytes,1,sizeof(bytes)-1,file); fclose(file);
     char expected[64]; sprintf(expected,"# generation=%u\n",generation);
-    return strstr(bytes,expected) && strstr(bytes,"# patched_imports=14\n") &&
-        strstr(bytes,"# base_patched_imports=14\n") &&
+    bool base=strstr(bytes,expected) && strstr(bytes,"# base_patched_imports=14\n");
+    if (available) {
+        sprintf(expected,"# icon_mode=%u\n",activeMode);
+        return base && strstr(bytes,"# patched_imports=17\n") &&
+            strstr(bytes,"# icon_patched_imports=3\n") && strstr(bytes,"# icon_status=0\n") &&
+            strstr(bytes,expected) && strstr(bytes,"# icon_pack=1\n");
+    }
+    return base && strstr(bytes,"# patched_imports=14\n") &&
         strstr(bytes,"# icon_patched_imports=0\n") &&
         strstr(bytes,"# icon_status=8\n") && strstr(bytes,"# icon_mode=0\n") &&
         strstr(bytes,"# icon_pack=0\n");
 }
 int wmain(int argc,wchar_t** argv) {
-    if (argc!=3) return 2;
+    if (argc!=3 && argc!=4) return 2;
+    available=argc==4 && !wcscmp(argv[3],L"available");
     ProbeConfig config={};
     config.size=sizeof(config); config.version=3; config.mode=1;
     config.mapCount=1; config.maps[0]={Text,0,0x123456};
@@ -67,17 +78,20 @@ int wmain(int argc,wchar_t** argv) {
     bool ok=preparations==1 && snapshotMatches(config.logPath,1);
     auto frame=frame_probe();
     ok &= frame.invariants && frame.text==0x123456 && graphics_probe(&config);
-    graphics_icon_probe(); ok &= iconDraws==0;
+    graphics_icon_probe(); ok &= iconDraws==(available?3u:0u);
     // A failed optional component must not prevent subsequent color updates.
     config.maps[0].target=0x654321;
     config.iconMode=config.iconMode==1?2:1;
     ok &= ThemeApply(&config)==ERROR_SUCCESS;
     frame=frame_probe();
-    ok &= preparations==1 && frame.invariants && frame.text==0x654321;
+    ok &= preparations==(available?2u:1u) && frame.invariants && frame.text==0x654321;
     ok &= graphics_probe(&config) && snapshotMatches(config.logPath,2);
     ok &= ThemeStop(nullptr)==ERROR_SUCCESS;
     frame=frame_probe();
     ok &= frame.invariants && frame.text==0;
-    printf("Icon preparation failure: color bootstrap, stock imports, status, apply, stop: %s\n",ok?"PASS":"FAIL");
+    // Stop keeps the import hooks but disables their replacement state.
+    unsigned before=iconDraws; graphics_icon_probe();
+    ok &= activeMode==0 && iconDraws==before+(available?3u:0u);
+    printf("8.5 host icons %s: bootstrap, imports, status, apply, stop: %s\n",available?"available":"preparation failure",ok?"PASS":"FAIL");
     return ok?0:1;
 }
