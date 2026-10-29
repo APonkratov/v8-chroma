@@ -16,6 +16,7 @@ parser.add_argument('--check', action='store_true', help='Verify committed fixtu
 args = parser.parse_args()
 
 report = []
+cases = {}
 for path in sorted((ROOT / 'assets/themes').glob('*.json')):
     theme = load_theme(path)
     # Independent reference for the internal compare/merge profile roles.
@@ -27,6 +28,16 @@ for path in sorted((ROOT / 'assets/themes').glob('*.json')):
         a,b=luminance(a),luminance(b)
         return (max(a,b)+.05)/(min(a,b)+.05)
     colors = dict(theme.colors)
+    # Form hyperlinks preserve the accent as far as its contrast allows.
+    for text_weight in range(101):
+        link = sum((((colors['accent'] >> bit & 255)*(100-text_weight)
+                     +(colors['text'] >> bit & 255)*text_weight+50)//100) << bit
+                   for bit in (16,8,0))
+        if all(contrast(link,colors[bg]) >= 4.5 for bg in ('editor.background','panel')):
+            colors['link']=link
+            break
+    else:
+        colors['link']=colors['text']
     for role,tint in [('compare.changed',0x00B8C4),('compare.local',0xE99A49),('compare.file',0x55AA66)]:
         for amount in range(25,-1,-1):
             color = sum((((colors['editor.background'] >> shift & 255)*(100-amount)
@@ -38,6 +49,7 @@ for path in sorted((ROOT / 'assets/themes').glob('*.json')):
     mappings = load_profile(ROOT / 'assets/profile.properties', theme)
     cfg = make_config(theme, mappings, Path(r'C:\Platform'), Path(r'C:\Logs\colors.csv'))
     data = bytes(cfg)
+    cases[theme.id] = data
     destination = ROOT / 'tests/golden' / (theme.id + '.bin')
     if args.check:
         if destination.read_bytes() != data:
@@ -45,6 +57,16 @@ for path in sorted((ROOT / 'assets/themes').glob('*.json')):
     else:
         destination.write_bytes(data)
     report.append({'theme': theme.id, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
+for name, base, mode in [('icons-dark','dracula',2),('icons-light','github-light-default',1),('icons-standard',None,1),('diagnostic',None,0)]:
+    import struct
+    data = bytearray(cases[base]) if base else make_config(None,[],Path(r'C:\Platform'),Path(r'C:\Logs\colors.csv'), identifier='standard' if mode else 'diagnostic')
+    struct.pack_into('<II',data,4752,mode,int(mode!=0))
+    data=bytes(data)
+    destination=ROOT/'tests/golden'/f'{name}.bin'
+    if args.check:
+        if destination.read_bytes()!=data: raise SystemExit(f'Protocol fixture differs: {name}')
+    else: destination.write_bytes(data)
+    report.append({'theme':name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
 manifest = ROOT / 'tests/golden/manifest.json'
 if args.check:
     if json.loads(manifest.read_text(encoding='utf-8')) != report:

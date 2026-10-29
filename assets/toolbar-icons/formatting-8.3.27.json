@@ -1,0 +1,147 @@
+{
+  "description": "Exact formatting toolbar glyphs, Designer 8.3.27.2325. preserve_bottom hashes normalize the bottom four swatch rows to transparent; these rows remain native at runtime. No platform pixels.",
+  "sources": [
+    {
+      "hash": "8d6fcd003a4bdeac",
+      "icon": "format-bold",
+      "label": "Полужирный"
+    },
+    {
+      "hash": "f3f4c9017c736f86",
+      "icon": "format-bold",
+      "label": "Полужирный",
+      "disabled": true
+    },
+    {
+      "hash": "80a1f593be176d85",
+      "icon": "format-italic",
+      "label": "Курсив"
+    },
+    {
+      "hash": "ba00eec23737f82d",
+      "icon": "format-italic",
+      "label": "Курсив",
+      "disabled": true
+    },
+    {
+      "hash": "df0904e8fa8ba146",
+      "icon": "format-underline",
+      "label": "Подчеркнутый"
+    },
+    {
+      "hash": "039477027c1b0c4a",
+      "icon": "format-underline",
+      "label": "Подчеркнутый",
+      "disabled": true
+    },
+    {
+      "hash": "30a513341a4b129d",
+      "icon": "format-fill-color",
+      "label": "Цвет фона",
+      "preserve_bottom": 4
+    },
+    {
+      "hash": "f9757c82d7790457",
+      "icon": "format-fill-color",
+      "label": "Цвет фона",
+      "disabled": true,
+      "preserve_bottom": 4
+    },
+    {
+      "hash": "06c64d90629bb34d",
+      "icon": "format-font-color",
+      "label": "Цвет текста",
+      "preserve_bottom": 4
+    },
+    {
+      "hash": "061988326fd09cc1",
+      "icon": "format-font-color",
+      "label": "Цвет текста",
+      "disabled": true,
+      "preserve_bottom": 4
+    },
+    {
+      "hash": "2c6d9e8d113a951d",
+      "icon": "format-line-color",
+      "label": "Цвет линии",
+      "preserve_bottom": 4
+    },
+    {
+      "hash": "c8bbc59845a671d0",
+      "icon": "format-line-color",
+      "label": "Цвет линии",
+      "disabled": true,
+      "preserve_bottom": 4
+    },
+    {
+      "hash": "a58d91fdcb7eaff8",
+      "icon": "format-align-left",
+      "label": "По левому краю"
+    },
+    {
+      "hash": "657b786aa167cd7a",
+      "icon": "format-align-center",
+      "label": "По центру"
+    },
+    {
+      "hash": "270b20b5bb2b35e4",
+      "icon": "format-align-right",
+      "label": "По правому краю"
+    },
+    {
+      "hash": "a2b807a134114522",
+      "icon": "format-align-justify",
+      "label": "По ширине"
+    },
+    {
+      "hash": "23fd325309b186b4",
+      "icon": "format-align-left",
+      "label": "По левому краю"
+    },
+    {
+      "hash": "e166ffa750605233",
+      "icon": "format-align-center",
+      "label": "По центру"
+    },
+    {
+      "hash": "fd5e12239b111785",
+      "icon": "format-align-right",
+      "label": "По правому краю"
+    },
+    {
+      "hash": "c6e4f3a2e47862d2",
+      "icon": "format-align-justify",
+      "label": "По ширине"
+    },
+    {
+      "hash": "5f65278efc6257e5",
+      "icon": "format-bold",
+      "label": "Полужирный"
+    },
+    {
+      "hash": "e31e9cc5205b18eb",
+      "icon": "format-italic",
+      "label": "Курсив"
+    },
+    {
+      "hash": "86a02a6d19bd799d",
+      "icon": "format-underline",
+      "label": "Подчеркнутый"
+    },
+    {
+      "hash": "bb31a977ddf17b39",
+      "icon": "format-bold",
+      "label": "Полужирный"
+    },
+    {
+      "hash": "f7b416c8aa5aa5f9",
+      "icon": "format-italic",
+      "label": "Курсив"
+    },
+    {
+      "hash": "582e67bbe0349779",
+      "icon": "format-underline",
+      "label": "Подчеркнутый"
+    }
+  ]
+}

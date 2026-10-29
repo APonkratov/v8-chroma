@@ -1,0 +1,282 @@
+{
+  "description": "Exact metadata tree image fingerprints, Designer 8.3.27.2325; original platform pixels are not included.",
+  "sources": [
+    {
+      "hash": "75ed0245f52de06d",
+      "icon": "meta-configuration",
+      "label": "Конфигурация"
+    },
+    {
+      "hash": "b8fcddc7f9ed6edd",
+      "icon": "meta-common",
+      "label": "Общие"
+    },
+    {
+      "hash": "f0f65b2c0a27580b",
+      "icon": "meta-subsystem",
+      "label": "Подсистемы"
+    },
+    {
+      "hash": "0a9ee3d9638aead0",
+      "icon": "meta-module",
+      "label": "Общие модули"
+    },
+    {
+      "hash": "020128dfc289af97",
+      "icon": "meta-session-parameter",
+      "label": "Параметры сеанса"
+    },
+    {
+      "hash": "5570589aa40b9b08",
+      "icon": "meta-role",
+      "label": "Роли"
+    },
+    {
+      "hash": "90d32e5a81b6a712",
+      "icon": "meta-attribute",
+      "label": "Общие реквизиты"
+    },
+    {
+      "hash": "a04381b5d4177dc6",
+      "icon": "meta-exchange-plan",
+      "label": "Планы обмена"
+    },
+    {
+      "hash": "58eacffb4a980483",
+      "icon": "meta-selection-criterion",
+      "label": "Критерии отбора"
+    },
+    {
+      "hash": "3691c8ff734dff0e",
+      "icon": "meta-event-subscription",
+      "label": "Подписки на события"
+    },
+    {
+      "hash": "9572dc61ee0a54fc",
+      "icon": "meta-scheduled-job",
+      "label": "Регламентные задания"
+    },
+    {
+      "hash": "0bf6223838ed9248",
+      "icon": "meta-bot",
+      "label": "Боты"
+    },
+    {
+      "hash": "4f6a7c4a6d27cef9",
+      "icon": "meta-functional-option",
+      "label": "Функциональные опции"
+    },
+    {
+      "hash": "d9492f4a137cb1b6",
+      "icon": "meta-option-parameter",
+      "label": "Параметры функциональных опций"
+    },
+    {
+      "hash": "774d112e1bfc6309",
+      "icon": "meta-defined-type",
+      "label": "Определяемые типы"
+    },
+    {
+      "hash": "9a23d5abe6a2e90b",
+      "icon": "meta-settings-storage",
+      "label": "Хранилища настроек"
+    },
+    {
+      "hash": "cee198c7e9f76ef0",
+      "icon": "meta-command",
+      "label": "Общие команды"
+    },
+    {
+      "hash": "e53ecf7202c08a80",
+      "icon": "meta-command-group",
+      "label": "Группы команд"
+    },
+    {
+      "hash": "ee99ffeaf597c46a",
+      "icon": "meta-form",
+      "label": "Общие формы"
+    },
+    {
+      "hash": "78d3275977a54e1b",
+      "icon": "meta-template",
+      "label": "Общие макеты"
+    },
+    {
+      "hash": "b6d9763b49e699a3",
+      "icon": "meta-image",
+      "label": "Общие картинки"
+    },
+    {
+      "hash": "f57a09409c87e77e",
+      "icon": "meta-xdto",
+      "label": "XDTO-пакеты"
+    },
+    {
+      "hash": "d48de5c8c9bed8be",
+      "icon": "meta-web-service",
+      "label": "Web-сервисы"
+    },
+    {
+      "hash": "4b205e2d5af7555c",
+      "icon": "meta-http-service",
+      "label": "HTTP-сервисы"
+    },
+    {
+      "hash": "5ef5f379834a4317",
+      "icon": "meta-ws-reference",
+      "label": "WS-ссылки"
+    },
+    {
+      "hash": "521ecd72b27f52a4",
+      "icon": "meta-websocket",
+      "label": "WebSocket-клиенты"
+    },
+    {
+      "hash": "4d4ea2528cf13e5d",
+      "icon": "meta-integration",
+      "label": "Сервисы интеграции"
+    },
+    {
+      "hash": "314174a87641efd0",
+      "icon": "meta-style-element",
+      "label": "Элементы стиля"
+    },
+    {
+      "hash": "fa8ce2e2cde22270",
+      "icon": "meta-style",
+      "label": "Стили"
+    },
+    {
+      "hash": "2e2b3e27eb0b9f85",
+      "icon": "meta-language",
+      "label": "Языки"
+    },
+    {
+      "hash": "c1f37e2c2826d4fb",
+      "icon": "meta-constant",
+      "label": "Константы"
+    },
+    {
+      "hash": "fa33ade302a01e48",
+      "icon": "meta-catalog",
+      "label": "Справочники"
+    },
+    {
+      "hash": "da25bb2db58bce34",
+      "icon": "meta-document",
+      "label": "Документы"
+    },
+    {
+      "hash": "d00b09babec78391",
+      "icon": "meta-document-journal",
+      "label": "Журналы документов"
+    },
+    {
+      "hash": "8d9fa9f0e2b5afef",
+      "icon": "meta-enumeration",
+      "label": "Перечисления"
+    },
+    {
+      "hash": "1b7d262934ce00a4",
+      "icon": "meta-report",
+      "label": "Отчеты"
+    },
+    {
+      "hash": "a2764a16f94511d6",
+      "icon": "meta-processor",
+      "label": "Обработки"
+    },
+    {
+      "hash": "c529ad152e38ff72",
+      "icon": "meta-characteristic-plan",
+      "label": "Планы видов характеристик"
+    },
+    {
+      "hash": "fbdb4dbf3e3cb676",
+      "icon": "meta-account-plan",
+      "label": "Планы счетов"
+    },
+    {
+      "hash": "9609caa8e40751ca",
+      "icon": "meta-calculation-plan",
+      "label": "Планы видов расчета"
+    },
+    {
+      "hash": "d63e05eb90a7c45e",
+      "icon": "meta-information-register",
+      "label": "Регистры сведений"
+    },
+    {
+      "hash": "84707991ed8c57c7",
+      "icon": "meta-accumulation-register",
+      "label": "Регистры накопления"
+    },
+    {
+      "hash": "b7b564592ff8d556",
+      "icon": "meta-accounting-register",
+      "label": "Регистры бухгалтерии"
+    },
+    {
+      "hash": "c3a9ab459c6cd793",
+      "icon": "meta-calculation-register",
+      "label": "Регистры расчета"
+    },
+    {
+      "hash": "4fbd7e5e253d49de",
+      "icon": "meta-business-process",
+      "label": "Бизнес-процессы"
+    },
+    {
+      "hash": "45c34755a418cb5a",
+      "icon": "meta-task",
+      "label": "Задачи"
+    },
+    {
+      "hash": "fff5a952ef16b0e5",
+      "icon": "meta-external-data",
+      "label": "Внешние источники данных"
+    },
+    {
+      "hash": "0e54cf3111de5d6b",
+      "icon": "meta-language",
+      "label": "Язык (вариант)"
+    },
+    {
+      "hash": "b5fbcd1a5ea038a8",
+      "icon": "meta-document-numerator",
+      "label": "Нумераторы"
+    },
+    {
+      "hash": "0c562124353294f6",
+      "icon": "meta-document-sequence",
+      "label": "Последовательности"
+    },
+    {
+      "hash": "625f231e6cd6fbaf",
+      "icon": "chevron-down",
+      "size": 9,
+      "label": "Развёрнутая ветка"
+    },
+    {
+      "hash": "96022e1f393c5eff",
+      "icon": "chevron-right",
+      "size": 9,
+      "label": "Свёрнутая ветка"
+    },
+    {
+      "hash": "d4aa5df561328f2a",
+      "icon": "meta-attribute",
+      "label": "Реквизиты"
+    },
+    {
+      "hash": "0124fd83b5e60ed5",
+      "icon": "meta-tabular-section",
+      "label": "Табличные части"
+    },
+    {
+      "hash": "efe965e8ff46e268",
+      "icon": "meta-template",
+      "label": "Макеты объекта"
+    }
+  ]
+}

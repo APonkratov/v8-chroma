@@ -55,6 +55,15 @@ async fn save_settings(service: State<'_, Service>, patch: SettingsPatch) -> Res
         .map_err(|e| format!("{e:#}"))
 }
 #[tauri::command]
+async fn set_appearance(service: State<'_, Service>, patch: SettingsPatch) -> Result<(), String> {
+    let service = service.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || service.set_appearance(patch))
+        .await
+        .map_err(|e| e.to_string())?
+        .map(|_| ())
+        .map_err(|e| format!("{e:#}"))
+}
+#[tauri::command]
 async fn reset_settings(service: State<'_, Service>) -> Result<(), String> {
     let service = service.inner().clone();
     tauri::async_runtime::spawn_blocking(move || service.reset())
@@ -163,6 +172,7 @@ fn run() -> anyhow::Result<()> {
             get_state,
             get_themes,
             save_settings,
+            set_appearance,
             reset_settings,
             apply_theme,
             refresh_processes,

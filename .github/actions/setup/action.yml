@@ -14,7 +14,9 @@ runs:
       with:
         python-version: 3.14.5
         cache: ${{ inputs.native == 'true' && 'pip' || '' }}
-        cache-dependency-path: scripts/requirements-ci.txt
+        cache-dependency-path: |
+          scripts/requirements-ci.txt
+          scripts/requirements-branding.txt
     - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable branch
       with:
         toolchain: 1.97.1

@@ -65,6 +65,8 @@ fn separate_processes_persist_preferences_and_override_is_temporary() {
             "night-owl",
             "--auto-apply",
             "off",
+            "--custom-icons",
+            "on",
             "--width",
             "1200",
         ],
@@ -72,6 +74,7 @@ fn separate_processes_persist_preferences_and_override_is_temporary() {
     let shown = value(cli(&profile, &["settings", "show"]));
     assert_eq!(shown["settings"]["selected_theme"], "night-owl");
     assert_eq!(shown["settings"]["auto_apply"], false);
+    assert_eq!(shown["settings"]["custom_icons"], true);
     let run = cli(&profile, &["watch", "--theme", "dracula", "--seconds", "1"]);
     assert!(run.status.success());
     let event: Value = serde_json::from_slice(&run.stdout).unwrap();
@@ -94,7 +97,7 @@ fn separate_processes_persist_preferences_and_override_is_temporary() {
 fn malformed_and_future_files_do_not_block_explicit_manual_override() {
     let temp = tempfile::tempdir().unwrap();
     let profile = temp.path();
-    fs::write(profile.join("settings.json"), br#"{"schema_version":2}"#).unwrap();
+    fs::write(profile.join("settings.json"), br#"{"schema_version":999}"#).unwrap();
     assert!(!cli(profile, &["settings", "reset"]).status.success());
     let rejected = cli(profile, &["attach", "--pid", "0"]);
     assert!(String::from_utf8_lossy(&rejected.stderr).contains("Версия настроек"));
@@ -103,7 +106,7 @@ fn malformed_and_future_files_do_not_block_explicit_manual_override() {
     assert!(cli(profile, &["themes"]).status.success());
     assert_eq!(
         fs::read(profile.join("settings.json")).unwrap(),
-        br#"{"schema_version":2}"#
+        br#"{"schema_version":999}"#
     );
 }
 

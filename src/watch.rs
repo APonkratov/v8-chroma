@@ -4,12 +4,31 @@ use std::collections::BTreeMap;
 
 #[derive(Default)]
 pub struct Controller {
-    attempted: BTreeMap<(u32, u64), String>,
+    attempted: BTreeMap<(u32, u64), (String, bool)>,
     enabled: bool,
 }
 impl Controller {
     pub fn pause(&mut self) {
         self.enabled = false;
+    }
+    /// Explicit Apply commands work even while automatic application is paused.
+    /// Keep other identities' attempts, so a single-process retry doesn't retry them.
+    pub fn manual(&mut self, identities: &[Identity], settings: &Settings) -> Vec<Identity> {
+        if settings.auto_apply {
+            if !self.enabled {
+                self.attempted.clear();
+                self.enabled = true;
+            }
+            for identity in identities {
+                self.attempted.insert(
+                    (identity.pid, identity.created_time),
+                    (settings.selected_theme.clone(), settings.custom_icons),
+                );
+            }
+        } else {
+            self.pause();
+        }
+        identities.to_vec()
     }
     /// An attempt is recorded before dispatch, so a failing remote call isn't retried per tick.
     pub fn plan(&mut self, identities: &[Identity], settings: &Settings) -> Vec<Identity> {
@@ -26,13 +45,14 @@ impl Controller {
             self.attempted.clear();
             self.enabled = true;
         }
+        let appearance = (settings.selected_theme.clone(), settings.custom_icons);
         let mut requests = vec![];
         for identity in identities {
             let key = (identity.pid, identity.created_time);
-            if self.attempted.get(&key) == Some(&settings.selected_theme) {
+            if self.attempted.get(&key) == Some(&appearance) {
                 continue;
             }
-            self.attempted.insert(key, settings.selected_theme.clone());
+            self.attempted.insert(key, appearance.clone());
             requests.push(identity.clone());
         }
         requests
@@ -48,6 +68,38 @@ mod tests {
             created_time: time,
             exe: "C:\\Platform\\1cv8.exe".into(),
         }
+    }
+    #[test]
+    fn explicit_apply_works_with_auto_disabled() {
+        let mut controller = Controller::default();
+        let settings = Settings {
+            auto_apply: false,
+            ..Default::default()
+        };
+        let identities = [id(10, 1), id(20, 1)];
+        assert_eq!(controller.manual(&identities, &settings), identities);
+        assert!(controller.plan(&identities, &settings).is_empty());
+        assert!(!settings.auto_apply);
+    }
+    #[test]
+    fn manual_attempt_is_not_repeated_and_keeps_other_attempts() {
+        let mut controller = Controller::default();
+        let settings = Settings::default();
+        let identities = [id(10, 1), id(20, 1)];
+        controller.plan(&identities, &settings);
+        assert_eq!(
+            controller.manual(&identities[..1], &settings),
+            identities[..1]
+        );
+        assert!(controller.plan(&identities, &settings).is_empty());
+        let new = id(30, 1);
+        assert_eq!(
+            controller.plan(
+                &[identities[0].clone(), identities[1].clone(), new.clone()],
+                &settings
+            ),
+            vec![new]
+        );
     }
     #[test]
     fn first_new_and_reused_processes_without_retries() {
@@ -76,6 +128,18 @@ mod tests {
         settings.window.width = 1200;
         assert!(controller.plan(&identities, &settings).is_empty());
         settings.selected_theme = "monokai".into();
+        assert_eq!(controller.plan(&identities, &settings).len(), 2);
+    }
+    #[test]
+    fn icon_toggle_reapplies_once_without_changing_theme() {
+        let mut controller = Controller::default();
+        let mut settings = Settings::default();
+        let identities = [id(10, 1), id(20, 1)];
+        assert_eq!(controller.plan(&identities, &settings).len(), 2);
+        settings.custom_icons = true;
+        assert_eq!(controller.plan(&identities, &settings).len(), 2);
+        assert!(controller.plan(&identities, &settings).is_empty());
+        settings.custom_icons = false;
         assert_eq!(controller.plan(&identities, &settings).len(), 2);
     }
     #[test]

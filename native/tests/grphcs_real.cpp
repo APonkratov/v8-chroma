@@ -58,6 +58,22 @@ extern "C" __declspec(dllexport) BOOL real_selection_probe(const ProbeConfig* cf
             if (((uint32_t*)bytes(output))[240*py+x]==(0xFF000000|ink)) ++found;
         ok &= found>4 && source(ctx)==original;
     }
+    // The current search hit uses a pale RGBA rectangle with ordinary identifier
+    // ink. It must use the selection fill while RGB UI skin keeps the panel role.
+    cairo_set_source_rgba(ctx,243./255.,238./255.,205./255.,1.);
+    rectangle(ctx,2,150,180,20); cairo_fill(ctx); flush(output);
+    ok &= ((uint32_t*)bytes(output))[240*154+5]==(0xFF000000|(cfg->mode?cfg->colors.selectionBackground:0xF3EECD));
+    cairo_set_source_rgba(ctx,0.,0.,1.,1.);
+    auto hitSource=source(ctx); Glyph* hitGlyphs=nullptr; int hitCount=0;
+    ok &= textGlyphs(getFont(ctx),10,166,"WWWW",4,&hitGlyphs,&hitCount,nullptr,nullptr,nullptr)==0;
+    cairo_show_glyphs(ctx,hitGlyphs,hitCount); freeGlyphs(hitGlyphs); flush(output);
+    DWORD hitInk=cfg->mode?cfg->colors.glyphForeground:0x0000FF;
+    unsigned readableHit=0;
+    for(int y=150;y<170;++y) for(int x=8;x<80;++x)
+        if (((uint32_t*)bytes(output))[240*y+x]==(0xFF000000|hitInk)) ++readableHit;
+    ok &= readableHit>4 && source(ctx)==hitSource;
+    cairo_set_source_rgb(ctx,243./255.,238./255.,205./255.); cairo_paint(ctx); flush(output);
+    ok &= ((uint32_t*)bytes(output))[0]==(0xFF000000|(cfg->mode?cfg->colors.rasterBackground:0xF3EECD));
     // An ordinary RGB UI brush stays foreground-colored, not selection-colored.
     cairo_set_source_rgb(ctx,0.,0.,0.); rectangle(ctx,2,150,80,12); cairo_fill(ctx); flush(output);
     ok &= ((uint32_t*)bytes(output))[240*154+5]==(0xFF000000|(cfg->mode?cfg->colors.glyphForeground:0));
@@ -139,6 +155,15 @@ extern "C" __declspec(dllexport) BOOL chrome_probe(const ProbeConfig* cfg) {
     ok &= ((uint32_t*)bytes(surface))[0]==(0xFF000000|(cfg->mode?cfg->colors.glyphBackground:0xFFFFFF));
     cairo_set_source_rgba(ctx,241./255.,241./255.,241./255.,1.); cairo_paint(ctx); flush(surface);
     ok &= ((uint32_t*)bytes(surface))[0]==(0xFF000000|(cfg->mode?cfg->colors.rasterBackground:0xF1F1F1));
+    // Managed-form tabs/headers use RGB on 8.3.27, not the RGBA logon path.
+    // Assert actual paint output so a profile missing one API variant fails.
+    for (DWORD c:{0xEBEBEBu,0xF2F2F2u,0xB3B3B3u}) for (unsigned alpha=0;alpha<2;++alpha) {
+        double r=((c>>16)&255)/255.,g=((c>>8)&255)/255.,b=(c&255)/255.;
+        if (alpha) cairo_set_source_rgba(ctx,r,g,b,1.); else cairo_set_source_rgb(ctx,r,g,b);
+        cairo_paint(ctx); flush(surface);
+        DWORD themed=c==0xB3B3B3?cfg->colors.border:cfg->colors.rasterBackground;
+        ok &= ((uint32_t*)bytes(surface))[0]==(0xFF000000|(cfg->mode?themed:c));
+    }
     // Modern logon uses solid enabled/disabled yellow, independently of the old gradients.
     const DWORD logon[]={0xFFDD00,0x403700,0xFFFCE5,0xCFB300,0x4D4D54,0x404040,0xF2F2F2};
     DWORD disabled=0;
@@ -180,7 +205,7 @@ extern "C" __declspec(dllexport) BOOL chrome_probe(const ProbeConfig* cfg) {
         DWORD actual=((DWORD)(r*255+.5)<<16)|((DWORD)(g*255+.5)<<8)|(DWORD)(b*255+.5);
         ok &= actual==(cfg->mode?(i<4?cfg->colors.rasterBackground:cfg->colors.border):c);
     }
-    printf("%s chrome: %s; RGBA caption, cached caption ink, logon states, tab gradients\n",cfg->themeId,ok?"PASS":"FAIL");
+    printf("%s chrome: %s; form headers/tabs, RGBA caption, cached caption ink, logon states, tab gradients\n",cfg->themeId,ok?"PASS":"FAIL");
     destroyPattern(gradient); destroyContext(ctx); destroySurface(surface);
     return ok;
 }

@@ -78,12 +78,14 @@ pub struct Config {
     pub target_dir: [u16; 260],
     pub log_path: [u16; 520],
     pub maps: [ColorMap; 256],
+    pub icon_mode: u32,
+    pub icon_pack: u32,
 }
-const _: () = assert!(std::mem::size_of::<Config>() == 4752);
+const _: () = assert!(std::mem::size_of::<Config>() == 4760);
 
 impl Config {
     pub fn bytes(&self) -> &[u8] {
-        // repr(C), fixed-width integer fields, and a verified padding-free v2 layout.
+        // repr(C), fixed-width integer fields, and a verified padding-free v3 layout.
         unsafe { std::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>()) }
     }
 }
@@ -190,8 +192,8 @@ fn wide<const N: usize>(path: &Path) -> Result<[u16; N]> {
 
 pub fn config(id: &str, target: &Path, log: &Path) -> Result<Config> {
     let mut cfg = Config {
-        size: 4752,
-        version: 2,
+        size: 4760,
+        version: 3,
         mode: 0,
         map_count: 0,
         theme_id: [0; 64],
@@ -199,10 +201,12 @@ pub fn config(id: &str, target: &Path, log: &Path) -> Result<Config> {
         target_dir: wide(target)?,
         log_path: wide(log)?,
         maps: [ColorMap::default(); 256],
+        icon_mode: 0,
+        icon_pack: 0,
     };
     ensure!(id.len() < 64, "Слишком длинный идентификатор темы");
     cfg.theme_id[..id.len()].copy_from_slice(id.as_bytes());
-    if id == "diagnostic" {
+    if id == "diagnostic" || id == "standard" {
         return Ok(cfg);
     }
     let doc: Document = serde_json::from_str(source(id)?)?;
@@ -247,6 +251,12 @@ pub fn config(id: &str, target: &Path, log: &Path) -> Result<Config> {
     for (role, color) in comparison_backgrounds(colors["editor.background"], colors["text"]) {
         colors.insert(role, color);
     }
+    let link = readable_link(
+        colors["accent"],
+        colors["text"],
+        [colors["editor.background"], colors["panel"]],
+    );
+    colors.insert("link", link);
     ensure!(
         cfg.colors[0] != cfg.colors[2] || cfg.colors[1] == cfg.colors[3],
         "Неоднозначные цвета глифов"
@@ -302,6 +312,25 @@ pub fn config(id: &str, target: &Path, log: &Path) -> Result<Config> {
     Ok(cfg)
 }
 
+/// Complete appearance request; diagnostic mode never transforms images.
+pub fn config_with_icons(
+    id: &str,
+    target: &Path,
+    log: &Path,
+    custom_icons: bool,
+) -> Result<Config> {
+    let mut cfg = config(id, target, log)?;
+    if custom_icons && id != "diagnostic" {
+        cfg.icon_mode = if id == "standard" || cfg.colors[9] == 0 {
+            1
+        } else {
+            2
+        };
+        cfg.icon_pack = 1;
+    }
+    Ok(cfg)
+}
+
 fn luminance(rgb: u32) -> f64 {
     let linear = |shift: u32| {
         let value = f64::from((rgb >> shift) & 255) / 255.0;
@@ -317,6 +346,22 @@ fn luminance(rgb: u32) -> f64 {
 fn contrast(left: u32, right: u32) -> f64 {
     let (left, right) = (luminance(left), luminance(right));
     (left.max(right) + 0.05) / (left.min(right) + 0.05)
+}
+
+// Retain the theme's accent where readable; otherwise move toward its text ink.
+fn readable_link(accent: u32, text: u32, backgrounds: [u32; 2]) -> u32 {
+    (0..=100)
+        .map(|amount| {
+            [16, 8, 0].into_iter().fold(0, |rgb, shift| {
+                rgb | (((((accent >> shift) & 255) * (100 - amount)
+                    + ((text >> shift) & 255) * amount
+                    + 50)
+                    / 100)
+                    << shift)
+            })
+        })
+        .find(|color| backgrounds.iter().all(|bg| contrast(*color, *bg) >= 4.5))
+        .unwrap_or(text)
 }
 
 // Derived profile roles keep the existing public EDT JSON schema unchanged.
@@ -347,6 +392,61 @@ fn comparison_backgrounds(background: u32, text: u32) -> [(&'static str, u32); 3
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn current_search_hit_uses_readable_selection_without_changing_rgb_ui_skin() {
+        for theme in catalog().unwrap() {
+            let cfg = config(&theme.id, Path::new("x"), Path::new("y")).unwrap();
+            let color = |role: &str| u32::from_str_radix(&theme.colors[role][1..], 16).unwrap();
+            let target = |kind| {
+                cfg.maps[..cfg.map_count as usize]
+                    .iter()
+                    .find(|m| m.kind == kind && m.source == 0xF3EECD)
+                    .unwrap()
+                    .target
+            };
+            assert_eq!(target(6), color("selection.background"), "{}", theme.id);
+            assert!(
+                contrast(target(6), color("selection.text")) >= 4.5,
+                "{}",
+                theme.id
+            );
+            // Search also paints ordinary identifier ink, not only inverse glyphs.
+            assert!(contrast(target(6), color("text")) >= 4.5, "{}", theme.id);
+            assert_eq!(target(5), color("panel"), "{}", theme.id);
+        }
+    }
+    #[test]
+    fn managed_form_chrome_and_links_are_readable_in_every_theme() {
+        for theme in catalog().unwrap() {
+            let cfg = config(&theme.id, Path::new("x"), Path::new("y")).unwrap();
+            let color = |role: &str| u32::from_str_radix(&theme.colors[role][1..], 16).unwrap();
+            for kind in [5, 6] {
+                let target = |source| {
+                    cfg.maps[..cfg.map_count as usize]
+                        .iter()
+                        .find(|m| m.kind == kind && m.source == source)
+                        .unwrap()
+                        .target
+                };
+                for source in [0xEBEBEB, 0xF2F2F2] {
+                    assert_eq!(target(source), color("panel"), "{}", theme.id);
+                    assert!(
+                        contrast(target(source), color("text")) >= 4.5,
+                        "{}",
+                        theme.id
+                    );
+                }
+                assert_eq!(target(0xB3B3B3), color("border"));
+                for background in [color("panel"), color("editor.background")] {
+                    assert!(
+                        contrast(target(0x1C55AE), background) >= 4.5,
+                        "{}",
+                        theme.id
+                    );
+                }
+            }
+        }
+    }
     #[test]
     fn preview_catalog_matches_native_palettes() {
         let catalog = catalog().unwrap();
@@ -391,8 +491,8 @@ mod tests {
                 Path::new(r"C:\Logs\colors.csv"),
             )
             .unwrap();
-            assert_eq!(cfg.bytes().len(), 4752);
-            assert_eq!(cfg.map_count, if *id == "diagnostic" { 0 } else { 193 });
+            assert_eq!(cfg.bytes().len(), 4760);
+            assert_eq!(cfg.map_count, if *id == "diagnostic" { 0 } else { 201 });
         }
     }
     #[test]
@@ -442,6 +542,30 @@ mod tests {
     fn rejects_unknown_and_long_paths() {
         assert!(config("../dracula", Path::new("x"), Path::new("y")).is_err());
         assert!(config("dracula", Path::new(&"x".repeat(260)), Path::new("y")).is_err());
+    }
+    #[test]
+    fn icon_modes_match_independent_goldens() {
+        for (id, enabled, fixture) in [
+            ("dracula", true, "icons-dark"),
+            ("github-light-default", true, "icons-light"),
+            ("standard", true, "icons-standard"),
+            ("diagnostic", true, "diagnostic"),
+        ] {
+            let cfg = config_with_icons(
+                id,
+                Path::new(r"C:\Platform"),
+                Path::new(r"C:\Logs\colors.csv"),
+                enabled,
+            )
+            .unwrap();
+            let expected = std::fs::read(
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/golden")
+                    .join(format!("{fixture}.bin")),
+            )
+            .unwrap();
+            assert_eq!(cfg.bytes(), expected);
+        }
     }
     #[test]
     fn binary_protocol_matches_independent_python_fixtures() {

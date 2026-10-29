@@ -11,7 +11,7 @@ use std::{
 };
 use v8_chroma_core::{
     manager,
-    settings::{Loaded, SettingsPatch, Store, WindowPatch},
+    settings::{Loaded, Settings, SettingsPatch, Store, WindowPatch},
     watch::Controller,
     win::Identity,
 };
@@ -27,6 +27,8 @@ pub struct ProcessRow {
     pub status: String,
     pub theme: Option<String>,
     pub detail: Option<String>,
+    pub icons: Option<String>,
+    pub icon_warning: Option<String>,
 }
 #[derive(Clone, Serialize)]
 pub struct Snapshot {
@@ -39,7 +41,7 @@ pub struct Snapshot {
 }
 enum Request {
     Wake,
-    Apply(Vec<Identity>, String),
+    Apply(Vec<Identity>, Settings),
     Geometry(WindowPatch),
     Quit,
 }
@@ -101,12 +103,17 @@ impl Service {
                                     geometry =
                                         Some((Instant::now(), merge_geometry(previous, patch)));
                                 }
-                                Request::Apply(targets, theme) => {
-                                    for identity in targets {
+                                Request::Apply(targets, settings) => {
+                                    for identity in controller.manual(&targets, &settings) {
                                         if background.shared.stop.load(Ordering::Acquire) {
                                             break;
                                         }
-                                        background.apply(&identity, &theme, &mut results);
+                                        background.apply(
+                                            &identity,
+                                            &settings.selected_theme,
+                                            settings.custom_icons,
+                                            &mut results,
+                                        );
                                     }
                                     background.shared.busy.store(false, Ordering::Release);
                                     last_scan = Instant::now() - Duration::from_secs(3);
@@ -184,6 +191,8 @@ impl Service {
                                             "unsupported".into()
                                         },
                                         theme: None,
+                                        icons: None,
+                                        icon_warning: None,
                                         detail: if candidate.eligible {
                                             None
                                         } else {
@@ -197,6 +206,8 @@ impl Service {
                                     match manager::last_applied(identity) {
                                         Ok(Some(applied)) => {
                                             row.theme = Some(applied.theme);
+                                            row.icons = Some(applied.icons);
+                                            row.icon_warning = applied.icon_warning;
                                             row.status = "applied".into();
                                         }
                                         Err(error) => {
@@ -226,6 +237,7 @@ impl Service {
                                     background.apply(
                                         &identity,
                                         &settings.selected_theme,
+                                        settings.custom_icons,
                                         &mut results,
                                     );
                                 }
@@ -281,6 +293,21 @@ impl Service {
         });
         let _ = self.tx.send(Request::Wake);
         Ok(loaded)
+    }
+    pub fn set_appearance(&self, patch: SettingsPatch) -> Result<Loaded> {
+        ensure!(
+            patch.auto_apply.is_none()
+                && patch.window.is_none()
+                && (patch.selected_theme.is_some() || patch.custom_icons.is_some()),
+            "Укажите тему или настройку значков"
+        );
+        ensure!(
+            !self.shared.busy.load(Ordering::Acquire),
+            "Дождитесь завершения текущего применения"
+        );
+        // The watcher applies saved choices according to auto_apply. Only the
+        // explicit Apply command is allowed to bypass that policy.
+        self.save(patch)
     }
     pub fn reset(&self) -> Result<Loaded> {
         let loaded = self.store.reset()?;
@@ -340,7 +367,7 @@ impl Service {
         );
         if self
             .tx
-            .send(Request::Apply(targets, loaded.settings.selected_theme))
+            .send(Request::Apply(targets, loaded.settings))
             .is_err()
         {
             self.shared.busy.store(false, Ordering::Release);
@@ -367,6 +394,7 @@ impl Service {
         &self,
         identity: &Identity,
         theme: &str,
+        custom_icons: bool,
         results: &mut BTreeMap<(u32, u64), ProcessRow>,
     ) {
         self.edit(|s| {
@@ -381,7 +409,7 @@ impl Service {
                 row.detail = None;
             }
         });
-        let result = manager::attach_to(identity, theme);
+        let result = manager::attach_to_with_icons(identity, theme, custom_icons);
         let row = ProcessRow {
             pid: identity.pid,
             created_time: Some(identity.created_time.to_string()),
@@ -395,6 +423,8 @@ impl Service {
                 "error".into()
             },
             theme: result.as_ref().ok().map(|r| r.theme.clone()),
+            icons: result.as_ref().ok().map(|r| r.icons.clone()),
+            icon_warning: result.as_ref().ok().and_then(|r| r.icon_warning.clone()),
             detail: result.err().map(|e| format!("{e:#}")),
         };
         results.insert((identity.pid, identity.created_time), row.clone());
@@ -424,6 +454,189 @@ fn merge_geometry(previous: WindowPatch, next: WindowPatch) -> WindowPatch {
 #[cfg(test)]
 mod tests {
     use super::*;
+    // No worker is started: tests can inspect dispatch without touching live 1C.
+    fn idle_service() -> (tempfile::TempDir, Service, mpsc::Receiver<Request>) {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Store::at(temp.path()).unwrap();
+        let loaded = store
+            .update(SettingsPatch {
+                auto_apply: Some(false),
+                ..Default::default()
+            })
+            .unwrap();
+        let (tx, rx) = mpsc::channel();
+        let service = Service {
+            store,
+            tx,
+            shared: Arc::new(Shared {
+                snapshot: Mutex::new(Snapshot {
+                    settings: Some(loaded),
+                    processes: vec![],
+                    error: None,
+                    busy: false,
+                    stopping: false,
+                    version: "test",
+                }),
+                busy: AtomicBool::new(false),
+                stop: AtomicBool::new(false),
+                finished: AtomicBool::new(false),
+            }),
+        };
+        (temp, service, rx)
+    }
+    #[test]
+    fn appearance_changes_with_auto_off_only_save_and_refresh_preview() {
+        let (_temp, service, rx) = idle_service();
+        let identities = [Identity {
+            pid: 123,
+            created_time: 456,
+            exe: "C:/Platform/1cv8.exe".into(),
+        }];
+        let mut controller = Controller::default();
+        for patch in [
+            SettingsPatch {
+                selected_theme: Some("monokai".into()),
+                ..Default::default()
+            },
+            SettingsPatch {
+                custom_icons: Some(true),
+                ..Default::default()
+            },
+        ] {
+            let loaded = service.set_appearance(patch).unwrap();
+            assert!(!loaded.settings.auto_apply);
+            assert_eq!(
+                service.snapshot().settings.unwrap().settings,
+                loaded.settings
+            );
+            assert_eq!(service.store.load().unwrap().settings, loaded.settings);
+            assert!(!service.snapshot().busy);
+            assert!(matches!(rx.try_recv().unwrap(), Request::Wake));
+            assert!(rx.try_recv().is_err());
+            assert!(controller.plan(&identities, &loaded.settings).is_empty());
+        }
+        let settings = service.store.load().unwrap().settings;
+        assert_eq!(settings.selected_theme, "monokai");
+        assert!(settings.custom_icons);
+        // Enabling automatic application uses the latest saved appearance once.
+        let loaded = service
+            .save(SettingsPatch {
+                auto_apply: Some(true),
+                ..Default::default()
+            })
+            .unwrap();
+        assert!(matches!(rx.try_recv().unwrap(), Request::Wake));
+        assert_eq!(controller.plan(&identities, &loaded.settings), identities);
+        assert!(controller.plan(&identities, &loaded.settings).is_empty());
+    }
+    #[test]
+    fn appearance_changes_with_auto_on_apply_once_through_watcher() {
+        let (_temp, service, rx) = idle_service();
+        service
+            .save(SettingsPatch {
+                auto_apply: Some(true),
+                ..Default::default()
+            })
+            .unwrap();
+        assert!(matches!(rx.try_recv().unwrap(), Request::Wake));
+        let identities = [Identity {
+            pid: 123,
+            created_time: 456,
+            exe: "C:/Platform/1cv8.exe".into(),
+        }];
+        let mut controller = Controller::default();
+        controller.plan(&identities, &service.store.load().unwrap().settings);
+        for patch in [
+            SettingsPatch {
+                selected_theme: Some("monokai".into()),
+                ..Default::default()
+            },
+            SettingsPatch {
+                custom_icons: Some(true),
+                ..Default::default()
+            },
+        ] {
+            let loaded = service.set_appearance(patch).unwrap();
+            assert!(matches!(rx.try_recv().unwrap(), Request::Wake));
+            assert!(rx.try_recv().is_err());
+            assert!(loaded.settings.auto_apply);
+            assert_eq!(controller.plan(&identities, &loaded.settings), identities);
+            assert!(controller.plan(&identities, &loaded.settings).is_empty());
+        }
+    }
+    #[test]
+    fn rejected_appearance_changes_do_not_save_or_dispatch() {
+        let (_temp, service, rx) = idle_service();
+        let before = std::fs::read(service.store.path()).unwrap();
+        assert!(
+            service
+                .set_appearance(SettingsPatch {
+                    auto_apply: Some(true),
+                    ..Default::default()
+                })
+                .is_err()
+        );
+        service.shared.busy.store(true, Ordering::Release);
+        assert!(
+            service
+                .set_appearance(SettingsPatch {
+                    custom_icons: Some(true),
+                    ..Default::default()
+                })
+                .is_err()
+        );
+        service.shared.busy.store(false, Ordering::Release);
+        assert!(
+            service
+                .set_appearance(SettingsPatch {
+                    selected_theme: Some("unknown".into()),
+                    ..Default::default()
+                })
+                .is_err()
+        );
+        assert!(!service.snapshot().busy);
+        service.shared.stop.store(true, Ordering::Release);
+        assert!(
+            service
+                .set_appearance(SettingsPatch {
+                    custom_icons: Some(true),
+                    ..Default::default()
+                })
+                .is_err()
+        );
+        assert!(!service.snapshot().busy);
+        assert_eq!(std::fs::read(service.store.path()).unwrap(), before);
+        assert!(rx.try_recv().is_err());
+    }
+    #[test]
+    fn explicit_apply_still_queues_with_auto_off() {
+        let (_temp, service, rx) = idle_service();
+        service.edit(|s| {
+            s.processes = vec![ProcessRow {
+                pid: 123,
+                created_time: Some("456".into()),
+                title: "Конфигуратор".into(),
+                exe: Some("C:/Platform/1cv8.exe".into()),
+                command_line: None,
+                eligible: true,
+                status: "idle".into(),
+                theme: None,
+                detail: None,
+                icons: None,
+                icon_warning: None,
+            }];
+        });
+        service.request_apply(Some((123, 456))).unwrap();
+        let Request::Apply(targets, settings) = rx.try_recv().unwrap() else {
+            panic!("Expected explicit manual apply");
+        };
+        assert!(!settings.auto_apply);
+        assert_eq!(targets.len(), 1);
+        assert_eq!(targets[0].pid, 123);
+        assert_eq!(targets[0].created_time, 456);
+        assert!(service.snapshot().busy);
+        assert!(rx.try_recv().is_err());
+    }
     #[test]
     fn javascript_identity_uses_lossless_decimal_string() {
         let time = 134376008137951638u64;
@@ -438,6 +651,8 @@ mod tests {
             eligible: true,
             status: "idle".into(),
             theme: None,
+            icons: None,
+            icon_warning: None,
             detail: None,
         };
         let json = serde_json::to_value(row).unwrap();

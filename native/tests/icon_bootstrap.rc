@@ -1,0 +1,8 @@
+#include <windows.h>
+// Exercise the supported icon-profile gate in the production bootstrap.
+1 VERSIONINFO
+FILEVERSION 8,3,27,2325
+PRODUCTVERSION 8,3,27,2325
+FILETYPE VFT_APP
+BEGIN
+END
