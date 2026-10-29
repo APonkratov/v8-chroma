@@ -1,5 +1,9 @@
 #include "editor_selection.h"
+#include "contrast.h"
 #include <math.h>
+#include <cmath>
+#include <memory>
+#include <new>
 #include <stdint.h>
 #include <string.h>
 
@@ -20,6 +24,12 @@ namespace {
     void*(*createRgba)(double,double,double,double); void(*setSource)(void*,void*); void(*destroyPattern)(void*);
     static int originalColorKey;
     bool supported;
+    bool comparisonSupported;
+    Unary win32Image;
+    int(*imageWidth)(void*),(*imageHeight)(void*),(*imageStride)(void*),(*imageFormat)(void*);
+    unsigned char*(*imageData)(void*);
+    void(*flushSurface)(void*),(*userToDevice)(void*,double*,double*);
+    void(*deviceOffset)(void*,double*,double*),(*deviceScale)(void*,double*,double*);
     volatile LONG64 fills,glyphs;
     template<class T> bool load(HMODULE m,const char* name,T &fn) {
         auto proc=GetProcAddress(m,name); static_assert(sizeof(proc)==sizeof(fn));
@@ -80,6 +90,19 @@ bool initializeEditorSelection(HMODULE m) {
     LOAD(referenceCount,"cairo_pattern_get_reference_count"); LOAD(patternStatus,"cairo_pattern_status");
     LOAD(createRgba,"cairo_pattern_create_rgba"); LOAD(setSource,"cairo_set_source"); LOAD(destroyPattern,"cairo_pattern_destroy");
 #undef LOAD
+    comparisonSupported=supported;
+#define LOAD_COMPARISON(fn,name) comparisonSupported &= load(m,name,fn)
+    LOAD_COMPARISON(win32Image,"cairo_win32_surface_get_image");
+    LOAD_COMPARISON(imageWidth,"cairo_image_surface_get_width");
+    LOAD_COMPARISON(imageHeight,"cairo_image_surface_get_height");
+    LOAD_COMPARISON(imageStride,"cairo_image_surface_get_stride");
+    LOAD_COMPARISON(imageFormat,"cairo_image_surface_get_format");
+    LOAD_COMPARISON(imageData,"cairo_image_surface_get_data");
+    LOAD_COMPARISON(flushSurface,"cairo_surface_flush");
+    LOAD_COMPARISON(userToDevice,"cairo_user_to_device");
+    LOAD_COMPARISON(deviceOffset,"cairo_surface_get_device_offset");
+    LOAD_COMPARISON(deviceScale,"cairo_surface_get_device_scale");
+#undef LOAD_COMPARISON
     return supported;
 }
 bool editorSelectionSupported() { return supported; }
@@ -144,6 +167,72 @@ bool editorSelectionGlyph(void* context) {
     bool inverted=rgb==0xFFFFFF || rgb==0x00FFFF || rgb==0xFFFF00 || rgb==0xFF7FFF || rgb==0x69CDFF;
     if (!inverted || !screen(context) || !monospace(context)) return false;
     InterlockedIncrement64(&glyphs); return true;
+}
+bool drawComparisonGlyphs(void* context,const void* glyphs,int count,DWORD background,DWORD fallback,
+                          void(__cdecl* draw)(void*,const void*,int)) {
+    DWORD lastError=GetLastError();
+    if (!comparisonSupported || !glyphs || count<=0 || background>0xFFFFFF) return false;
+    double r,g,b,a;
+    if (getRgba(source(context),&r,&g,&b,&a) || a!=1.) return false;
+    auto channel=[](double v)->DWORD { return (DWORD)(fmax(0.,fmin(1.,v))*255.+.5); };
+    DWORD current=(channel(r)<<16)|(channel(g)<<8)|channel(b);
+    if (current==fallback) return false;
+    if (ChromaContrast::ratio(current,background)>=4.5 || !screen(context) || !monospace(context)) return false;
+    void* destination=target(context);
+    void* image=surfaceType(destination)==7?win32Image(destination):destination;
+    if (!image || surfaceType(image)!=0) return false;
+    int format=imageFormat(image),width=imageWidth(image),height=imageHeight(image),stride=imageStride(image);
+    if ((format!=0 && format!=1) || width<=0 || height<=0 || stride<=0 ||
+        static_cast<size_t>(stride)<static_cast<size_t>(width)*4) return false;
+    // Check the painted fill per glyph; a batch can cross changed/unchanged
+    // blocks. Never sample a printer/PDF/group or measure a WebKit USER font.
+    flushSurface(destination);
+    auto bytes=imageData(image); if (!bytes) return false;
+    double offsetX,offsetY,scaleX,scaleY;
+    deviceOffset(destination,&offsetX,&offsetY); deviceScale(destination,&scaleX,&scaleY);
+    struct Glyph { unsigned long index; double x,y; };
+    const auto values=static_cast<const Glyph*>(glyphs);
+    auto changed=[&](int index) {
+        double x=values[index].x,y=values[index].y+1.;
+        userToDevice(context,&x,&y);
+        x=x*scaleX+offsetX; y=y*scaleY+offsetY;
+        if (!std::isfinite(x) || !std::isfinite(y) || x<0 || y<0 || x>=width || y>=height) return false;
+        uint32_t pixel; memcpy(&pixel,bytes+static_cast<size_t>(y)*stride+static_cast<size_t>(x)*4,sizeof(pixel));
+        return (pixel&0xFFFFFF)==background && (format==1 || (pixel>>24)==255);
+    };
+    // Snapshot before any glyph is drawn: a prefix's descender/underscore can
+    // overwrite a later probe. Keep common runs on the stack; allocation failure
+    // for an unusually long run falls back to the original Cairo drawing path.
+    unsigned char localFlags[256];
+    std::unique_ptr<unsigned char[]> heapFlags;
+    auto flags=localFlags;
+    if (count>256) {
+        heapFlags.reset(new(std::nothrow) unsigned char[static_cast<size_t>(count)]);
+        if (!heapFlags) return false;
+        flags=heapFlags.get();
+    }
+    int first=count;
+    for (int i=0;i<count;++i) {
+        flags[i]=changed(i)?1:0;
+        if (flags[i] && first==count) first=i;
+    }
+    if (first==count) return false;
+    DWORD ink=ChromaContrast::readableInk(current,background,fallback);
+    if (ink==current) return false;
+    // Draw adjacent glyphs with the same background together, preserving their
+    // absolute positions and the source pattern/last-error state of the caller.
+    if (first) { SetLastError(lastError); draw(context,values,first); lastError=GetLastError(); }
+    save(context);
+    for (int begin=first;begin<count;) {
+        bool corrected=flags[begin]!=0; int end=begin+1;
+        while (end<count && (flags[end]!=0)==corrected) ++end;
+        if (corrected) rgba(context,((ink>>16)&255)/255.,((ink>>8)&255)/255.,(ink&255)/255.,a);
+        else rgba(context,r,g,b,a);
+        SetLastError(lastError); draw(context,values+begin,end-begin); lastError=GetLastError();
+        begin=end;
+    }
+    restore(context); heapFlags.reset(); SetLastError(lastError);
+    return true;
 }
 unsigned long long editorSelectionFills() { return InterlockedCompareExchange64(&fills,0,0); }
 unsigned long long editorSelectionGlyphs() { return InterlockedCompareExchange64(&glyphs,0,0); }

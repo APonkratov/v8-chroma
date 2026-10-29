@@ -18,15 +18,18 @@ struct ThemeRead {
 };
 static DWORD generation=1;
 static DWORD paleCaptionInk=0xFFFFFFFF;
-static void refreshCaptionInk() {
-    paleCaptionInk=0xFFFFFFFF;
+static DWORD comparisonBackground=0xFFFFFFFF;
+static void refreshGlyphColors() {
+    paleCaptionInk=0xFFFFFFFF; comparisonBackground=0xFFFFFFFF;
     // In this platform profile FFFAD9 is shared by hover fills and the disabled
     // Apply caption. Only pale palettes need the caption corrected to text ink.
-    for (DWORD i=0;i<cfg.mapCount;++i) if (cfg.maps[i].kind==CairoRgb && cfg.maps[i].source==0xFFFAD9) {
+    for (DWORD i=0;i<cfg.mapCount;++i) {
+        if (cfg.maps[i].kind!=CairoRgb) continue;
+        if (cfg.maps[i].source==0xF5F5F5) comparisonBackground=cfg.maps[i].target;
+        if (cfg.maps[i].source!=0xFFFAD9) continue;
         DWORD color=cfg.maps[i].target;
         unsigned light=(((color>>16)&255)*54+((color>>8)&255)*183+(color&255)*19)/256;
         if (light>=160) paleCaptionInk=color;
-        break;
     }
 }
 static volatile LONG active, started, stopping;
@@ -208,6 +211,10 @@ static void __cdecl hookedGlyphs(void* context,const void* glyphs,int count) {
             current==cfg.colors.selectionBackground || current==paleCaptionInk;
         if (current==cfg.colors.selectionBackground) foreground=cfg.colors.selectionForeground;
         if (editorSelectionGlyph(context)) { change=true; foreground=cfg.colors.selectionForeground; }
+        if (!change) {
+            SetLastError(last);
+            if (drawComparisonGlyphs(context,glyphs,count,comparisonBackground,cfg.colors.glyphForeground,realGlyphs)) return;
+        }
     }
     if (change) {
         if (saveContext && restoreContext) saveContext(context);
@@ -420,7 +427,7 @@ extern "C" __declspec(dllexport) DWORD WINAPI ThemeApply(void* argument) {
     if (!result) {
         cfg=*incoming; ++generation;
         activateIconTheme(prepared); prepared=nullptr;
-        refreshCaptionInk();
+        refreshGlyphColors();
         AcquireSRWLockExclusive(&tableLock); memset(rows,0,sizeof(rows)); dropped=0; ReleaseSRWLockExclusive(&tableLock);
         setRasterThemeColors(cfg.colors.rasterBackground,cfg.colors.rasterForeground,cfg.colors.border);
     }
@@ -436,7 +443,7 @@ extern "C" __declspec(dllexport) DWORD WINAPI ThemeInitialize(void* argument) {
     const auto incoming=(const ProbeConfig*)argument;
     if (InterlockedCompareExchange(&started,1,0)) return ERROR_ALREADY_INITIALIZED;
     cfg=*incoming;
-    refreshCaptionInk();
+    refreshGlyphColors();
     const auto &c=cfg.colors;
     if (ThemeSnapshot(nullptr)) return ERROR_OPEN_FAILED;
     HMODULE pin;

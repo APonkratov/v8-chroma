@@ -14,9 +14,10 @@ int wmain(int argc,wchar_t** argv) {
     auto stop=load<DWORD(WINAPI*)(void*)>(probe,"ThemeStop");
     auto render=load<BOOL(*)(const ProbeConfig*)>(graphics,"real_selection_probe");
     auto renderChrome=load<BOOL(*)(const ProbeConfig*)>(graphics,"chrome_probe");
+    auto renderComparison=load<BOOL(*)(const ProbeConfig*)>(graphics,"comparison_probe");
     auto renderBrowser=load<BOOL(*)(const ProbeConfig*)>(browser,"browser_probe");
     auto systemColor=load<DWORD(*)(int)>(frame,"system_color_probe");
-    bool ok=initialize && apply && stop && render && renderBrowser && systemColor && renderChrome;
+    bool ok=initialize && apply && stop && render && renderBrowser && systemColor && renderChrome && renderComparison;
     for (int i=3;ok && i<argc;++i) {
         ProbeConfig cfg={}; FILE* file=_wfopen(argv[i],L"rb");
         if (!file) return 4;
@@ -27,6 +28,7 @@ int wmain(int argc,wchar_t** argv) {
         ok=render(&cfg)!=0;
         ok &= renderBrowser(&cfg)!=0;
         ok &= renderChrome(&cfg)!=0;
+        ok &= renderComparison(&cfg)!=0;
         auto nativeRgb=[](int index)->DWORD { COLORREF c=GetSysColor(index); return (GetRValue(c)<<16)|(GetGValue(c)<<8)|GetBValue(c); };
         ok &= systemColor(COLOR_ACTIVECAPTION)==(cfg.mode?cfg.colors.captionBackground:nativeRgb(COLOR_ACTIVECAPTION));
         ok &= systemColor(COLOR_CAPTIONTEXT)==(cfg.mode?cfg.colors.captionText:nativeRgb(COLOR_CAPTIONTEXT));

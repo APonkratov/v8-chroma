@@ -77,6 +77,11 @@ int wmain(int argc,wchar_t** argv) {
     void* face=userFace(); setUnicode(face,userUnicode); setRender(face,userRender); setFace(ctx,face);
     rgba(ctx,1.,1.,1.,1.); rememberEditorSource(ctx,0xFFFFFF);
     bool browserExcluded=!editorSelectionGlyph(ctx) && userConversions==0;
+    // Contrast correction must also reject USER fonts before querying metrics.
+    rgba(ctx,98./255.,114./255.,164./255.,1.);
+    struct Glyph { unsigned long index; double x,y; } glyph={42,12,25};
+    browserExcluded &= !drawComparisonGlyphs(ctx,&glyph,1,0x1E4E5A,0xF8F8F2,
+        [](void*,const void*,int) { ++userConversions; }) && userConversions==0;
     printf("Browser font exclusion: %s; Unicode callbacks=%u\n",browserExcluded?"PASS":"FAIL",userConversions);
     ok &= browserExcluded;
     destroyFace(face);

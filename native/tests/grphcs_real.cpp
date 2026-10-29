@@ -104,15 +104,15 @@ extern "C" __declspec(dllexport) BOOL real_selection_probe(const ProbeConfig* cf
     ok &= whiteInk>4 && source(ctx)==whiteSource;
     // Compare/merge cells: both drawing APIs and their legend swatches use the
     // exact profile targets, while diagnostic leaves native pastel colors intact.
-    const DWORD compareColors[]={0xE0FFFF,0xFFE4C4,0xC0DCC0,0xBFF7B8,0xDCDCDC,0x0000A0};
-    for (unsigned i=0;i<6;++i) for (DWORD kind:{DWORD(CairoRgb),DWORD(CairoRgba)}) {
+    const DWORD compareColors[]={0xE0FFFF,0xFFE4C4,0xC0DCC0,0xBFF7B8,0xDCDCDC,0x0000A0,0xF5F5F5};
+    for (unsigned i=0;i<7;++i) for (DWORD kind:{DWORD(CairoRgb),DWORD(CairoRgba)}) {
         DWORD native=compareColors[i],expected=native;
         if(cfg->mode) for(DWORD j=0;j<cfg->mapCount;++j)
             if(cfg->maps[j].kind==kind && cfg->maps[j].source==native) expected=cfg->maps[j].target;
         double r=((native>>16)&255)/255.,g=((native>>8)&255)/255.,b=(native&255)/255.;
         if(kind==CairoRgb) cairo_set_source_rgb(ctx,r,g,b); else cairo_set_source_rgba(ctx,r,g,b,1.);
-        void* before=source(ctx); rectangle(ctx,180+i*9,130,7,7); cairo_fill(ctx); flush(output);
-        ok &= ((uint32_t*)bytes(output))[240*133+182+i*9]==(0xFF000000|expected) && source(ctx)==before;
+        void* before=source(ctx); rectangle(ctx,174+i*9,130,7,7); cairo_fill(ctx); flush(output);
+        ok &= ((uint32_t*)bytes(output))[240*133+176+i*9]==(0xFF000000|expected) && source(ctx)==before;
     }
     if (cfg->mode) {
         // Reproduce a cached opaque hot skin, including text-like pixels inside.
