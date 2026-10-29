@@ -1,2 +1,3 @@
 cmake==4.4.4
 ninja==1.13.2
+-r requirements-branding.txt
