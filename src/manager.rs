@@ -238,7 +238,7 @@ fn icon_result(snapshot: &EngineSnapshot, requested: bool) -> (String, Option<St
         (
             "unavailable".into(),
             Some(format!(
-                "Тема применена; новые значки недоступны для этой платформы (Win32={}). Используются штатные значки.",
+                "Тема применена; не удалось включить новые значки (Win32={}). Используются штатные значки.",
                 snapshot.icon_status
             )),
         )

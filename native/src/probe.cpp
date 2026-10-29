@@ -3,7 +3,6 @@
 #include "raster_theme.h"
 #include "editor_selection.h"
 #include "icon_theme.h"
-#include <vector>
 #include <stdio.h>
 #include <math.h>
 #include <wchar.h>
@@ -40,26 +39,12 @@ static Row rows[capacity];
 static unsigned long long dropped;
 static unsigned patchCount;
 static unsigned browserPatchCount, iconPatchCount;
-static DWORD iconStatus=ERROR_NOT_SUPPORTED;
+static DWORD iconStatus=ERROR_PROC_NOT_FOUND;
 static void (__cdecl *realIconSource)(void*,void*),(*realIconMask)(void*,void*);
 static void (__cdecl *realIconMaskSurface)(void*,void*,double,double);
 static void __cdecl hookedIconSource(void* c,void* p) { ThemeRead guard; drawIconSource(c,p,realIconSource); }
 static void __cdecl hookedIconMask(void* c,void* p) { ThemeRead guard; drawIconMask(c,p,realIconMask); }
 static void __cdecl hookedIconMaskSurface(void* c,void* p,double x,double y) { ThemeRead guard; drawIconMaskSurface(c,p,x,y,realIconMaskSurface); }
-static bool iconProfileSupported() noexcept {
-    try {
-    wchar_t exe[32768];
-    if (!GetModuleFileNameW(nullptr,exe,32768)) return false;
-    DWORD ignored=0, size=GetFileVersionInfoSizeW(exe,&ignored);
-    if (!size || size>1024*1024) return false;
-    std::vector<BYTE> bytes(size);
-    if (!GetFileVersionInfoW(exe,0,size,bytes.data())) return false;
-    VS_FIXEDFILEINFO* info=nullptr; UINT length=0;
-    return VerQueryValueW(bytes.data(),L"\\",reinterpret_cast<void**>(&info),&length) &&
-        length>=sizeof(*info) && info->dwSignature==0xFEEF04BD &&
-        info->dwFileVersionMS==MAKELONG(3,8) && info->dwFileVersionLS==MAKELONG(2325,27);
-    } catch (...) { return false; }
-}
 static SRWLOCK lifecycleLock=SRWLOCK_INIT;
 static const char* apiNames[] = {"", "SetTextColor", "SetBkColor", "CreateSolidBrush", "CreatePen",
     "cairo_set_source_rgb", "cairo_set_source_rgba", "cairo_pattern_add_color_stop_rgba", "cairo_mesh_pattern_set_corner_color_rgba"};
@@ -489,8 +474,10 @@ extern "C" __declspec(dllexport) DWORD WINAPI ThemeInitialize(void* argument) {
         browserPatchCount=patchCount-first;
     }
     if (!ok) { rollback(); ThemeSnapshot(nullptr); return ERROR_PROC_NOT_FOUND; }
+    // Capabilities enable the hooks; exact image fingerprints decide each
+    // replacement. The host's platform version does not gate known images.
     // Optional icon imports never make the color engine unavailable.
-    if (iconProfileSupported() && initializeIconTheme(GetModuleHandleW(L"cairo.dll"))) {
+    if (initializeIconTheme(GetModuleHandleW(L"cairo.dll"))) {
         unsigned first=patchCount;
         bool iconsOk=patchImport(graphics,"cairo.dll","cairo_set_source",(void*)hookedIconSource,(void**)&realIconSource);
         iconsOk &= patchImport(graphics,"cairo.dll","cairo_mask",(void*)hookedIconMask,(void**)&realIconMask);

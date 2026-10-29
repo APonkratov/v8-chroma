@@ -1,8 +1,8 @@
 #include <windows.h>
-// Exercise the supported icon-profile gate in the production bootstrap.
+// A host version outside the original icon pack's source platform must work.
 1 VERSIONINFO
-FILEVERSION 8,3,27,2325
-PRODUCTVERSION 8,3,27,2325
+FILEVERSION 8,5,4,1878
+PRODUCTVERSION 8,5,4,1878
 FILETYPE VFT_APP
 BEGIN
 END
