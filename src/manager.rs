@@ -157,6 +157,14 @@ struct Session {
     log: PathBuf,
     stage: String,
     theme: String,
+    custom_icons: bool,
+}
+
+fn read_session(path: &Path) -> Result<Session> {
+    let bytes = fs::read(path)?;
+    let header: serde_json::Value = serde_json::from_slice(&bytes)?;
+    ensure!(header["schema_version"] == 2, ENGINE_MISMATCH);
+    Ok(serde_json::from_slice(&bytes)?)
 }
 
 #[derive(Serialize, Deserialize)]
@@ -173,12 +181,19 @@ pub struct Applied {
     pub action: String,
     pub generation: u32,
     pub patched_imports: u32,
+    pub icons: String,
+    pub icon_warning: Option<String>,
     pub session: PathBuf,
 }
 
-fn snapshot(process: &Process, address: usize, log: &Path) -> Result<(String, u32, u32)> {
-    let code = process.call(address, None)?;
-    ensure!(code == 0, "ThemeSnapshot Win32={code}");
+struct EngineSnapshot {
+    theme: String,
+    generation: u32,
+    hooks: u32,
+    icon_mode: u32,
+    icon_status: u32,
+}
+fn read_snapshot(log: &Path) -> Result<EngineSnapshot> {
     let data = fs::read_to_string(log)?;
     let field = |name: &str| {
         data.lines()
@@ -186,23 +201,80 @@ fn snapshot(process: &Process, address: usize, log: &Path) -> Result<(String, u3
             .map(str::to_owned)
             .with_context(|| format!("Нет поля {name} в snapshot"))
     };
-    Ok((
-        field("theme")?,
-        field("generation")?.parse()?,
-        field("patched_imports")?.parse()?,
-    ))
+    ensure!(field("protocol")? == "3", "Несовместимый протокол snapshot");
+    let base: u32 = field("base_patched_imports")?.parse()?;
+    let icon_hooks: u32 = field("icon_patched_imports")?.parse()?;
+    let hooks: u32 = field("patched_imports")?.parse()?;
+    let icon_status: u32 = field("icon_status")?.parse()?;
+    let icon_mode: u32 = field("icon_mode")?.parse()?;
+    let pack: u32 = field("icon_pack")?.parse()?;
+    ensure!(
+        matches!(base, 14 | 22)
+            && hooks == base + icon_hooks
+            && icon_mode <= 2
+            && pack == u32::from(icon_mode != 0)
+            && if icon_status == 0 {
+                icon_hooks == 3
+            } else {
+                icon_hooks == 0 && icon_mode == 0
+            },
+        "Snapshot не подтвердил состояние подсистем движка"
+    );
+    Ok(EngineSnapshot {
+        theme: field("theme")?,
+        generation: field("generation")?.parse()?,
+        hooks,
+        icon_mode,
+        icon_status,
+    })
+}
+fn snapshot(process: &Process, address: usize, log: &Path) -> Result<EngineSnapshot> {
+    let code = process.call(address, None)?;
+    ensure!(code == 0, "ThemeSnapshot Win32={code}");
+    read_snapshot(log)
+}
+fn icon_result(snapshot: &EngineSnapshot, requested: bool) -> (String, Option<String>) {
+    if requested && snapshot.icon_status != 0 {
+        (
+            "unavailable".into(),
+            Some(format!(
+                "Тема применена; новые значки недоступны для этой платформы (Win32={}). Используются штатные значки.",
+                snapshot.icon_status
+            )),
+        )
+    } else {
+        (
+            (match snapshot.icon_mode {
+                1 => "light",
+                2 => "dark",
+                _ => "stock",
+            })
+            .into(),
+            None,
+        )
+    }
 }
 
 /// Public entry point: candidates must pass WMI mode and native identity checks.
 pub fn attach(pid: u32, theme_id: &str) -> Result<Applied> {
+    attach_with_icons(pid, theme_id, false)
+}
+pub fn attach_with_icons(pid: u32, theme_id: &str, custom_icons: bool) -> Result<Applied> {
     // Validate the theme before opening a writable process handle.
     theme::config(theme_id, Path::new("x"), Path::new("y"))?;
     let expected = identity(pid)?;
-    attach_to(&expected, theme_id)
+    attach_to_with_icons(&expected, theme_id, custom_icons)
 }
 
 /// GUI requests carry the identity observed in the process list, not only a PID.
 pub fn attach_to(expected: &Identity, theme_id: &str) -> Result<Applied> {
+    attach_to_with_icons(expected, theme_id, false)
+}
+pub fn attach_to_with_icons(
+    expected: &Identity,
+    theme_id: &str,
+    custom_icons: bool,
+) -> Result<Applied> {
     theme::config(theme_id, Path::new("x"), Path::new("y"))?;
     ensure!(
         identity(expected.pid)? == *expected,
@@ -212,13 +284,21 @@ pub fn attach_to(expected: &Identity, theme_id: &str) -> Result<Applied> {
     let directory = root
         .join("sessions")
         .join(format!("{}-{}", expected.pid, expected.created_time));
-    attach_verified(expected, theme_id, &directory, &materialize(&root)?)
+    attach_appearance_verified(
+        expected,
+        theme_id,
+        &directory,
+        &materialize(&root)?,
+        custom_icons,
+    )
 }
 
 #[derive(Clone, Serialize)]
 pub struct LastApplied {
     pub theme: String,
     pub generation: u32,
+    pub icons: String,
+    pub icon_warning: Option<String>,
 }
 /// Read the last successful application; never invokes a remote thread while polling UI.
 pub fn last_applied(expected: &Identity) -> Result<Option<LastApplied>> {
@@ -229,37 +309,46 @@ pub fn last_applied(expected: &Identity) -> Result<Option<LastApplied>> {
     if !path.exists() {
         return Ok(None);
     }
-    let saved: Session = serde_json::from_slice(&fs::read(path)?)?;
+    let saved: Session = read_session(&path)?;
     ensure!(
-        saved.schema_version == 1 && saved.identity == *expected && saved.stage == "ready",
+        saved.schema_version == 2 && saved.identity == *expected && saved.stage == "ready",
         "Предыдущее применение не завершено или несовместимо"
     );
     ensure!(saved.dll_sha256 == hash(theme::DLL), ENGINE_MISMATCH);
     ensure!(
-        saved.log == directory.join("colors.csv"),
+        win::same_path(
+            &win::canonical(&saved.log)?,
+            &win::canonical(&directory.join("colors.csv"))?
+        ),
         "Некорректный путь журнала сессии"
     );
-    let text = fs::read_to_string(saved.log)?;
-    let theme = text
-        .lines()
-        .find_map(|s| s.strip_prefix("# theme="))
-        .context("Нет имени темы")?;
-    let generation = text
-        .lines()
-        .find_map(|s| s.strip_prefix("# generation="))
-        .context("Нет поколения")?
-        .parse()?;
+    let snapshot = read_snapshot(&saved.log)?;
+    let (icons, icon_warning) =
+        icon_result(&snapshot, saved.custom_icons && saved.theme != "diagnostic");
     Ok(Some(LastApplied {
-        theme: theme.into(),
-        generation,
+        theme: snapshot.theme,
+        generation: snapshot.generation,
+        icons,
+        icon_warning,
     }))
 }
 
+#[cfg(test)]
 fn attach_verified(
     expected: &Identity,
     theme_id: &str,
     directory: &Path,
     dll: &Path,
+) -> Result<Applied> {
+    attach_appearance_verified(expected, theme_id, directory, dll, false)
+}
+
+fn attach_appearance_verified(
+    expected: &Identity,
+    theme_id: &str,
+    directory: &Path,
+    dll: &Path,
+    custom_icons: bool,
 ) -> Result<Applied> {
     fs::create_dir_all(directory)?;
     let directory = win::canonical(directory)?;
@@ -267,12 +356,24 @@ fn attach_verified(
     let process = Process::open(expected.pid, true)?;
     process.matches(expected)?;
     let log = directory.join("colors.csv");
+    // MSIX file virtualization can redirect an individual file even when its
+    // parent directory exists outside LocalCache. Resolve the existing file.
+    let log = if log.exists() {
+        win::canonical(&log)?
+    } else {
+        log
+    };
     let state_path = directory.join("session.json");
     let mut state = if state_path.exists() {
-        let state: Session = serde_json::from_slice(&fs::read(&state_path)?)?;
+        let state: Session = read_session(&state_path)?;
+        ensure!(state.schema_version == 2, "Несовместимая схема сессии");
         ensure!(
-            state.schema_version == 1 && state.identity == *expected && state.log == log,
-            "Несовместимый/повреждённый реестр сессии"
+            state.identity == *expected,
+            "Идентичность процесса отличается от сохранённой сессии"
+        );
+        ensure!(
+            win::same_path(&state.log, &log),
+            "Путь журнала отличается от сохранённой сессии"
         );
         ensure!(
             state.dll_sha256 == hash(theme::DLL) && win::same_path(&state.dll, dll),
@@ -315,10 +416,11 @@ fn attach_verified(
             "Модуль {name} загружен из неожиданного каталога"
         );
     }
-    let cfg = theme::config(
+    let cfg = theme::config_with_icons(
         theme_id,
         expected.exe.parent().context("Нет каталога exe")?,
         &log,
+        custom_icons,
     )?;
     // A preset name can stay the same when its palette/profile is corrected.
     // Keep this marker separate so older managers can still read session.json.
@@ -336,18 +438,15 @@ fn attach_verified(
             .as_mut()
             .context("DLL есть, но реестр сессии отсутствует; повторная инициализация запрещена")?;
         exports = process.exports(dll)?;
-        let (current, generation, hooks) = snapshot(&process, exports["ThemeSnapshot"], &log)?;
-        ensure!(
-            matches!(hooks, 14 | 22),
-            "Несовместимое число перехватов: {hooks}"
-        );
+        let current = snapshot(&process, exports["ThemeSnapshot"], &log)?;
         let marker = fs::read(&marker_path)
             .ok()
             .and_then(|bytes| serde_json::from_slice::<AppliedConfig>(&bytes).ok());
-        if current == theme_id
+        if current.theme == theme_id
             && saved.theme == theme_id
-            && marker
-                .is_some_and(|m| m.config_sha256 == config_sha256 && m.generation == generation)
+            && marker.is_some_and(|m| {
+                m.config_sha256 == config_sha256 && m.generation == current.generation
+            })
         {
             action = "unchanged";
         } else {
@@ -366,13 +465,14 @@ fn attach_verified(
             "Реестр сессии есть, но DLL отсутствует; состояние несогласованно"
         );
         let saved = Session {
-            schema_version: 1,
+            schema_version: 2,
             identity: expected.clone(),
             dll: dll.into(),
             dll_sha256: hash(theme::DLL),
             log: log.clone(),
             stage: "initializing".into(),
             theme: theme_id.into(),
+            custom_icons,
         };
         atomic_write(&state_path, &serde_json::to_vec_pretty(&saved)?)?;
         process.load_dll(dll)?;
@@ -386,14 +486,17 @@ fn attach_verified(
         action = "attached";
     }
     win::redraw(expected.pid, action != "unchanged");
-    let (current, generation, hooks) = snapshot(&process, exports["ThemeSnapshot"], &log)?;
+    let current = snapshot(&process, exports["ThemeSnapshot"], &log)?;
+    let generation = current.generation;
     ensure!(
-        current == theme_id && matches!(hooks, 14 | 22),
+        current.theme == theme_id
+            && (current.icon_status != 0 || current.icon_mode == cfg.icon_mode),
         "Snapshot не подтвердил применение темы"
     );
     let saved = state.as_mut().context("Нет состояния сессии")?;
     saved.stage = "ready".into();
     saved.theme = theme_id.into();
+    saved.custom_icons = custom_icons;
     atomic_write(&state_path, &serde_json::to_vec_pretty(saved)?)?;
     atomic_write(
         &marker_path,
@@ -402,12 +505,15 @@ fn attach_verified(
             generation,
         })?,
     )?;
+    let (icons, icon_warning) = icon_result(&current, cfg.icon_mode != 0);
     Ok(Applied {
         identity: expected.clone(),
         theme: theme_id.into(),
         action: action.into(),
         generation,
-        patched_imports: hooks,
+        patched_imports: current.hooks,
+        icons,
+        icon_warning,
         session: state_path,
     })
 }
@@ -613,6 +719,20 @@ mod tests {
             ensure!(
                 repeated.action == "unchanged" && repeated.generation == 1,
                 "duplicate attach"
+            );
+            let enabled = attach_appearance_verified(&expected, "dracula", &directory, &dll, true)?;
+            ensure!(
+                enabled.action == "applied"
+                    && enabled.icons == "unavailable"
+                    && enabled.icon_warning.is_some(),
+                "unsupported icons must be reported without breaking theme"
+            );
+            let disabled = attach_verified(&expected, "dracula", &directory, &dll)?;
+            ensure!(
+                disabled.action == "applied"
+                    && disabled.icons == "stock"
+                    && disabled.icon_warning.is_none(),
+                "icon-only toggle must reapply once"
             );
             // Migration from a manager without a marker, changed profile content,
             // and a native update by an older manager must each reapply once.

@@ -37,14 +37,16 @@ pub struct Settings {
     pub schema_version: u32,
     pub selected_theme: String,
     pub auto_apply: bool,
+    pub custom_icons: bool,
     pub window: WindowSettings,
 }
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            schema_version: 1,
+            schema_version: 2,
             selected_theme: "dracula".into(),
             auto_apply: true,
+            custom_icons: false,
             window: WindowSettings::default(),
         }
     }
@@ -52,12 +54,13 @@ impl Default for Settings {
 impl Settings {
     pub fn validate(&self) -> Result<()> {
         ensure!(
-            self.schema_version == 1,
+            self.schema_version == 2,
             "Неизвестная схема настроек: {}",
             self.schema_version
         );
         ensure!(
             self.selected_theme == "diagnostic"
+                || self.selected_theme == "standard"
                 || theme::IDS.contains(&self.selected_theme.as_str()),
             "Неизвестный пресет: {}",
             self.selected_theme
@@ -82,6 +85,7 @@ pub struct WindowPatch {
 pub struct SettingsPatch {
     pub selected_theme: Option<String>,
     pub auto_apply: Option<bool>,
+    pub custom_icons: Option<bool>,
     pub window: Option<WindowPatch>,
 }
 impl SettingsPatch {
@@ -91,6 +95,9 @@ impl SettingsPatch {
         }
         if let Some(value) = self.auto_apply {
             settings.auto_apply = value;
+        }
+        if let Some(value) = self.custom_icons {
+            settings.custom_icons = value;
         }
         if let Some(window) = self.window {
             if let Some(value) = window.width {
@@ -149,10 +156,33 @@ fn parse(bytes: &[u8]) -> Result<Settings> {
         schema_version: u32,
     }
     let header: Header = serde_json::from_slice(bytes)?;
-    if header.schema_version != 1 {
-        return Err(UnsupportedSchema(header.schema_version).into());
-    }
-    let settings: Settings = serde_json::from_slice(bytes)?;
+    let settings: Settings = match header.schema_version {
+        1 => {
+            #[derive(Deserialize)]
+            #[serde(deny_unknown_fields)]
+            struct Legacy {
+                schema_version: u32,
+                selected_theme: String,
+                auto_apply: bool,
+                window: WindowSettings,
+            }
+            let old: Legacy = serde_json::from_slice(bytes)?;
+            ensure!(old.schema_version == 1, "Некорректная схема миграции");
+            Settings {
+                schema_version: 2,
+                selected_theme: if old.selected_theme == "diagnostic" {
+                    "standard".into()
+                } else {
+                    old.selected_theme
+                },
+                auto_apply: old.auto_apply,
+                window: old.window,
+                custom_icons: false,
+            }
+        }
+        2 => serde_json::from_slice(bytes)?,
+        version => return Err(UnsupportedSchema(version).into()),
+    };
     settings.validate()?;
     Ok(settings)
 }
@@ -250,6 +280,15 @@ impl Store {
         let primary = read(&self.path())?;
         // Refuse unknown versions in either file instead of overwriting newer data.
         let backup = read(&self.backup())?;
+        // Both versions were checked before writing; preserve exact legacy bytes in .bak.
+        if let Document::Valid { settings, bytes } = &primary {
+            let raw: serde_json::Value =
+                serde_json::from_slice(bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(bytes))?;
+            if raw["schema_version"] == 1 {
+                self.persist(settings, &primary, &backup)?;
+                return Ok((read(&self.path())?, read(&self.backup())?));
+            }
+        }
         Ok((primary, backup))
     }
     pub fn load(&self) -> Result<Loaded> {
@@ -410,10 +449,32 @@ mod tests {
         assert_eq!(store.load().unwrap().settings, Settings::default());
     }
     #[test]
+    fn legacy_settings_migrate_with_exact_backup_and_icons_disabled() {
+        let (_temp, store) = profile();
+        fs::create_dir_all(&store.directory).unwrap();
+        let old=br#"{"schema_version":1,"selected_theme":"diagnostic","auto_apply":false,"window":{"width":1200,"height":800,"maximized":true}}"#;
+        fs::write(store.path(), old).unwrap();
+        let migrated = store.load().unwrap().settings;
+        assert_eq!(migrated.schema_version, 2);
+        assert_eq!(migrated.selected_theme, "standard");
+        assert!(!migrated.custom_icons && !migrated.auto_apply);
+        assert_eq!(migrated.window.width, 1200);
+        assert_eq!(fs::read(store.backup()).unwrap(), old);
+        assert_eq!(store.load().unwrap().settings, migrated);
+        assert_eq!(fs::read(store.backup()).unwrap(), old);
+        store
+            .update(SettingsPatch {
+                custom_icons: Some(true),
+                ..Default::default()
+            })
+            .unwrap();
+        assert!(store.load().unwrap().settings.custom_icons);
+    }
+    #[test]
     fn future_schema_is_never_overwritten() {
         let (_temp, store) = profile();
         store.ensure_initialized().unwrap();
-        let bytes = br#"{"schema_version":2,"future":"data"}"#;
+        let bytes = br#"{"schema_version":999,"future":"data"}"#;
         fs::write(store.path(), bytes).unwrap();
         assert!(store.load().is_err());
         assert!(store.update(preset("monokai")).is_err());
@@ -489,8 +550,8 @@ mod tests {
             parse(
                 valid
                     .replace(
-                        "\"schema_version\": 1",
-                        "\"schema_version\": 1, \"typo\": 3"
+                        "\"schema_version\": 2",
+                        "\"schema_version\": 2, \"typo\": 3"
                     )
                     .as_bytes()
             )

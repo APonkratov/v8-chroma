@@ -25,14 +25,14 @@ with tempfile.TemporaryDirectory(prefix='theme-real-cairo-') as temporary:
     configs = []
     for source in sorted((ROOT/'tests/golden').glob('*.bin')):
         cfg = bytearray(source.read_bytes())
-        assert len(cfg) == 4752 and struct.unpack_from('<II',cfg) == (4752,2)
+        assert len(cfg) == 4760 and struct.unpack_from('<II',cfg) == (4760,3)
         cfg[120:640] = wide(fixtures,260)
         cfg[640:1680] = wide(log,520)
         path = directory/source.name
         path.write_bytes(cfg)
         configs.append(path)
-    cfg = bytearray(4752)
-    struct.pack_into('<II',cfg,0,4752,2)
+    cfg = bytearray(4760)
+    struct.pack_into('<II',cfg,0,4760,3)
     cfg[16:26] = b'diagnostic'
     cfg[120:640] = wide(fixtures,260)
     cfg[640:1680] = wide(log,520)

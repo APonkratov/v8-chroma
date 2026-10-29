@@ -27,6 +27,8 @@ pub struct ProcessRow {
     pub status: String,
     pub theme: Option<String>,
     pub detail: Option<String>,
+    pub icons: Option<String>,
+    pub icon_warning: Option<String>,
 }
 #[derive(Clone, Serialize)]
 pub struct Snapshot {
@@ -39,7 +41,7 @@ pub struct Snapshot {
 }
 enum Request {
     Wake,
-    Apply(Vec<Identity>, String),
+    Apply(Vec<Identity>, String, bool),
     Geometry(WindowPatch),
     Quit,
 }
@@ -101,12 +103,12 @@ impl Service {
                                     geometry =
                                         Some((Instant::now(), merge_geometry(previous, patch)));
                                 }
-                                Request::Apply(targets, theme) => {
+                                Request::Apply(targets, theme, icons) => {
                                     for identity in targets {
                                         if background.shared.stop.load(Ordering::Acquire) {
                                             break;
                                         }
-                                        background.apply(&identity, &theme, &mut results);
+                                        background.apply(&identity, &theme, icons, &mut results);
                                     }
                                     background.shared.busy.store(false, Ordering::Release);
                                     last_scan = Instant::now() - Duration::from_secs(3);
@@ -184,6 +186,8 @@ impl Service {
                                             "unsupported".into()
                                         },
                                         theme: None,
+                                        icons: None,
+                                        icon_warning: None,
                                         detail: if candidate.eligible {
                                             None
                                         } else {
@@ -197,6 +201,8 @@ impl Service {
                                     match manager::last_applied(identity) {
                                         Ok(Some(applied)) => {
                                             row.theme = Some(applied.theme);
+                                            row.icons = Some(applied.icons);
+                                            row.icon_warning = applied.icon_warning;
                                             row.status = "applied".into();
                                         }
                                         Err(error) => {
@@ -226,6 +232,7 @@ impl Service {
                                     background.apply(
                                         &identity,
                                         &settings.selected_theme,
+                                        settings.custom_icons,
                                         &mut results,
                                     );
                                 }
@@ -340,7 +347,11 @@ impl Service {
         );
         if self
             .tx
-            .send(Request::Apply(targets, loaded.settings.selected_theme))
+            .send(Request::Apply(
+                targets,
+                loaded.settings.selected_theme,
+                loaded.settings.custom_icons,
+            ))
             .is_err()
         {
             self.shared.busy.store(false, Ordering::Release);
@@ -367,6 +378,7 @@ impl Service {
         &self,
         identity: &Identity,
         theme: &str,
+        custom_icons: bool,
         results: &mut BTreeMap<(u32, u64), ProcessRow>,
     ) {
         self.edit(|s| {
@@ -381,7 +393,7 @@ impl Service {
                 row.detail = None;
             }
         });
-        let result = manager::attach_to(identity, theme);
+        let result = manager::attach_to_with_icons(identity, theme, custom_icons);
         let row = ProcessRow {
             pid: identity.pid,
             created_time: Some(identity.created_time.to_string()),
@@ -395,6 +407,8 @@ impl Service {
                 "error".into()
             },
             theme: result.as_ref().ok().map(|r| r.theme.clone()),
+            icons: result.as_ref().ok().map(|r| r.icons.clone()),
+            icon_warning: result.as_ref().ok().and_then(|r| r.icon_warning.clone()),
             detail: result.err().map(|e| format!("{e:#}")),
         };
         results.insert((identity.pid, identity.created_time), row.clone());
@@ -438,6 +452,8 @@ mod tests {
             eligible: true,
             status: "idle".into(),
             theme: None,
+            icons: None,
+            icon_warning: None,
             detail: None,
         };
         let json = serde_json::to_value(row).unwrap();

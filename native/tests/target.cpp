@@ -12,7 +12,7 @@ int wmain(int argc,wchar_t** argv) {
     FILE* configFile=_wfopen(argv[2],L"rb");
     if (!configFile) return 9;
     size_t read=fread(&cfg,1,sizeof(cfg),configFile); fclose(configFile);
-    if (read!=sizeof(cfg) || cfg.size!=sizeof(cfg) || cfg.version!=2) return 10;
+    if (read!=sizeof(cfg) || cfg.size!=sizeof(cfg) || cfg.version!=3) return 10;
     auto expected=[&](DWORD kind,DWORD source) {
         if (cfg.mode) for (DWORD i=0;i<cfg.mapCount;++i)
             if (cfg.maps[i].kind==kind && cfg.maps[i].source==source) return cfg.maps[i].target;

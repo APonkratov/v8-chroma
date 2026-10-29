@@ -40,8 +40,17 @@ function(console target)
     endif()
 endfunction()
 
-add_library(theme_engine SHARED src/probe.cpp src/window_theme.cpp src/raster_theme.cpp src/editor_selection.cpp)
-target_link_libraries(theme_engine PRIVATE gdi32 user32 dwmapi)
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+file(GLOB ICON_INPUTS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/../assets/toolbar-icons/*.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../assets/toolbar-icons/*/*.svg")
+set(ICON_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/icon_assets.h")
+add_custom_command(OUTPUT "${ICON_HEADER}"
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/build_icon_assets.py" --output "${ICON_HEADER}"
+    DEPENDS ${ICON_INPUTS} ../scripts/build_icon_assets.py ../scripts/build_toolbar_prototype.py
+    VERBATIM)
+add_library(theme_engine SHARED src/probe.cpp src/window_theme.cpp src/raster_theme.cpp src/editor_selection.cpp src/icon_theme.cpp "${ICON_HEADER}")
+target_include_directories(theme_engine PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+target_link_libraries(theme_engine PRIVATE gdi32 user32 dwmapi version)
 output(theme_engine ThemeProbe "")
 install(TARGETS theme_engine RUNTIME DESTINATION assets)
 install(TARGETS theme_engine RUNTIME DESTINATION native/bin)
@@ -54,6 +63,15 @@ endif()
 
 option(V8_CHROMA_BUILD_FIXTURES "Build owned DLLs and process fixtures for tests" ON)
 if(V8_CHROMA_BUILD_FIXTURES)
+    set(ICON_FIXTURE_HEADER "${CMAKE_CURRENT_BINARY_DIR}/icon-fixtures/icon_assets.h")
+    add_custom_command(OUTPUT "${ICON_FIXTURE_HEADER}"
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/build_icon_assets.py" --fixture --output "${ICON_FIXTURE_HEADER}"
+        DEPENDS ../scripts/build_icon_assets.py ../scripts/build_toolbar_prototype.py VERBATIM)
+    add_executable(icon_theme_test tests/icon_theme.cpp src/icon_theme.cpp "${ICON_FIXTURE_HEADER}")
+    target_include_directories(icon_theme_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/icon-fixtures")
+    output(icon_theme_test icon_theme_test demo)
+    install(TARGETS icon_theme_test RUNTIME DESTINATION tests/fixtures)
+    install(TARGETS icon_theme_test RUNTIME DESTINATION native/bin/demo)
     add_library(mock_cairo SHARED tests/mock_cairo.cpp)
     output(mock_cairo cairo demo)
     if(V8_CHROMA_BUILD_ICON_PROTOTYPE)

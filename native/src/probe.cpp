@@ -2,6 +2,8 @@
 #include "window_theme.h"
 #include "raster_theme.h"
 #include "editor_selection.h"
+#include "icon_theme.h"
+#include <vector>
 #include <stdio.h>
 #include <math.h>
 #include <wchar.h>
@@ -34,7 +36,25 @@ struct Row { DWORD kind, rgb, alpha, target, browser; unsigned long long count; 
 static Row rows[capacity];
 static unsigned long long dropped;
 static unsigned patchCount;
-static unsigned browserPatchCount;
+static unsigned browserPatchCount, iconPatchCount;
+static DWORD iconStatus=ERROR_NOT_SUPPORTED;
+static void (__cdecl *realIconSource)(void*,void*),(*realIconMask)(void*,void*);
+static void (__cdecl *realIconMaskSurface)(void*,void*,double,double);
+static void __cdecl hookedIconSource(void* c,void* p) { ThemeRead guard; drawIconSource(c,p,realIconSource); }
+static void __cdecl hookedIconMask(void* c,void* p) { ThemeRead guard; drawIconMask(c,p,realIconMask); }
+static void __cdecl hookedIconMaskSurface(void* c,void* p,double x,double y) { ThemeRead guard; drawIconMaskSurface(c,p,x,y,realIconMaskSurface); }
+static bool iconProfileSupported() {
+    wchar_t exe[32768];
+    if (!GetModuleFileNameW(nullptr,exe,32768)) return false;
+    DWORD ignored=0, size=GetFileVersionInfoSizeW(exe,&ignored);
+    if (!size || size>1024*1024) return false;
+    std::vector<BYTE> bytes(size);
+    if (!GetFileVersionInfoW(exe,0,size,bytes.data())) return false;
+    VS_FIXEDFILEINFO* info=nullptr; UINT length=0;
+    return VerQueryValueW(bytes.data(),L"\\",reinterpret_cast<void**>(&info),&length) &&
+        length>=sizeof(*info) && info->dwSignature==0xFEEF04BD &&
+        info->dwFileVersionMS==MAKELONG(3,8) && info->dwFileVersionLS==MAKELONG(2325,27);
+}
 static SRWLOCK lifecycleLock=SRWLOCK_INIT;
 static const char* apiNames[] = {"", "SetTextColor", "SetBkColor", "CreateSolidBrush", "CreatePen",
     "cairo_set_source_rgb", "cairo_set_source_rgba", "cairo_pattern_add_color_stop_rgba", "cairo_mesh_pattern_set_corner_color_rgba"};
@@ -284,15 +304,15 @@ static bool patchImport(HMODULE module,const char* provider,const char* name,voi
     }
     return false;
 }
-static void rollback() {
-    for (unsigned i=0;i<patchCount;++i) {
+static void rollback(unsigned first=0) {
+    for (unsigned i=first;i<patchCount;++i) {
         DWORD old;
         if (VirtualProtect(patches[i].slot,sizeof(void*),PAGE_READWRITE,&old)) {
             InterlockedCompareExchangePointer(patches[i].slot,patches[i].original,patches[i].replacement);
             DWORD ignored; VirtualProtect(patches[i].slot,sizeof(void*),old,&ignored);
         }
     }
-    patchCount=0;
+    patchCount=first;
 }
 static DWORD snapshotUnlocked() {
     AcquireSRWLockExclusive(&snapshotLock);
@@ -306,7 +326,9 @@ static DWORD snapshotUnlocked() {
     FILE* file=_wfopen(temp,L"wb");
     DWORD result=ERROR_SUCCESS;
     if (file) {
-        fprintf(file,"# theme-probe-v3\n# mode=%s\n# theme=%s\n# protocol=2\n# generation=%lu\n# patched_imports=%u\n# browser_patched_imports=%u\n# themed_windows=%u\n# raster_supported=%u\n# raster_changes=%llu\n# hover_frames=%llu\n# selection_supported=%u\n# selection_fills=%llu\n# selection_glyphs=%llu\n# dropped=%llu\nmodule,api,source_rgb,alpha,calls,target_rgb\n",cfg.mode?"theme":"diagnostic",cfg.themeId,generation,patchCount,browserPatchCount,themedWindowCount(),rasterSupported()?1:0,rasterChanges(),rasterHoverFrames(),editorSelectionSupported()?1:0,editorSelectionFills(),editorSelectionGlyphs(),lost);
+        fprintf(file,"# theme-probe-v3\n# mode=%s\n# theme=%s\n# protocol=3\n# generation=%lu\n# patched_imports=%u\n# browser_patched_imports=%u\n# themed_windows=%u\n# raster_supported=%u\n# raster_changes=%llu\n# hover_frames=%llu\n# selection_supported=%u\n# selection_fills=%llu\n# selection_glyphs=%llu\n# dropped=%llu\nmodule,api,source_rgb,alpha,calls,target_rgb\n",cfg.mode?"theme":"diagnostic",cfg.themeId,generation,patchCount,browserPatchCount,themedWindowCount(),rasterSupported()?1:0,rasterChanges(),rasterHoverFrames(),editorSelectionSupported()?1:0,editorSelectionFills(),editorSelectionGlyphs(),lost);
+        auto icons=iconStats();
+        fprintf(file,"# base_patched_imports=%u\n# icon_patched_imports=%u\n# icon_status=%lu\n# icon_mode=%u\n# icon_pack=%u\n# icon_cache_bytes=%llu\n# icon_cache_entries=%u\n# icon_calls=%llu\n# icon_matches=%llu\n",patchCount-iconPatchCount,iconPatchCount,iconStatus,icons.mode,icons.mode?1:0,icons.bytes,icons.cached,icons.calls,icons.matches);
         for (unsigned i=0;i<capacity;++i) if (copy[i].count) {
             auto &r=copy[i]; fprintf(file,"%s,%s,%06lX,%lu,%llu,%06lX\n",r.browser?"WebKit.dll":r.kind<=Pen?"frame.dll":"grphcs.dll",apiNames[r.kind],r.rgb,r.alpha,r.count,r.target);
         }
@@ -338,6 +360,7 @@ extern "C" __declspec(dllexport) DWORD WINAPI ThemeStop(void*) {
     AcquireSRWLockExclusive(&lifecycleLock);
     AcquireSRWLockExclusive(&themeLock);
     InterlockedExchange(&active,0); InterlockedExchange(&stopping,1);
+    activateIconTheme(nullptr);
     ReleaseSRWLockExclusive(&themeLock);
     updateWindowTheme(false,0,0,0);
     ReleaseSRWLockExclusive(&lifecycleLock);
@@ -354,8 +377,10 @@ static HMODULE verifiedModule(const wchar_t* name) {
 static DWORD validateConfig(void* argument) {
     if (!argument) return ERROR_INVALID_PARAMETER;
     const auto incoming=(const ProbeConfig*)argument;
-    if (incoming->size!=sizeof(cfg)||incoming->version!=2||incoming->mode>1||incoming->mapCount>256||
+    if (incoming->size!=sizeof(cfg)||incoming->version!=3||incoming->mode>1||incoming->mapCount>256||
         incoming->targetDir[259]||incoming->logPath[519]||incoming->themeId[63]||!incoming->themeId[0]) return ERROR_INVALID_PARAMETER;
+    if (incoming->iconMode>2 || incoming->iconPack!=(incoming->iconMode?1u:0u) ||
+        (!strcmp(incoming->themeId,"diagnostic") && incoming->iconMode)) return ERROR_INVALID_PARAMETER;
     for (const char* p=incoming->themeId;*p;++p)
         if (!((*p>='a' && *p<='z') || (*p>='0' && *p<='9') || *p=='-')) return ERROR_INVALID_PARAMETER;
     const auto &c=incoming->colors;
@@ -380,6 +405,8 @@ extern "C" __declspec(dllexport) DWORD WINAPI ThemeApply(void* argument) {
     DWORD result=ERROR_SUCCESS;
     if (!active || stopping) result=ERROR_SERVICE_NOT_ACTIVE;
     else if (_wcsicmp(incoming->targetDir,cfg.targetDir) || _wcsicmp(incoming->logPath,cfg.logPath)) result=ERROR_INVALID_PARAMETER;
+    IconState* prepared=nullptr;
+    if (!result && !iconStatus) prepared=prepareIconTheme(incoming->iconMode,result);
     if (!result) {
         result=snapshotUnlocked();
         if (!result) {
@@ -390,10 +417,12 @@ extern "C" __declspec(dllexport) DWORD WINAPI ThemeApply(void* argument) {
     }
     if (!result) {
         cfg=*incoming; ++generation;
+        activateIconTheme(prepared); prepared=nullptr;
         refreshCaptionInk();
         AcquireSRWLockExclusive(&tableLock); memset(rows,0,sizeof(rows)); dropped=0; ReleaseSRWLockExclusive(&tableLock);
         setRasterThemeColors(cfg.colors.rasterBackground,cfg.colors.rasterForeground,cfg.colors.border);
     }
+    discardIconTheme(prepared);
     RenderColors c=cfg.colors; bool enabled=cfg.mode && active;
     ReleaseSRWLockExclusive(&themeLock);
     if (!result) updateWindowTheme(enabled,toColor(c.captionBackground),toColor(c.captionText),toColor(c.border),c.darkCaption!=0);
@@ -451,12 +480,26 @@ extern "C" __declspec(dllexport) DWORD WINAPI ThemeInitialize(void* argument) {
         browserPatchCount=patchCount-first;
     }
     if (!ok) { rollback(); ThemeSnapshot(nullptr); return ERROR_PROC_NOT_FOUND; }
+    // Optional icon imports never make the color engine unavailable.
+    if (iconProfileSupported() && initializeIconTheme(GetModuleHandleW(L"cairo.dll"))) {
+        unsigned first=patchCount;
+        bool iconsOk=patchImport(graphics,"cairo.dll","cairo_set_source",(void*)hookedIconSource,(void**)&realIconSource);
+        iconsOk &= patchImport(graphics,"cairo.dll","cairo_mask",(void*)hookedIconMask,(void**)&realIconMask);
+        iconsOk &= patchImport(graphics,"cairo.dll","cairo_mask_surface",(void*)hookedIconMaskSurface,(void**)&realIconMaskSurface);
+        if (iconsOk) { iconPatchCount=patchCount-first; iconStatus=ERROR_SUCCESS; }
+        else { rollback(first); iconStatus=ERROR_PROC_NOT_FOUND; }
+    }
+    if (!iconStatus) {
+        DWORD error=0; auto prepared=prepareIconTheme(cfg.iconMode,error);
+        if (error) { rollback(); return error; }
+        activateIconTheme(prepared);
+    }
     InterlockedExchange(&active,1);
     updateWindowTheme(cfg.mode!=0,toColor(cfg.colors.captionBackground),toColor(cfg.colors.captionText),toColor(cfg.colors.border),cfg.colors.darkCaption!=0);
     DWORD snapshotResult=ThemeSnapshot(nullptr);
-    if (snapshotResult) { InterlockedExchange(&active,0); updateWindowTheme(false,0,0,0); rollback(); return snapshotResult; }
+    if (snapshotResult) { activateIconTheme(nullptr); InterlockedExchange(&active,0); updateWindowTheme(false,0,0,0); rollback(); return snapshotResult; }
     HANDLE thread=CreateThread(nullptr,0,writer,nullptr,0,nullptr);
-    if (!thread) { DWORD error=GetLastError(); InterlockedExchange(&active,0); updateWindowTheme(false,0,0,0); rollback(); return error; }
+    if (!thread) { activateIconTheme(nullptr); DWORD error=GetLastError(); InterlockedExchange(&active,0); updateWindowTheme(false,0,0,0); rollback(); return error; }
     CloseHandle(thread);
     return ERROR_SUCCESS;
 }

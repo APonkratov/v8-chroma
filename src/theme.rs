@@ -78,12 +78,14 @@ pub struct Config {
     pub target_dir: [u16; 260],
     pub log_path: [u16; 520],
     pub maps: [ColorMap; 256],
+    pub icon_mode: u32,
+    pub icon_pack: u32,
 }
-const _: () = assert!(std::mem::size_of::<Config>() == 4752);
+const _: () = assert!(std::mem::size_of::<Config>() == 4760);
 
 impl Config {
     pub fn bytes(&self) -> &[u8] {
-        // repr(C), fixed-width integer fields, and a verified padding-free v2 layout.
+        // repr(C), fixed-width integer fields, and a verified padding-free v3 layout.
         unsafe { std::slice::from_raw_parts(self as *const Self as *const u8, size_of::<Self>()) }
     }
 }
@@ -190,8 +192,8 @@ fn wide<const N: usize>(path: &Path) -> Result<[u16; N]> {
 
 pub fn config(id: &str, target: &Path, log: &Path) -> Result<Config> {
     let mut cfg = Config {
-        size: 4752,
-        version: 2,
+        size: 4760,
+        version: 3,
         mode: 0,
         map_count: 0,
         theme_id: [0; 64],
@@ -199,10 +201,12 @@ pub fn config(id: &str, target: &Path, log: &Path) -> Result<Config> {
         target_dir: wide(target)?,
         log_path: wide(log)?,
         maps: [ColorMap::default(); 256],
+        icon_mode: 0,
+        icon_pack: 0,
     };
     ensure!(id.len() < 64, "Слишком длинный идентификатор темы");
     cfg.theme_id[..id.len()].copy_from_slice(id.as_bytes());
-    if id == "diagnostic" {
+    if id == "diagnostic" || id == "standard" {
         return Ok(cfg);
     }
     let doc: Document = serde_json::from_str(source(id)?)?;
@@ -302,6 +306,25 @@ pub fn config(id: &str, target: &Path, log: &Path) -> Result<Config> {
     Ok(cfg)
 }
 
+/// Complete appearance request; diagnostic mode never transforms images.
+pub fn config_with_icons(
+    id: &str,
+    target: &Path,
+    log: &Path,
+    custom_icons: bool,
+) -> Result<Config> {
+    let mut cfg = config(id, target, log)?;
+    if custom_icons && id != "diagnostic" {
+        cfg.icon_mode = if id == "standard" || cfg.colors[9] == 0 {
+            1
+        } else {
+            2
+        };
+        cfg.icon_pack = 1;
+    }
+    Ok(cfg)
+}
+
 fn luminance(rgb: u32) -> f64 {
     let linear = |shift: u32| {
         let value = f64::from((rgb >> shift) & 255) / 255.0;
@@ -391,7 +414,7 @@ mod tests {
                 Path::new(r"C:\Logs\colors.csv"),
             )
             .unwrap();
-            assert_eq!(cfg.bytes().len(), 4752);
+            assert_eq!(cfg.bytes().len(), 4760);
             assert_eq!(cfg.map_count, if *id == "diagnostic" { 0 } else { 193 });
         }
     }
@@ -442,6 +465,30 @@ mod tests {
     fn rejects_unknown_and_long_paths() {
         assert!(config("../dracula", Path::new("x"), Path::new("y")).is_err());
         assert!(config("dracula", Path::new(&"x".repeat(260)), Path::new("y")).is_err());
+    }
+    #[test]
+    fn icon_modes_match_independent_goldens() {
+        for (id, enabled, fixture) in [
+            ("dracula", true, "icons-dark"),
+            ("github-light-default", true, "icons-light"),
+            ("standard", true, "icons-standard"),
+            ("diagnostic", true, "diagnostic"),
+        ] {
+            let cfg = config_with_icons(
+                id,
+                Path::new(r"C:\Platform"),
+                Path::new(r"C:\Logs\colors.csv"),
+                enabled,
+            )
+            .unwrap();
+            let expected = std::fs::read(
+                Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("tests/golden")
+                    .join(format!("{fixture}.bin")),
+            )
+            .unwrap();
+            assert_eq!(cfg.bytes(), expected);
+        }
     }
     #[test]
     fn binary_protocol_matches_independent_python_fixtures() {

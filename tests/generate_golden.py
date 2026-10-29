@@ -16,6 +16,7 @@ parser.add_argument('--check', action='store_true', help='Verify committed fixtu
 args = parser.parse_args()
 
 report = []
+cases = {}
 for path in sorted((ROOT / 'assets/themes').glob('*.json')):
     theme = load_theme(path)
     # Independent reference for the internal compare/merge profile roles.
@@ -38,6 +39,7 @@ for path in sorted((ROOT / 'assets/themes').glob('*.json')):
     mappings = load_profile(ROOT / 'assets/profile.properties', theme)
     cfg = make_config(theme, mappings, Path(r'C:\Platform'), Path(r'C:\Logs\colors.csv'))
     data = bytes(cfg)
+    cases[theme.id] = data
     destination = ROOT / 'tests/golden' / (theme.id + '.bin')
     if args.check:
         if destination.read_bytes() != data:
@@ -45,6 +47,16 @@ for path in sorted((ROOT / 'assets/themes').glob('*.json')):
     else:
         destination.write_bytes(data)
     report.append({'theme': theme.id, 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()})
+for name, base, mode in [('icons-dark','dracula',2),('icons-light','github-light-default',1),('icons-standard',None,1),('diagnostic',None,0)]:
+    import struct
+    data = bytearray(cases[base]) if base else make_config(None,[],Path(r'C:\Platform'),Path(r'C:\Logs\colors.csv'), identifier='standard' if mode else 'diagnostic')
+    struct.pack_into('<II',data,4752,mode,int(mode!=0))
+    data=bytes(data)
+    destination=ROOT/'tests/golden'/f'{name}.bin'
+    if args.check:
+        if destination.read_bytes()!=data: raise SystemExit(f'Protocol fixture differs: {name}')
+    else: destination.write_bytes(data)
+    report.append({'theme':name,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
 manifest = ROOT / 'tests/golden/manifest.json'
 if args.check:
     if json.loads(manifest.read_text(encoding='utf-8')) != report:

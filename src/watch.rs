@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 #[derive(Default)]
 pub struct Controller {
-    attempted: BTreeMap<(u32, u64), String>,
+    attempted: BTreeMap<(u32, u64), (String, bool)>,
     enabled: bool,
 }
 impl Controller {
@@ -26,13 +26,14 @@ impl Controller {
             self.attempted.clear();
             self.enabled = true;
         }
+        let appearance = (settings.selected_theme.clone(), settings.custom_icons);
         let mut requests = vec![];
         for identity in identities {
             let key = (identity.pid, identity.created_time);
-            if self.attempted.get(&key) == Some(&settings.selected_theme) {
+            if self.attempted.get(&key) == Some(&appearance) {
                 continue;
             }
-            self.attempted.insert(key, settings.selected_theme.clone());
+            self.attempted.insert(key, appearance.clone());
             requests.push(identity.clone());
         }
         requests
@@ -76,6 +77,18 @@ mod tests {
         settings.window.width = 1200;
         assert!(controller.plan(&identities, &settings).is_empty());
         settings.selected_theme = "monokai".into();
+        assert_eq!(controller.plan(&identities, &settings).len(), 2);
+    }
+    #[test]
+    fn icon_toggle_reapplies_once_without_changing_theme() {
+        let mut controller = Controller::default();
+        let mut settings = Settings::default();
+        let identities = [id(10, 1), id(20, 1)];
+        assert_eq!(controller.plan(&identities, &settings).len(), 2);
+        settings.custom_icons = true;
+        assert_eq!(controller.plan(&identities, &settings).len(), 2);
+        assert!(controller.plan(&identities, &settings).is_empty());
+        settings.custom_icons = false;
         assert_eq!(controller.plan(&identities, &settings).len(), 2);
     }
     #[test]

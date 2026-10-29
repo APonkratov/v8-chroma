@@ -73,6 +73,8 @@ enum SettingsCommand {
         theme: Option<String>,
         #[arg(long, value_enum)]
         auto_apply: Option<Switch>,
+        #[arg(long, value_enum)]
+        custom_icons: Option<Switch>,
         #[arg(long)]
         width: Option<u32>,
         #[arg(long)]
@@ -100,18 +102,25 @@ fn store(directory: Option<PathBuf>) -> Result<Store> {
         None => Store::system(),
     }
 }
-fn selected(store: &Store, override_theme: Option<String>) -> Result<String> {
-    let id = if let Some(id) = override_theme {
-        id
+fn selected(store: &Store, override_theme: Option<String>) -> Result<(String, bool)> {
+    let (id, icons) = if let Some(id) = override_theme {
+        // Explicit manual theme remains usable even with broken preferences.
+        (
+            id,
+            store
+                .load()
+                .map(|s| s.settings.custom_icons)
+                .unwrap_or(false),
+        )
     } else {
         let loaded = store.load()?;
         if let Some(warning) = loaded.warning {
             eprintln!("Предупреждение: {warning}");
         }
-        loaded.settings.selected_theme
+        (loaded.settings.selected_theme, loaded.settings.custom_icons)
     };
     theme::config(&id, Path::new("x"), Path::new("y"))?;
-    Ok(id)
+    Ok((id, icons))
 }
 fn main() -> std::process::ExitCode {
     match run() {
@@ -128,15 +137,15 @@ fn run() -> Result<()> {
     match cli.command {
         Some(Command::List) => print(&manager::discover()?)?,
         Some(Command::Themes) => print(&theme::IDS)?,
-        Some(Command::Attach { pid, theme }) => print(&manager::attach(
-            pid,
-            &selected(&store(cli.config_dir)?, theme)?,
-        )?)?,
+        Some(Command::Attach { pid, theme }) => {
+            let (id, icons) = selected(&store(cli.config_dir)?, theme)?;
+            print(&manager::attach_with_icons(pid, &id, icons)?)?;
+        }
         Some(Command::ApplyAll { theme }) => {
-            let id = selected(&store(cli.config_dir)?, theme)?;
+            let (id, icons) = selected(&store(cli.config_dir)?, theme)?;
             let mut failed = false;
             for candidate in manager::discover()?.into_iter().filter(|c| c.eligible) {
-                match manager::attach(candidate.pid, &id) {
+                match manager::attach_with_icons(candidate.pid, &id, icons) {
                     Ok(result) => print(&result)?,
                     Err(error) => {
                         failed = true;
@@ -159,6 +168,7 @@ fn run() -> Result<()> {
                 SettingsCommand::Set {
                     theme,
                     auto_apply,
+                    custom_icons,
                     width,
                     height,
                     maximized,
@@ -166,6 +176,7 @@ fn run() -> Result<()> {
                     ensure!(
                         theme.is_some()
                             || auto_apply.is_some()
+                            || custom_icons.is_some()
                             || width.is_some()
                             || height.is_some()
                             || maximized.is_some(),
@@ -183,6 +194,7 @@ fn run() -> Result<()> {
                     show(store.update(SettingsPatch {
                         selected_theme: theme,
                         auto_apply: auto_apply.map(Switch::value),
+                        custom_icons: custom_icons.map(Switch::value),
                         window,
                     })?)?;
                 }
@@ -217,10 +229,14 @@ fn watch(store: &Store, override_theme: Option<String>, seconds: u64) -> Result<
                 if let Some(id) = &override_theme {
                     settings.selected_theme = id.clone();
                 }
-                let policy = (settings.selected_theme.clone(), settings.auto_apply);
+                let policy = (
+                    settings.selected_theme.clone(),
+                    settings.auto_apply,
+                    settings.custom_icons,
+                );
                 if last_policy.as_ref() != Some(&policy) {
                     print(
-                        &serde_json::json!({"event":"settings","theme":policy.0,"auto_apply":policy.1,"path":loaded.path}),
+                        &serde_json::json!({"event":"settings","theme":policy.0,"auto_apply":policy.1,"custom_icons":policy.2,"path":loaded.path}),
                     )?;
                     last_policy = Some(policy);
                 }
@@ -235,7 +251,11 @@ fn watch(store: &Store, override_theme: Option<String>, seconds: u64) -> Result<
                                 .filter_map(|c| c.identity)
                                 .collect();
                             for identity in controller.plan(&identities, &settings) {
-                                match manager::attach(identity.pid, &settings.selected_theme) {
+                                match manager::attach_to_with_icons(
+                                    &identity,
+                                    &settings.selected_theme,
+                                    settings.custom_icons,
+                                ) {
                                     Ok(result) => print(&result)?,
                                     Err(error) => print(
                                         &serde_json::json!({"pid":identity.pid,"error":format!("{error:#}")}),
