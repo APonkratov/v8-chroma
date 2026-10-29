@@ -10,10 +10,6 @@ template<class T> bool load(HMODULE module,const char* name,T& fn) {
     auto address=GetProcAddress(module,name);
     static_assert(sizeof(fn)==sizeof(address)); memcpy(&fn,&address,sizeof(fn)); return fn!=nullptr;
 }
-using SetSource=void(__cdecl*)(void*,void*);
-
-
-
 void* (*getTarget)(void*);
 int (*patternSurface)(void*,void**),(*surfaceType)(void*),(*width)(void*),(*height)(void*),(*stride)(void*),(*format)(void*),(*status)(void*);
 int (*getExtend)(void*),(*getFilter)(void*);
@@ -98,7 +94,8 @@ void* replacement(void* source) {
         double x,y; getOffset(source,&x,&y); setOffset(copy,x,y);
         getScale(source,&x,&y); setScale(copy,x,y); dirty(copy);
     }
-    cache.push_back({hash,w,h,kind,offsetX,offsetY,scaleX,scaleY,copy});
+    try { cache.push_back({hash,w,h,kind,offsetX,offsetY,scaleX,scaleY,copy}); }
+    catch (...) { if (copy) destroySurface(copy); throw; }
     if (copy) cacheBytes+=static_cast<size_t>(w)*h*4;
     return copy;
 }

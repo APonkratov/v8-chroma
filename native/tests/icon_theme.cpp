@@ -95,19 +95,22 @@ int main() {
     valid &= failed==nullptr && error!=0 && iconStats().mode==1;
     rejectSurface=false;
     std::atomic<bool> done{false}, stressOk{true};
+    std::atomic<unsigned> stressCalls{0};
     std::thread render([&] {
         while (!done) { drawIconSource(&context,&pattern,[](void*,void* value) {
             auto surface=static_cast<Pattern*>(value)->surface;
             auto pixel=reinterpret_cast<uint32_t*>(surface->pixels.data())[16];
             if (pixel!=0xffcc2244u && pixel!=0xff44cc88u && pixel!=0xff4488ccu) valid=false;
-        }); Sleep(1); }
+        }); ++stressCalls; Sleep(1); }
     });
+    while (!stressCalls) Sleep(1);
     for (unsigned i=0;i<80;++i) {
         auto state=prepareIconTheme(i%3,error);
         if (error) stressOk=false;
         activateIconTheme(state);
+        Sleep(1);
     }
-    done=true; render.join(); valid &= stressOk;
+    done=true; render.join(); valid &= stressOk && stressCalls>=10;
     activateIconTheme(nullptr); cairo_surface_destroy(source);
     printf("Integrated icon module: sizes, masks, state, mutation, toggles, cache release: %s\n",valid?"PASS":"FAIL");
     return valid?0:1;

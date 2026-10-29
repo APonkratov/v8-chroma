@@ -43,7 +43,8 @@ static void (__cdecl *realIconMaskSurface)(void*,void*,double,double);
 static void __cdecl hookedIconSource(void* c,void* p) { ThemeRead guard; drawIconSource(c,p,realIconSource); }
 static void __cdecl hookedIconMask(void* c,void* p) { ThemeRead guard; drawIconMask(c,p,realIconMask); }
 static void __cdecl hookedIconMaskSurface(void* c,void* p,double x,double y) { ThemeRead guard; drawIconMaskSurface(c,p,x,y,realIconMaskSurface); }
-static bool iconProfileSupported() {
+static bool iconProfileSupported() noexcept {
+    try {
     wchar_t exe[32768];
     if (!GetModuleFileNameW(nullptr,exe,32768)) return false;
     DWORD ignored=0, size=GetFileVersionInfoSizeW(exe,&ignored);
@@ -54,6 +55,7 @@ static bool iconProfileSupported() {
     return VerQueryValueW(bytes.data(),L"\\",reinterpret_cast<void**>(&info),&length) &&
         length>=sizeof(*info) && info->dwSignature==0xFEEF04BD &&
         info->dwFileVersionMS==MAKELONG(3,8) && info->dwFileVersionLS==MAKELONG(2325,27);
+    } catch (...) { return false; }
 }
 static SRWLOCK lifecycleLock=SRWLOCK_INIT;
 static const char* apiNames[] = {"", "SetTextColor", "SetBkColor", "CreateSolidBrush", "CreatePen",
