@@ -1,0 +1,327 @@
+{
+  "description": "Exact remaining main menu and module editor image fingerprints, Designer 8.3.27.2325. No original platform pixels.",
+  "sources": [
+    {
+      "hash": "93af5166554ed0ba",
+      "icon": "editor-fold-all",
+      "label": "fold-all / fold-all"
+    },
+    {
+      "hash": "ab57bab8233f418c",
+      "icon": "editor-unfold-all",
+      "label": "unfold-all / unfold-all",
+      "disabled": true
+    },
+    {
+      "hash": "28de6204be81fb09",
+      "icon": "editor-comment-add",
+      "label": "comment-add / comment-add"
+    },
+    {
+      "hash": "36823079f6f7dae8",
+      "icon": "editor-comment-remove",
+      "label": "comment-remove / comment-remove"
+    },
+    {
+      "hash": "4afbcd55bef24c39",
+      "icon": "editor-module-check",
+      "label": "module-check / module-check"
+    },
+    {
+      "hash": "6202bd35ffb880e8",
+      "icon": "editor-procedures",
+      "label": "procedures / procedures"
+    },
+    {
+      "hash": "dd718800d155f30b",
+      "icon": "editor-breakpoint",
+      "label": "breakpoint / breakpoint"
+    },
+    {
+      "hash": "ff4bcc5c2f1088e2",
+      "icon": "editor-breakpoint-settings",
+      "label": "breakpoint-settings / breakpoint-settings"
+    },
+    {
+      "hash": "478c6eac514ff769",
+      "icon": "editor-breakpoint-toggle",
+      "label": "breakpoint-toggle / breakpoint-toggle",
+      "disabled": true
+    },
+    {
+      "hash": "a940c0d9e9dc9fbb",
+      "icon": "editor-breakpoint-clear",
+      "label": "breakpoint-clear / breakpoint-clear"
+    },
+    {
+      "hash": "10323f12d9548fbf",
+      "icon": "editor-breakpoint-up",
+      "label": "breakpoint-up / breakpoint-up",
+      "disabled": true
+    },
+    {
+      "hash": "a30bbb6152abb9f4",
+      "icon": "editor-breakpoint-down",
+      "label": "breakpoint-down / breakpoint-down",
+      "disabled": true
+    },
+    {
+      "hash": "64eacc91ef649965",
+      "icon": "editor-breakpoint-cut",
+      "label": "breakpoint-cut / breakpoint-cut",
+      "disabled": true
+    },
+    {
+      "hash": "de6d72e145c9efa9",
+      "icon": "editor-breakpoint-copy",
+      "label": "breakpoint-copy / breakpoint-copy",
+      "disabled": true
+    },
+    {
+      "hash": "74ca73e7acc0a12d",
+      "icon": "editor-breakpoint-paste",
+      "label": "breakpoint-paste / breakpoint-paste",
+      "disabled": true
+    },
+    {
+      "hash": "1a4844a42af41a26",
+      "icon": "editor-bookmark",
+      "label": "bookmark / bookmark-list / bookmark"
+    },
+    {
+      "hash": "98529f300252c78f",
+      "icon": "editor-bookmark-next",
+      "label": "bookmark-next / bookmark-next",
+      "disabled": true
+    },
+    {
+      "hash": "85f50d5c3423544d",
+      "icon": "editor-bookmark-previous",
+      "label": "bookmark-previous / bookmark-previous",
+      "disabled": true
+    },
+    {
+      "hash": "f776a03d6873ce88",
+      "icon": "editor-bookmark-clear",
+      "label": "bookmark-clear / bookmark-clear",
+      "disabled": true
+    },
+    {
+      "hash": "46248ec8eba08d95",
+      "icon": "editor-format",
+      "label": "format / format",
+      "disabled": true
+    },
+    {
+      "hash": "c16fb45b10212087",
+      "icon": "editor-indent",
+      "label": "indent / indent",
+      "disabled": true
+    },
+    {
+      "hash": "87200f278a7b9ee5",
+      "icon": "editor-outdent",
+      "label": "outdent / outdent",
+      "disabled": true
+    },
+    {
+      "hash": "8c51d74e4274d07c",
+      "icon": "editor-goto-line",
+      "label": "goto-line / goto-line"
+    },
+    {
+      "hash": "7ccac73e49090711",
+      "icon": "editor-file-close",
+      "label": "file-close"
+    },
+    {
+      "hash": "654dfae8b7683ce7",
+      "icon": "editor-page-settings",
+      "label": "page-settings"
+    },
+    {
+      "hash": "8c95bf102a223db2",
+      "icon": "editor-replace",
+      "label": "replace"
+    },
+    {
+      "hash": "c6f327507ecc1069",
+      "icon": "editor-translate-ui",
+      "label": "translate-ui"
+    },
+    {
+      "hash": "3215dbbabfd52383",
+      "icon": "editor-find-tree",
+      "label": "find-tree"
+    },
+    {
+      "hash": "70c1fd0ae6f20fc2",
+      "icon": "editor-query-builder",
+      "label": "query-builder"
+    },
+    {
+      "hash": "cdc6c899305399dc",
+      "icon": "editor-query-process",
+      "label": "query-process"
+    },
+    {
+      "hash": "0699adc7a90864a5",
+      "icon": "menu-extension-add",
+      "label": "extension-add-disabled",
+      "disabled": true
+    },
+    {
+      "hash": "e39541061907bf3b",
+      "icon": "editor-linebreak-add",
+      "label": "linebreak-add"
+    },
+    {
+      "hash": "0b3e79e08f6e7581",
+      "icon": "editor-linebreak-remove",
+      "label": "linebreak-remove"
+    },
+    {
+      "hash": "1fd805852798418e",
+      "icon": "editor-fold",
+      "label": "fold"
+    },
+    {
+      "hash": "825749c6281a9305",
+      "icon": "editor-unfold",
+      "label": "unfold",
+      "disabled": true
+    },
+    {
+      "hash": "eb0f03cca7d80f66",
+      "icon": "editor-extensions",
+      "label": "extensions"
+    },
+    {
+      "hash": "bcd19a4e4404e66d",
+      "icon": "editor-compare-configurations",
+      "label": "compare-configurations"
+    },
+    {
+      "hash": "57741c53933e8021",
+      "icon": "editor-performance",
+      "label": "performance"
+    },
+    {
+      "hash": "e0ba17821b55e575",
+      "icon": "editor-client-thin",
+      "label": "client-thin"
+    },
+    {
+      "hash": "5ff65c0ddd2b9e40",
+      "icon": "editor-client-web",
+      "label": "client-web"
+    },
+    {
+      "hash": "18a3f01d5a7c627a",
+      "icon": "editor-client-mobile",
+      "label": "client-mobile"
+    },
+    {
+      "hash": "b3abe6774c99b3a4",
+      "icon": "editor-client-mobile-app",
+      "label": "client-mobile-app"
+    },
+    {
+      "hash": "bf681e27ad479490",
+      "icon": "editor-client-thick",
+      "label": "client-thick"
+    },
+    {
+      "hash": "0cd2d88c9daa58e3",
+      "icon": "editor-users",
+      "label": "users"
+    },
+    {
+      "hash": "9202068ecaea63d6",
+      "icon": "editor-users-active",
+      "label": "users-active"
+    },
+    {
+      "hash": "0a46b2361f76b4f7",
+      "icon": "editor-event-log",
+      "label": "event-log"
+    },
+    {
+      "hash": "2498e0d0cd611223",
+      "icon": "editor-auth-lock",
+      "label": "auth-lock"
+    },
+    {
+      "hash": "edd91db9ed3b80e6",
+      "icon": "editor-record",
+      "label": "record"
+    },
+    {
+      "hash": "096e7efaaa46df44",
+      "icon": "editor-calculator",
+      "label": "calculator"
+    },
+    {
+      "hash": "cf09d3d76f123ff6",
+      "icon": "editor-calendar",
+      "label": "calendar"
+    },
+    {
+      "hash": "3892b5c996d7f071",
+      "icon": "editor-session-lock",
+      "label": "session-lock"
+    },
+    {
+      "hash": "a4e52bbbdf25e284",
+      "icon": "editor-settings",
+      "label": "settings"
+    },
+    {
+      "hash": "ea2d3af9711d6233",
+      "icon": "editor-window-new",
+      "label": "window-new"
+    },
+    {
+      "hash": "813758a0f494d4a7",
+      "icon": "editor-split-horizontal",
+      "label": "split-horizontal"
+    },
+    {
+      "hash": "f0cb079c9e747e54",
+      "icon": "editor-split-vertical",
+      "label": "split-vertical"
+    },
+    {
+      "hash": "82f23da15ffc49d2",
+      "icon": "editor-navigate-back",
+      "label": "navigate-back"
+    },
+    {
+      "hash": "33679a25cf99e8f8",
+      "icon": "editor-navigate-forward",
+      "label": "navigate-forward",
+      "disabled": true
+    },
+    {
+      "hash": "ffb23745bcabce9d",
+      "icon": "editor-messages",
+      "label": "messages"
+    },
+    {
+      "hash": "8d95f85dce29bf7b",
+      "icon": "editor-help-question",
+      "label": "help-question"
+    },
+    {"hash":"ebf35010e15e7415", "icon":"editor-fold-all", "disabled":true, "label":"Свернуть все группы (недоступно)"},
+    {"hash":"4fa500be5d89fe4c", "icon":"editor-unfold-all", "label":"Развернуть все группы"},
+    {"hash":"5ca1f434e8fc2c0e", "icon":"editor-format", "label":"Форматировать (выделен текст)"},
+    {"hash":"45cef4748ec415cf", "icon":"editor-indent", "label":"Увеличить отступ (выделен текст)"},
+    {"hash":"ec6763fd609b03b4", "icon":"editor-outdent", "label":"Уменьшить отступ (выделен текст)"},
+    {
+      "hash": "40beaa946924ab6a",
+      "icon": "meta-module",
+      "size": 14,
+      "label": "Модуль в меню Окна (14 px)"
+    }
+  ]
+}

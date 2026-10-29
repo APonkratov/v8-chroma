@@ -1,6 +1,10 @@
 #include <windows.h>
 struct Color { double r,g,b,a,offset; unsigned corner; };
 extern "C" __declspec(dllexport) void cairo_set_source_rgb(Color* c,double r,double g,double b) { *c={r,g,b,1.,0.,0}; }
+// Import-library symbol for the optional prototype fixture; it loads real Cairo.
+extern "C" __declspec(dllexport) void cairo_set_source(void*,void*) {}
+extern "C" __declspec(dllexport) void cairo_mask(void*,void*) {}
+extern "C" __declspec(dllexport) void cairo_mask_surface(void*,void*,double,double) {}
 extern "C" __declspec(dllexport) void cairo_set_source_rgba(Color* c,double r,double g,double b,double a) { *c={r,g,b,a,0.,0}; }
 extern "C" __declspec(dllexport) void cairo_pattern_add_color_stop_rgba(Color* c,double o,double r,double g,double b,double a) { *c={r,g,b,a,o,0}; }
 extern "C" __declspec(dllexport) void cairo_mesh_pattern_set_corner_color_rgba(Color* c,unsigned corner,double r,double g,double b,double a) { *c={r,g,b,a,0.,corner}; }

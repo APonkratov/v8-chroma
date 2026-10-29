@@ -86,6 +86,11 @@ Core-задачи кэшируют только загруженные паке�
 
 ## Протокол
 
+Отдельный эксперимент с собственными значками панели описан в
+[toolbar-icons-prototype.md](toolbar-icons-prototype.md). В обычной сборке он выключен.
+Предложение по включению в основной движок и этапы PR:
+[icon-integration.md](icon-integration.md).
+
 ```powershell
 python tests/generate_golden.py --check
 ```
