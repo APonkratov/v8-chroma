@@ -69,6 +69,7 @@ GEOMETRY.update({
     "move-down": '<polyline points="3,8 8,13 13,8"/><line x1="8" y1="2" x2="8" y2="13"/>',
     "sort": '<line x1="2" y1="3" x2="10" y2="3"/><line x1="2" y1="6" x2="8" y2="6"/><line x1="2" y1="9" x2="6" y2="9"/><line x1="2" y1="12" x2="4" y2="12"/><polyline points="12,5 12,14 9.5,11.5"/><line x1="12" y1="14" x2="14.5" y2="11.5"/>',
     "subsystems": '<polygon points="1.5,2.5 14.5,2.5 9.5,8 9.5,13.5 6.5,12 6.5,8"/><line x1="4.2" y1="5" x2="11.8" y2="5"/>',
+    "subsystems-support": '<polyline points="4.5,10 4.5,7 1.5,2.5 11,2.5 8,7 8,12.5 6.5,12"/><line x1="11.5" y1="6" x2="14.5" y2="6"/><line x1="11.5" y1="9.5" x2="14.5" y2="9.5"/><line x1="11.5" y1="13" x2="14.5" y2="13"/><rect x="1.5" y="11" width="4" height="3.5"/><polyline points="2.3,11 2.3,9.3 4.7,9.3 4.7,11"/>',
 })
 GEOMETRY.update(METADATA_GEOMETRY)
 GEOMETRY.update(MENU_GEOMETRY)
