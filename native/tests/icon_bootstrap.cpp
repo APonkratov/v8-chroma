@@ -40,7 +40,7 @@ void drawIconMaskSurface(void* c,void* s,double x,double y,
                         void(__cdecl* original)(void*,void*,double,double)) {
     ++iconDraws; original(c,s,x,y);
 }
-static bool snapshotMatches(const wchar_t* path,unsigned generation) {
+static bool snapshotMatches(const wchar_t* path,unsigned generation,unsigned requestedMode) {
     if (ThemeSnapshot(nullptr)) return false;
     FILE* file=_wfopen(path,L"rb");
     if (!file) return false;
@@ -48,7 +48,7 @@ static bool snapshotMatches(const wchar_t* path,unsigned generation) {
     char expected[64]; sprintf(expected,"# generation=%u\n",generation);
     bool base=strstr(bytes,expected) && strstr(bytes,"# base_patched_imports=14\n");
     if (available) {
-        sprintf(expected,"# icon_mode=%u\n",activeMode);
+        sprintf(expected,"# icon_mode=%u\n",requestedMode);
         return base && strstr(bytes,"# patched_imports=17\n") &&
             strstr(bytes,"# icon_patched_imports=3\n") && strstr(bytes,"# icon_status=0\n") &&
             strstr(bytes,expected) && strstr(bytes,"# icon_pack=1\n");
@@ -75,7 +75,7 @@ int wmain(int argc,wchar_t** argv) {
     if (!GetFullPathNameW(argv[1],520,config.logPath,nullptr)) return 4;
     DWORD result=ThemeInitialize(&config);
     if (result) { printf("ThemeInitialize failed: %lu\n",result); return 5; }
-    bool ok=preparations==1 && snapshotMatches(config.logPath,1);
+    bool ok=preparations==1 && snapshotMatches(config.logPath,1,config.iconMode);
     auto frame=frame_probe();
     ok &= frame.invariants && frame.text==0x123456 && graphics_probe(&config);
     graphics_icon_probe(); ok &= iconDraws==(available?3u:0u);
@@ -85,7 +85,7 @@ int wmain(int argc,wchar_t** argv) {
     ok &= ThemeApply(&config)==ERROR_SUCCESS;
     frame=frame_probe();
     ok &= preparations==(available?2u:1u) && frame.invariants && frame.text==0x654321;
-    ok &= graphics_probe(&config) && snapshotMatches(config.logPath,2);
+    ok &= graphics_probe(&config) && snapshotMatches(config.logPath,2,config.iconMode);
     ok &= ThemeStop(nullptr)==ERROR_SUCCESS;
     frame=frame_probe();
     ok &= frame.invariants && frame.text==0;
