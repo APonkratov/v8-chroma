@@ -12,7 +12,7 @@ class IconAssetTests(unittest.TestCase):
     def test_pack_is_reproducible_and_all_replacements_have_artwork(self):
         import build_icon_assets as icons
         rows = icons.patches()
-        self.assertEqual(len(rows), 765)
+        self.assertEqual(len(rows), 791)
         self.assertEqual(icons.build(), icons.build())
         for row in rows:
             for style in ("light", "dark"):

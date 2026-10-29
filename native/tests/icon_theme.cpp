@@ -85,6 +85,35 @@ int main() {
     }
     activateIconTheme(nullptr);
     valid &= iconStats().bytes==0 && iconStats().cached==0 && iconStats().mode==0;
+    // Formatting color controls: replace the known glyph, retain any selected
+    // swatch, and invalidate the cached image when only that swatch changes.
+    source=cairo_image_surface_create(0,16,16);
+    Pattern colorPattern={source,{}};
+    for (unsigned mode:{1u,2u}) {
+        DWORD colorError=0; activateIconTheme(prepareIconTheme(mode,colorError));
+        expectedMode=mode;
+        valid &= colorError==0;
+        for (uint32_t swatch:{0xff112233u,0xffffcc00u,0x80402010u,0u}) {
+            auto values=reinterpret_cast<uint32_t*>(source->pixels.data());
+            for (int i=0;i<16*16;++i) values[i]=i<16*12?0xffcc2244u:swatch;
+            auto original=source->pixels;
+            drawIconSource(&context,&colorPattern,[](void*,void* value) {
+                auto result=static_cast<Pattern*>(value)->surface;
+                auto pixels=reinterpret_cast<uint32_t*>(result->pixels.data());
+                auto native=reinterpret_cast<uint32_t*>(source->pixels.data());
+                valid &= result!=source;
+                uint32_t expected=expectedMode==1?0xff44cc88u:0xff4488ccu;
+                for (int i=0;i<16*16;++i) valid &= pixels[i]==(i<16*12?expected:native[i]);
+            });
+            valid &= source->pixels==original;
+            source->pixels[0]^=1; // A changed glyph is unknown even with a known swatch.
+            drawIconSource(&context,&colorPattern,[](void*,void* value) {
+                valid &= static_cast<Pattern*>(value)->surface==source;
+            });
+        }
+        valid &= iconStats().cached==4;
+    }
+    activateIconTheme(nullptr); cairo_surface_destroy(source);
     source=cairo_image_surface_create(0,48,16);
     auto p=reinterpret_cast<uint32_t*>(source->pixels.data());
     for (int i=0;i<48*16-1;++i) p[i]=0xffcc2244u;
@@ -112,6 +141,6 @@ int main() {
     }
     done=true; render.join(); valid &= stressOk && stressCalls>=10;
     activateIconTheme(nullptr); cairo_surface_destroy(source);
-    printf("Integrated icon module: sizes, masks, state, mutation, toggles, cache release: %s\n",valid?"PASS":"FAIL");
+    printf("Integrated icon module: sizes, masks, state, dynamic swatches, mutation, toggles, cache release: %s\n",valid?"PASS":"FAIL");
     return valid?0:1;
 }

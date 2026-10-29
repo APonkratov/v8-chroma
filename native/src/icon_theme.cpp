@@ -24,7 +24,7 @@ void (*getMatrix)(void*,Matrix*),(*setMatrix)(void*,const Matrix*);
 void (*setExtend)(void*,int),(*setFilter)(void*,int);
 void (*getOffset)(void*,double*,double*),(*setOffset)(void*,double,double);
 void (*getScale)(void*,double*,double*),(*setScale)(void*,double,double);
-struct Patch { uint64_t hash; int w,h,x,y,size; void* image; };
+struct Patch { uint64_t hash; int w,h,x,y,size,preserveBottom; void* image; };
 std::vector<Patch> patches;
 struct Cache { uint64_t hash; int w,h,kind; double x,y,sx,sy; void* image; };
 std::vector<Cache> cache;
@@ -42,11 +42,11 @@ uint32_t sourcePixel(unsigned char* input,int x,int y,int pitch,int kind) {
     if (kind==1) pixel|=0xFF000000u;
     return (pixel>>24)?pixel:0;
 }
-uint64_t fingerprint(unsigned char* input,int w,int h,int pitch,int kind) {
+uint64_t fingerprint(unsigned char* input,int w,int h,int pitch,int kind,int ignoreBottom=0) {
     uint64_t value=14695981039346656037ull;
     for (int n:{w,h}) for (int shift=0;shift<32;shift+=8) hashByte(value,(n>>shift)&255);
     for (int y=0;y<h;++y) for (int x=0;x<w;++x) {
-        uint32_t pixel=sourcePixel(input,x,y,pitch,kind);
+        uint32_t pixel=y>=h-ignoreBottom?0:sourcePixel(input,x,y,pitch,kind);
         for (int shift=0;shift<32;shift+=8) hashByte(value,(pixel>>shift)&255);
     }
     return value;
@@ -67,8 +67,17 @@ void* replacement(void* source) {
     getOffset(source,&offsetX,&offsetY); getScale(source,&scaleX,&scaleY);
     for (auto& entry:cache) if (entry.hash==hash && entry.w==w && entry.h==h && entry.kind==kind &&
         entry.x==offsetX && entry.y==offsetY && entry.sx==scaleX && entry.sy==scaleY) return entry.image;
+    // Only declared 16px color controls ignore their dynamic swatch. The cache
+    // still keys on all original pixels, so a changed color never reuses an old one.
+    uint64_t glyphHash=0; bool glyphHashed=false;
+    auto matching=[&](const Patch& patch) {
+        if (patch.w!=w || patch.h!=h) return false;
+        if (!patch.preserveBottom) return patch.hash==hash;
+        if (!glyphHashed) { glyphHash=fingerprint(input,w,h,pitch,kind,4); glyphHashed=true; }
+        return patch.hash==glyphHash;
+    };
     bool known=false;
-    for (auto& patch:patches) if (patch.hash==hash && patch.w==w && patch.h==h) { known=true; break; }
+    for (auto& patch:patches) if (matching(patch)) { known=true; break; }
     if (!known) return nullptr;
     if (cache.size()>=maxImages || cacheBytes+static_cast<size_t>(w)*h*4>16*1024*1024) {
         for (auto& entry:cache) if (entry.image) destroySurface(entry.image);
@@ -76,7 +85,7 @@ void* replacement(void* source) {
     }
     ++uniqueImages;
     void* copy=nullptr;
-    for (auto& patch:patches) if (patch.hash==hash && patch.w==w && patch.h==h) {
+    for (auto& patch:patches) if (matching(patch)) {
         if (!copy) {
             copy=createSurface(0,w,h);
             if (!copy || status(copy)) { if (copy) destroySurface(copy); copy=nullptr; break; }
@@ -87,7 +96,7 @@ void* replacement(void* source) {
         }
         auto output=data(copy),pixels=data(patch.image);
         int outPitch=stride(copy),patchPitch=stride(patch.image);
-        for (int y=0;y<patch.size;++y)
+        for (int y=0;y<patch.size-patch.preserveBottom;++y)
             memcpy(output+(y+patch.y)*outPitch+patch.x*4,pixels+y*patchPitch,static_cast<size_t>(patch.size)*4);
     }
     if (copy) {
@@ -152,6 +161,9 @@ IconState* prepareIconTheme(unsigned mode,DWORD& error) {
     // Each patch owns its surface. Decode before publishing; never read files in a hook.
     try {
         for (auto& p:IconAssets::patches) {
+            if (p.preserveBottom && (p.preserveBottom!=4 || p.w!=16 || p.h!=16 || p.x || p.y || p.size!=16)) {
+                error=ERROR_INVALID_DATA; break;
+            }
             const auto& a=assets[p.asset];
             void* surface=createSurface(0,a.size,a.size);
             if (!surface || status(surface)) {
@@ -169,7 +181,7 @@ IconState* prepareIconTheme(unsigned mode,DWORD& error) {
             }
             dirty(surface);
             try { state->patches.push_back({p.hash,static_cast<int>(p.w),static_cast<int>(p.h),
-                      static_cast<int>(p.x),static_cast<int>(p.y),static_cast<int>(p.size),surface}); }
+                      static_cast<int>(p.x),static_cast<int>(p.y),static_cast<int>(p.size),static_cast<int>(p.preserveBottom),surface}); }
             catch (...) { destroySurface(surface); throw; }
         }
     } catch (...) { error=ERROR_NOT_ENOUGH_MEMORY; }
