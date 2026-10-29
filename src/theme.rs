@@ -532,6 +532,8 @@ mod tests {
             let changed_code = target(5, 0xF5F5F5);
             assert_eq!(changed_code, statuses[0], "changed code block {id}");
             assert_ne!(changed_code, cfg.colors[0], "difference erased {id}");
+            // This ink is the native correction's fallback. Actual syntax inks
+            // are covered by contrast_test and the production Cairo glyph test.
             assert!(contrast(changed_code, cfg.colors[1]) >= 4.5, "code {id}");
             assert_eq!(target(6, 0xF5F5F5), cfg.colors[4], "RGBA UI skin {id}");
         }
