@@ -1,0 +1,97 @@
+{
+  "description": "Exact compare/merge image fingerprints for Designer 8.3.27.2325; no platform pixels.",
+  "sources": [
+    {
+      "hash": "99d29566c138d334",
+      "icon": "compare-unresolved",
+      "label": "unresolved"
+    },
+    {
+      "hash": "3a666cf88d08842b",
+      "icon": "compare-unresolved",
+      "label": "unresolved"
+    },
+    {
+      "hash": "8ff244e7b3e4e5b5",
+      "icon": "compare-merge-modules",
+      "label": "merge-modules"
+    },
+    {
+      "hash": "dfafa799a09514b6",
+      "icon": "compare-merge-modules",
+      "label": "merge-modules"
+    },
+    {
+      "hash": "b9687e3f46ccad7a",
+      "icon": "compare-procedure",
+      "label": "procedure"
+    },
+    {
+      "hash": "74de0073c6deee95",
+      "icon": "compare-function",
+      "label": "function"
+    },
+    {
+      "hash": "e8e050f8c70830a5",
+      "icon": "compare-region",
+      "label": "region"
+    },
+    {
+      "hash": "9627e322c1e07556",
+      "icon": "compare-borrowed",
+      "label": "borrowed"
+    },
+    {
+      "hash": "3aa1cbb4cd9cb946",
+      "icon": "compare-extension",
+      "label": "extension"
+    },
+    {
+      "hash": "3f1bdcc31efddb47",
+      "icon": "compare-extension",
+      "label": "extension"
+    },
+    {
+      "hash": "251b53d96cd3dd04",
+      "icon": "compare-file",
+      "label": "file"
+    },
+    {
+      "hash": "bf62efa9e011aca9",
+      "icon": "compare-file",
+      "label": "file"
+    },
+    {
+      "hash": "7d820877c762cab0",
+      "icon": "preview",
+      "label": "find-line"
+    },
+    {
+      "hash": "13d987f41a2e05c8",
+      "icon": "preview",
+      "label": "find-line"
+    },
+    {
+      "hash": "78c6ea86e0a6f22d",
+      "icon": "editor-comment-add",
+      "label": "comparison disabled editor-comment-add",
+      "disabled": true
+    },
+    {
+      "hash": "07ae17394df0a264",
+      "icon": "editor-comment-remove",
+      "label": "comparison disabled editor-comment-remove",
+      "disabled": true
+    },
+    {
+      "hash": "f6e21d4604f7dabc",
+      "icon": "compare-lock",
+      "label": "repository lock"
+    },
+    {
+      "hash": "f90df28fa55284ee",
+      "icon": "compare-refresh",
+      "label": "comparison refresh"
+    }
+  ]
+}

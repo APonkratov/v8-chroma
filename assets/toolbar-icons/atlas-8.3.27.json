@@ -4869,6 +4869,69 @@
       "y": 0,
       "size": 64,
       "asset": "undo-64.png"
+    },
+    {
+      "hash": "c3a6a825e50c3eca",
+      "width": 64,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "compare-procedure-16.png"
+    },
+    {
+      "hash": "c3a6a825e50c3eca",
+      "width": 64,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "compare-function-16.png"
+    },
+    {
+      "hash": "c3a6a825e50c3eca",
+      "width": 64,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "compare-region-16.png"
+    },
+    {
+      "hash": "df88b45d8298bec3",
+      "width": 48,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "compare-borrowed-16.png"
+    },
+    {
+      "hash": "544a4c33da574c0b",
+      "width": 160,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "compare-extension-16.png"
+    },
+    {
+      "hash": "544a4c33da574c0b",
+      "width": 160,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "compare-file-16.png"
+    },
+    {
+      "hash": "ae3c30433d0539cf",
+      "width": 880,
+      "height": 16,
+      "x": 144,
+      "y": 0,
+      "size": 16,
+      "asset": "compare-refresh-16.png"
     }
   ]
 }
