@@ -73,9 +73,8 @@
           <div class="swatches" aria-hidden="true">{#each ['keyword','identifier','comment','string'] as role}<i style:background={editor[role]}></i>{/each}</div>
         </div>
         <div class="appearance-controls">
-          <div class="appearance-icon-option"><label for="custom-icons"><strong>Новые значки</strong><small>Панели, дерево и меню</small></label><button id="custom-icons" class="switch" class:checked={customIcons} role="switch" aria-checked={customIcons} aria-label="Новые значки конфигуратора" disabled={disabled} onclick={toggleIcons}><i></i></button></div>
+          <div class="appearance-icon-option"><label for="custom-icons"><strong>Новые значки</strong></label><button id="custom-icons" class="switch" class:checked={customIcons} role="switch" aria-checked={customIcons} aria-label="Новые значки конфигуратора" disabled={disabled} onclick={toggleIcons}><i></i></button></div>
         </div>
-        <p class="appearance-policy" role="status">{#if appState?.busy}<RefreshCw size={12} class="spin"/>Применяем оформление…{:else if eligible>0}Выбор темы и значков сразу применяется к открытым конфигураторам.{:else if auto}Оформление применится, когда вы откроете конфигуратор.{:else}Выбор сохранён. После открытия конфигуратора примените его на вкладке «Конфигураторы».{/if}</p>
         <ConfiguratorPreview theme={selected} {customIcons}/>
       </section>
       <p class="preview-note">Пример оформления конфигуратора. Строки и числа пока используют общий цвет.</p>

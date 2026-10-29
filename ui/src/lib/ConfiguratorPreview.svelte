@@ -20,9 +20,6 @@
   ];
 </script>
 
-<div class="preview-heading">
-  <span class="preview-label">Пример конфигуратора</span>
-</div>
 <div class="configurator-preview" style:background={colors['editor.background']} style:color={colors.text} style:--preview-panel={colors.panel} style:--preview-border={colors.border} aria-label={`Пример конфигуратора: ${theme.name}, ${customIcons?'новые':'штатные'} значки`}>
   <div class="preview-menubar" aria-hidden="true"><span>Файл</span><span>Правка</span><span>Конфигурация</span><span>Отладка</span><span>Сервис</span></div>
   <div class="preview-toolbar" aria-label="Пример панели команд">
