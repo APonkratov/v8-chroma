@@ -49,4 +49,4 @@ C++, Rust и независимых goldens. Уже загруженный дв�
 Собственные значки встроены в ThemeProbe. Для генерации нужны Python и Pillow
 из `scripts/requirements-ci.txt`; установленная 1С не нужна. CMake пересобирает
 пакет при изменении SVG/профилей. `icon_theme_test` проверяет модуль на
-собственных поверхностях без Cairo; см. [интеграцию](../docs/icon-integration.md).
+собственных поверхностях без Cairo; см. [интеграцию](../docs/custom-icons.md).

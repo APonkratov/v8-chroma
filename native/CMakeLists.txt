@@ -46,7 +46,7 @@ file(GLOB ICON_INPUTS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/../assets/t
 set(ICON_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/icon_assets.h")
 add_custom_command(OUTPUT "${ICON_HEADER}"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/build_icon_assets.py" --output "${ICON_HEADER}"
-    DEPENDS ${ICON_INPUTS} ../scripts/build_icon_assets.py ../scripts/build_toolbar_prototype.py
+    DEPENDS ${ICON_INPUTS} ../scripts/build_icon_assets.py ../scripts/icon_raster.py
     VERBATIM)
 add_library(theme_engine SHARED src/probe.cpp src/window_theme.cpp src/raster_theme.cpp src/editor_selection.cpp src/icon_theme.cpp "${ICON_HEADER}")
 target_include_directories(theme_engine PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
@@ -55,18 +55,12 @@ output(theme_engine ThemeProbe "")
 install(TARGETS theme_engine RUNTIME DESTINATION assets)
 install(TARGETS theme_engine RUNTIME DESTINATION native/bin)
 
-option(V8_CHROMA_BUILD_ICON_PROTOTYPE "Build the opt-in, separate toolbar icon experiment" OFF)
-if(V8_CHROMA_BUILD_ICON_PROTOTYPE)
-    add_library(toolbar_icons SHARED prototype/toolbar_icons.cpp)
-    output(toolbar_icons ToolbarIcons prototype)
-endif()
-
 option(V8_CHROMA_BUILD_FIXTURES "Build owned DLLs and process fixtures for tests" ON)
 if(V8_CHROMA_BUILD_FIXTURES)
     set(ICON_FIXTURE_HEADER "${CMAKE_CURRENT_BINARY_DIR}/icon-fixtures/icon_assets.h")
     add_custom_command(OUTPUT "${ICON_FIXTURE_HEADER}"
         COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/build_icon_assets.py" --fixture --output "${ICON_FIXTURE_HEADER}"
-        DEPENDS ../scripts/build_icon_assets.py ../scripts/build_toolbar_prototype.py VERBATIM)
+        DEPENDS ../scripts/build_icon_assets.py ../scripts/icon_raster.py VERBATIM)
     add_executable(icon_theme_test tests/icon_theme.cpp src/icon_theme.cpp "${ICON_FIXTURE_HEADER}")
     target_include_directories(icon_theme_test PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/icon-fixtures")
     output(icon_theme_test icon_theme_test demo)
@@ -74,14 +68,6 @@ if(V8_CHROMA_BUILD_FIXTURES)
     install(TARGETS icon_theme_test RUNTIME DESTINATION native/bin/demo)
     add_library(mock_cairo SHARED tests/mock_cairo.cpp)
     output(mock_cairo cairo demo)
-    if(V8_CHROMA_BUILD_ICON_PROTOTYPE)
-        add_library(icon_test_graphics SHARED prototype/test_graphics.cpp)
-        target_link_libraries(icon_test_graphics PRIVATE mock_cairo)
-        output(icon_test_graphics grphcs prototype-fixtures)
-        add_executable(toolbar_icons_test prototype/test_host.cpp)
-        console(toolbar_icons_test)
-        output(toolbar_icons_test toolbar_icons_test prototype-fixtures)
-    endif()
     add_library(mock_frame SHARED tests/frame.cpp)
     target_link_libraries(mock_frame PRIVATE gdi32 user32)
     output(mock_frame frame demo)

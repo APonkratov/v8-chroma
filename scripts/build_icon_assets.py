@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import re
 
-from build_toolbar_prototype import raster
+from icon_raster import raster
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets/toolbar-icons"
@@ -99,7 +99,7 @@ def main():
 
 
 def fixture():
-    from build_toolbar_prototype import fingerprint, SIZES
+    from icon_raster import fingerprint, SIZES
     out = ["#pragma once\n#include <stdint.h>\nnamespace IconAssets {\n",
            "struct Run { uint32_t count,pixel; }; struct Asset { const Run* runs; unsigned count,size; };\n",
            "struct Patch { uint64_t hash; unsigned w,h,x,y,size,asset; };\n"]
