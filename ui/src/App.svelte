@@ -34,10 +34,10 @@
     try {await action();await refresh();notice=message;}catch(e){error=String(e);}finally{saving=false;}
   }
   async function select(id:string){
-    await perform(()=>invoke('save_settings',{patch:{selected_theme:id}}));
+    await perform(()=>invoke('set_appearance',{patch:{selected_theme:id}}));
     if(!error)window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
   }
-  function toggleIcons(){return perform(()=>invoke('save_settings',{patch:{custom_icons:!appState?.settings?.settings.custom_icons}}),'Настройка значков сохранена');}
+  function toggleIcons(){return perform(()=>invoke('set_appearance',{patch:{custom_icons:!customIcons}}));}
   function toggleAuto(){return perform(()=>invoke('save_settings',{patch:{auto_apply:!auto}}),auto?'Авто-применение выключено':'Авто-применение включено');}
   function apply(row?:ProcessRow){return perform(()=>invoke('apply_theme',{pid:row?.pid??null,createdTime:row?.created_time??null}));}
   onMount(()=>{
@@ -74,12 +74,9 @@
         </div>
         <div class="appearance-controls">
           <div class="appearance-icon-option"><label for="custom-icons"><strong>Новые значки</strong><small>Панели, дерево и меню</small></label><button id="custom-icons" class="switch" class:checked={customIcons} role="switch" aria-checked={customIcons} aria-label="Новые значки конфигуратора" disabled={disabled} onclick={toggleIcons}><i></i></button></div>
-          <button class="primary" disabled={disabled || eligible===0} onclick={()=>apply()}>{#if appState?.busy}<RefreshCw size={14} class="spin"/>{:else}<Check size={15}/>{/if}Применить сейчас</button>
         </div>
-        <p class="appearance-policy">{auto?'Авто-применение включено: изменения применяются сразу.':'Изменения сохраняются. Нажмите «Применить сейчас», когда будете готовы.'}</p>
-        {#key `${selectedId}-${customIcons}`}
-          <ConfiguratorPreview theme={selected} {customIcons}/>
-        {/key}
+        <p class="appearance-policy" role="status">{#if appState?.busy}<RefreshCw size={12} class="spin"/>Применяем оформление…{:else if eligible>0}Выбор темы и значков сразу применяется к открытым конфигураторам.{:else if auto}Оформление применится, когда вы откроете конфигуратор.{:else}Выбор сохранён. После открытия конфигуратора примените его на вкладке «Конфигураторы».{/if}</p>
+        <ConfiguratorPreview theme={selected} {customIcons}/>
       </section>
       <p class="preview-note">Пример оформления конфигуратора. Строки и числа пока используют общий цвет.</p>
       <section class="collection" aria-label="Коллекция тем">
@@ -104,7 +101,7 @@
       {/if}
     {:else}
       <header class="page-header"><h1>Настройки</h1></header>
-      <section class="settings-group"><h2>Работа приложения</h2><div class="setting-row"><div><strong>Автоматическое применение</strong><p>Оформлять открытые и новые конфигураторы.</p></div><button class="switch" class:checked={auto} role="switch" aria-checked={auto} aria-label="Автоматическое применение" disabled={saving || !appState?.settings} onclick={toggleAuto}><i></i></button></div><div class="setting-row"><div><strong>Запускать при входе в Windows</strong><p>{appState?.custom_profile?'Для отдельного профиля автозапуск недоступен.':'В фоне, со значком в системном трее.'}</p></div><button class="switch" class:checked={appState?.autostart_enabled===true} role="switch" aria-checked={appState?.autostart_enabled===true} aria-label="Запускать при входе в Windows" disabled={saving || appState?.custom_profile || appState?.autostart_enabled==null} onclick={()=>perform(()=>invoke('set_autostart',{enabled:!appState?.autostart_enabled}),'Настройка автозапуска сохранена')}><i></i></button></div>{#if appState?.autostart_error}<p class="setting-warning">{appState.autostart_error}</p>{/if}</section>
+      <section class="settings-group"><h2>Работа приложения</h2><div class="setting-row"><div><strong>Автоматическое применение</strong><p>В фоне оформлять открытые и новые конфигураторы. Ручной выбор применяется сразу.</p></div><button class="switch" class:checked={auto} role="switch" aria-checked={auto} aria-label="Автоматическое применение" disabled={saving || !appState?.settings} onclick={toggleAuto}><i></i></button></div><div class="setting-row"><div><strong>Запускать при входе в Windows</strong><p>{appState?.custom_profile?'Для отдельного профиля автозапуск недоступен.':'В фоне, со значком в системном трее.'}</p></div><button class="switch" class:checked={appState?.autostart_enabled===true} role="switch" aria-checked={appState?.autostart_enabled===true} aria-label="Запускать при входе в Windows" disabled={saving || appState?.custom_profile || appState?.autostart_enabled==null} onclick={()=>perform(()=>invoke('set_autostart',{enabled:!appState?.autostart_enabled}),'Настройка автозапуска сохранена')}><i></i></button></div>{#if appState?.autostart_error}<p class="setting-warning">{appState.autostart_error}</p>{/if}</section>
       <section class="settings-group"><h2>Ваши настройки</h2><div class="settings-path"><span>Расположение файла</span><code>{appState?.settings?.path??'Файл настроек недоступен'}</code><button class="secondary" onclick={()=>perform(()=>invoke('open_settings_folder'))}><FolderOpen size={15}/>Открыть папку</button></div><div class="setting-row"><div><strong>Вернуть настройки по умолчанию</strong><p>Dracula и включённое авто-применение. Предыдущая копия сохраняется.</p></div><button class="secondary" disabled={saving} onclick={()=>perform(()=>invoke('reset_settings'),'Настройки восстановлены')}>Сбросить</button></div></section>
       <div class="quit-row"><p>Крестик сворачивает приложение в трей. Для полного выхода используйте кнопку; конфигураторы останутся открытыми.</p><button class="quit-button" disabled={appState?.stopping} onclick={()=>perform(()=>invoke('quit_app'))}><Power size={15}/>{appState?.stopping?'Завершаем…':'Завершить приложение'}</button></div>
     {/if}

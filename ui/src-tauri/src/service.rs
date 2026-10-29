@@ -11,7 +11,7 @@ use std::{
 };
 use v8_chroma_core::{
     manager,
-    settings::{Loaded, SettingsPatch, Store, WindowPatch},
+    settings::{Loaded, Settings, SettingsPatch, Store, WindowPatch},
     watch::Controller,
     win::Identity,
 };
@@ -41,7 +41,7 @@ pub struct Snapshot {
 }
 enum Request {
     Wake,
-    Apply(Vec<Identity>, String, bool),
+    Apply(Vec<Identity>, Settings),
     Geometry(WindowPatch),
     Quit,
 }
@@ -103,12 +103,17 @@ impl Service {
                                     geometry =
                                         Some((Instant::now(), merge_geometry(previous, patch)));
                                 }
-                                Request::Apply(targets, theme, icons) => {
-                                    for identity in targets {
+                                Request::Apply(targets, settings) => {
+                                    for identity in controller.manual(&targets, &settings) {
                                         if background.shared.stop.load(Ordering::Acquire) {
                                             break;
                                         }
-                                        background.apply(&identity, &theme, icons, &mut results);
+                                        background.apply(
+                                            &identity,
+                                            &settings.selected_theme,
+                                            settings.custom_icons,
+                                            &mut results,
+                                        );
                                     }
                                     background.shared.busy.store(false, Ordering::Release);
                                     last_scan = Instant::now() - Duration::from_secs(3);
@@ -289,6 +294,55 @@ impl Service {
         let _ = self.tx.send(Request::Wake);
         Ok(loaded)
     }
+    pub fn set_appearance(&self, patch: SettingsPatch) -> Result<Loaded> {
+        self.set_appearance_with(patch, || {
+            Ok(manager::discover()?
+                .into_iter()
+                .filter(|c| c.eligible)
+                .filter_map(|c| c.identity)
+                .collect())
+        })
+    }
+    fn set_appearance_with(
+        &self,
+        patch: SettingsPatch,
+        discover: impl FnOnce() -> Result<Vec<Identity>>,
+    ) -> Result<Loaded> {
+        ensure!(
+            !self.shared.stop.load(Ordering::Acquire),
+            "Приложение завершается"
+        );
+        ensure!(
+            patch.auto_apply.is_none()
+                && patch.window.is_none()
+                && (patch.selected_theme.is_some() || patch.custom_icons.is_some()),
+            "Укажите тему или настройку значков"
+        );
+        // Reserve the worker before saving, so the watcher can't race a separate apply.
+        ensure!(
+            self.shared
+                .busy
+                .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+                .is_ok(),
+            "Дождитесь завершения текущего применения"
+        );
+        let result = (|| {
+            let targets = discover()?;
+            let loaded = self.store.update(patch)?;
+            self.edit(|s| {
+                s.settings = Some(loaded.clone());
+                s.error = None;
+            });
+            self.tx
+                .send(Request::Apply(targets, loaded.settings.clone()))
+                .map_err(|_| anyhow::anyhow!("Настройка сохранена, но наблюдатель завершён"))?;
+            Ok(loaded)
+        })();
+        if result.is_err() {
+            self.shared.busy.store(false, Ordering::Release);
+        }
+        result
+    }
     pub fn reset(&self) -> Result<Loaded> {
         let loaded = self.store.reset()?;
         self.edit(|s| {
@@ -347,11 +401,7 @@ impl Service {
         );
         if self
             .tx
-            .send(Request::Apply(
-                targets,
-                loaded.settings.selected_theme,
-                loaded.settings.custom_icons,
-            ))
+            .send(Request::Apply(targets, loaded.settings))
             .is_err()
         {
             self.shared.busy.store(false, Ordering::Release);
@@ -438,6 +488,160 @@ fn merge_geometry(previous: WindowPatch, next: WindowPatch) -> WindowPatch {
 #[cfg(test)]
 mod tests {
     use super::*;
+    // No worker is started: tests can inspect dispatch without touching live 1C.
+    fn idle_service() -> (tempfile::TempDir, Service, mpsc::Receiver<Request>) {
+        let temp = tempfile::tempdir().unwrap();
+        let store = Store::at(temp.path()).unwrap();
+        let loaded = store
+            .update(SettingsPatch {
+                auto_apply: Some(false),
+                ..Default::default()
+            })
+            .unwrap();
+        let (tx, rx) = mpsc::channel();
+        let service = Service {
+            store,
+            tx,
+            shared: Arc::new(Shared {
+                snapshot: Mutex::new(Snapshot {
+                    settings: Some(loaded),
+                    processes: vec![],
+                    error: None,
+                    busy: false,
+                    stopping: false,
+                    version: "test",
+                }),
+                busy: AtomicBool::new(false),
+                stop: AtomicBool::new(false),
+                finished: AtomicBool::new(false),
+            }),
+        };
+        (temp, service, rx)
+    }
+    #[test]
+    fn appearance_change_queues_manual_apply_with_auto_off() {
+        let (_temp, service, rx) = idle_service();
+        let identity = Identity {
+            pid: 123,
+            created_time: 456,
+            exe: "C:/Platform/1cv8.exe".into(),
+        };
+        let loaded = service
+            .set_appearance_with(
+                SettingsPatch {
+                    selected_theme: Some("monokai".into()),
+                    ..Default::default()
+                },
+                || Ok(vec![identity.clone()]),
+            )
+            .unwrap();
+        assert!(!loaded.settings.auto_apply);
+        assert_eq!(
+            service.snapshot().settings.unwrap().settings.selected_theme,
+            "monokai"
+        );
+        assert!(service.snapshot().busy);
+        let Request::Apply(targets, settings) = rx.try_recv().unwrap() else {
+            panic!("Expected manual apply");
+        };
+        assert_eq!(targets, vec![identity]);
+        assert_eq!(settings.selected_theme, "monokai");
+        assert_eq!(Controller::default().manual(&targets, &settings), targets);
+        assert!(rx.try_recv().is_err());
+    }
+    #[test]
+    fn icons_can_be_selected_without_any_open_process() {
+        let (_temp, service, rx) = idle_service();
+        service
+            .set_appearance_with(
+                SettingsPatch {
+                    custom_icons: Some(true),
+                    ..Default::default()
+                },
+                || Ok(vec![]),
+            )
+            .unwrap();
+        let Request::Apply(targets, settings) = rx.try_recv().unwrap() else {
+            panic!("Expected manual apply");
+        };
+        assert!(targets.is_empty());
+        assert!(settings.custom_icons);
+        assert!(!settings.auto_apply);
+        assert!(service.store.load().unwrap().settings.custom_icons);
+    }
+    #[test]
+    fn rejected_appearance_changes_do_not_save_or_dispatch() {
+        let (_temp, service, rx) = idle_service();
+        let before = std::fs::read(service.store.path()).unwrap();
+        assert!(
+            service
+                .set_appearance_with(
+                    SettingsPatch {
+                        auto_apply: Some(true),
+                        ..Default::default()
+                    },
+                    || panic!("Invalid patch must not discover processes")
+                )
+                .is_err()
+        );
+        service.shared.busy.store(true, Ordering::Release);
+        assert!(
+            service
+                .set_appearance_with(
+                    SettingsPatch {
+                        custom_icons: Some(true),
+                        ..Default::default()
+                    },
+                    || panic!("Busy worker must not discover processes")
+                )
+                .is_err()
+        );
+        service.shared.busy.store(false, Ordering::Release);
+        assert!(
+            service
+                .set_appearance_with(
+                    SettingsPatch {
+                        selected_theme: Some("unknown".into()),
+                        ..Default::default()
+                    },
+                    || Ok(vec![])
+                )
+                .is_err()
+        );
+        assert!(!service.snapshot().busy);
+        assert!(
+            service
+                .set_appearance_with(
+                    SettingsPatch {
+                        custom_icons: Some(true),
+                        ..Default::default()
+                    },
+                    || Err(anyhow::anyhow!("Discovery unavailable"))
+                )
+                .is_err()
+        );
+        assert!(!service.snapshot().busy);
+        assert_eq!(std::fs::read(service.store.path()).unwrap(), before);
+        assert!(rx.try_recv().is_err());
+    }
+    #[test]
+    fn closed_worker_reports_saved_choice_without_staying_busy() {
+        let (_temp, service, rx) = idle_service();
+        drop(rx);
+        assert!(
+            service
+                .set_appearance_with(
+                    SettingsPatch {
+                        custom_icons: Some(true),
+                        ..Default::default()
+                    },
+                    || Ok(vec![])
+                )
+                .is_err()
+        );
+        assert!(service.store.load().unwrap().settings.custom_icons);
+        assert!(!service.snapshot().busy);
+    }
     #[test]
     fn javascript_identity_uses_lossless_decimal_string() {
         let time = 134376008137951638u64;

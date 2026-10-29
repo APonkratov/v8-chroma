@@ -4,9 +4,6 @@
   import type {ThemePreview} from './preview';
   import {stockReference} from './preview';
   let {theme, customIcons}:{theme:ThemePreview;customIcons:boolean} = $props();
-  let comparison = $state<boolean|null>(null);
-  const showCustom = $derived(comparison ?? customIcons);
-  const different = $derived(showCustom !== customIcons);
   const colors = $derived(theme.colors);
   const editor = $derived(theme.editor);
   const reference = $derived(stockReference(theme.id));
@@ -25,30 +22,23 @@
 
 <div class="preview-heading">
   <span class="preview-label">Пример конфигуратора</span>
-  <div class="preview-comparison" role="group" aria-label="Сравнение значков только в примере">
-    <span>Сравнить значки</span>
-    <div class="preview-segments">
-      <button aria-pressed={!showCustom} onclick={()=>comparison=false}>Штатные</button>
-      <button aria-pressed={showCustom} onclick={()=>comparison=true}>Новые</button>
-    </div>
-  </div>
 </div>
-<div class="configurator-preview" style:background={colors['editor.background']} style:color={colors.text} style:--preview-panel={colors.panel} style:--preview-border={colors.border} aria-label={`Пример конфигуратора: ${theme.name}, ${showCustom?'новые':'штатные'} значки`}>
+<div class="configurator-preview" style:background={colors['editor.background']} style:color={colors.text} style:--preview-panel={colors.panel} style:--preview-border={colors.border} aria-label={`Пример конфигуратора: ${theme.name}, ${customIcons?'новые':'штатные'} значки`}>
   <div class="preview-menubar" aria-hidden="true"><span>Файл</span><span>Правка</span><span>Конфигурация</span><span>Отладка</span><span>Сервис</span></div>
   <div class="preview-toolbar" aria-label="Пример панели команд">
     {#each commands as command,i}
       {#if i===3 || i===5}<span class="preview-separator"></span>{/if}
-      <span class="preview-tool"><PreviewIcon name={command.icon} dark={theme.dark} custom={showCustom} {reference} inactive={['save','copy','undo','redo'].includes(command.icon)} title={command.label}/></span>
+      <span class="preview-tool"><PreviewIcon name={command.icon} dark={theme.dark} custom={customIcons} {reference} inactive={['save','copy','undo','redo'].includes(command.icon)} title={command.label}/></span>
     {/each}
-    <span class="preview-icon-kind">{showCustom?'Новые значки':'Штатные значки'}</span>
+    <span class="preview-icon-kind">{customIcons?'Новые значки':'Штатные значки'}</span>
   </div>
   <div class="preview-workspace">
     <div class="preview-tree" aria-label="Пример дерева конфигурации">
       <div class="preview-tree-title">Конфигурация</div>
       <ul>
-        <li class="preview-root" style:background={colors['selection.background']} style:color={colors['selection.text']}><ChevronDown size={10}/><PreviewIcon name="meta-configuration" dark={theme.dark} custom={showCustom} {reference}/><span>Конфигурация</span></li>
+        <li class="preview-root" style:background={colors['selection.background']} style:color={colors['selection.text']}><ChevronDown size={10}/><PreviewIcon name="meta-configuration" dark={theme.dark} custom={customIcons} {reference}/><span>Конфигурация</span></li>
         {#each nodes as node}
-          <li><ChevronRight size={9}/><PreviewIcon name={node.icon} dark={theme.dark} custom={showCustom} {reference}/><span>{node.label}</span></li>
+          <li><ChevronRight size={9}/><PreviewIcon name={node.icon} dark={theme.dark} custom={customIcons} {reference}/><span>{node.label}</span></li>
         {/each}
       </ul>
     </div>
@@ -68,11 +58,4 @@
       <div class="preview-samples"><span style:background={colors['selection.background']} style:color={colors['selection.text']}>Выделение</span><span style:background={colors.hover}>Наведение</span></div>
     </div>
   </div>
-</div>
-<div class="preview-caption" aria-live="polite">
-  {#if different}
-    <span>Только в примере — {showCustom?'новые':'штатные'} значки.</span><button onclick={()=>comparison=null}>Вернуть выбранный вид</button>
-  {:else}
-    <span>Показано выбранное оформление.</span><span>Сравнение не меняет настройки.</span>
-  {/if}
 </div>
