@@ -2,6 +2,8 @@
 #include "contrast.h"
 #include <math.h>
 #include <cmath>
+#include <memory>
+#include <new>
 #include <stdint.h>
 #include <string.h>
 
@@ -198,8 +200,22 @@ bool drawComparisonGlyphs(void* context,const void* glyphs,int count,DWORD backg
         uint32_t pixel; memcpy(&pixel,bytes+static_cast<size_t>(y)*stride+static_cast<size_t>(x)*4,sizeof(pixel));
         return (pixel&0xFFFFFF)==background && (format==1 || (pixel>>24)==255);
     };
-    int first=0;
-    while (first<count && !changed(first)) ++first;
+    // Snapshot before any glyph is drawn: a prefix's descender/underscore can
+    // overwrite a later probe. Keep common runs on the stack; allocation failure
+    // for an unusually long run falls back to the original Cairo drawing path.
+    unsigned char localFlags[256];
+    std::unique_ptr<unsigned char[]> heapFlags;
+    auto flags=localFlags;
+    if (count>256) {
+        heapFlags.reset(new(std::nothrow) unsigned char[static_cast<size_t>(count)]);
+        if (!heapFlags) return false;
+        flags=heapFlags.get();
+    }
+    int first=count;
+    for (int i=0;i<count;++i) {
+        flags[i]=changed(i)?1:0;
+        if (flags[i] && first==count) first=i;
+    }
     if (first==count) return false;
     DWORD ink=ChromaContrast::readableInk(current,background,fallback);
     if (ink==current) return false;
@@ -208,14 +224,14 @@ bool drawComparisonGlyphs(void* context,const void* glyphs,int count,DWORD backg
     if (first) { SetLastError(lastError); draw(context,values,first); lastError=GetLastError(); }
     save(context);
     for (int begin=first;begin<count;) {
-        bool corrected=changed(begin); int end=begin+1;
-        while (end<count && changed(end)==corrected) ++end;
+        bool corrected=flags[begin]!=0; int end=begin+1;
+        while (end<count && (flags[end]!=0)==corrected) ++end;
         if (corrected) rgba(context,((ink>>16)&255)/255.,((ink>>8)&255)/255.,(ink&255)/255.,a);
         else rgba(context,r,g,b,a);
         SetLastError(lastError); draw(context,values+begin,end-begin); lastError=GetLastError();
         begin=end;
     }
-    restore(context); SetLastError(lastError);
+    restore(context); heapFlags.reset(); SetLastError(lastError);
     return true;
 }
 unsigned long long editorSelectionFills() { return InterlockedCompareExchange64(&fills,0,0); }

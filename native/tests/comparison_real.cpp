@@ -30,6 +30,7 @@ extern "C" __declspec(dllexport) BOOL comparison_probe(const ProbeConfig* cfg) {
     auto font=load<void*(*)(void*)>(m,"cairo_get_scaled_font");
     auto textGlyphs=load<int(*)(void*,double,double,const char*,int,Glyph**,int*,void**,int*,int*)>(m,"cairo_scaled_font_text_to_glyphs");
     auto freeGlyphs=load<void(*)(Glyph*)>(m,"cairo_glyph_free");
+    auto realGlyphs=load<void(*)(void*,const Glyph*,int)>(m,"cairo_show_glyphs");
     auto offset=load<void(*)(void*,double,double)>(m,"cairo_surface_set_device_offset");
     auto deviceScale=load<void(*)(void*,double,double)>(m,"cairo_surface_set_device_scale");
     auto translate=load<void(*)(void*,double,double)>(m,"cairo_translate");
@@ -95,6 +96,37 @@ extern "C" __declspec(dllexport) BOOL comparison_probe(const ProbeConfig* cfg) {
             ok &= ordinary && (!cfg->mode || readable) && source(ctx)==original;
             freeGlyphs(mixed);
             ++checked;
+            // Locate the underscore's actual overhang below its baseline. Put
+            // the next glyph's background probe there, across a fill boundary.
+            // Drawing the ordinary prefix must not change that classification.
+            Glyph* overlap=nullptr; int overlapCount=0;
+            ok &= textGlyphs(font(ctx),12,34,"_W",2,&overlap,&overlapCount,nullptr,nullptr,nullptr)==0;
+            cairo_set_source_rgb(ctx,1.,1.,1.); cairo_paint(ctx); flush(output);
+            uint32_t plain; memcpy(&plain,data+10*pitch+10*4,4);
+            cairo_set_source_rgba(ctx,0.,128./255.,0.,1.);
+            realGlyphs(ctx,overlap,1); flush(output);
+            int probeX=0,probeY=0;
+            for (int y=35;y<42;++y) for (int x=20;x<32;++x) {
+                uint32_t pixel; memcpy(&pixel,data+y*pitch+x*4,4);
+                if (pixel!=plain && x>=probeX) { probeX=x; probeY=y; }
+            }
+            ok &= overlapCount==2 && probeX>0;
+            if (overlapCount==2 && probeX>0) {
+                overlap[1].x=probeX; overlap[1].y=probeY-1;
+                cairo_set_source_rgb(ctx,1.,1.,1.); cairo_paint(ctx);
+                cairo_set_source_rgb(ctx,245./255.,245./255.,245./255.);
+                rectangle(ctx,probeX,0,240-probeX,100); cairo_fill(ctx); flush(output);
+                memcpy(&bg,data+probeY*pitch+probeX*4,4); bg &= 0xFFFFFF;
+                cairo_set_source_rgba(ctx,0.,128./255.,0.,1.); original=source(ctx);
+                cairo_show_glyphs(ctx,overlap,overlapCount); flush(output);
+                readable=false;
+                for (int y=probeY-22;y<probeY;++y) for (int x=probeX+3;x<probeX+15;++x) {
+                    uint32_t pixel; memcpy(&pixel,data+y*pitch+x*4,4);
+                    readable |= ChromaContrast::ratio(pixel&0xFFFFFF,bg)>=4.5;
+                }
+                ok &= (!cfg->mode || readable) && source(ctx)==original;
+            }
+            freeGlyphs(overlap); ++checked;
         }
         freeGlyphs(glyphs);
         destroyContext(ctx); destroySurface(output);

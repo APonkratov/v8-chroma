@@ -12,9 +12,12 @@ int wmain(int argc,wchar_t** argv) {
         size_t read=fread(&cfg,1,sizeof(cfg),file); fclose(file);
         if (read!=sizeof(cfg) || cfg.version!=3 || cfg.mapCount>256) return 4;
         if (!cfg.mode) continue;
-        DWORD background=0;
+        DWORD background=0; bool foundBackground=false;
         for (DWORD j=0;j<cfg.mapCount;++j)
-            if (cfg.maps[j].kind==CairoRgb && cfg.maps[j].source==0xF5F5F5) background=cfg.maps[j].target;
+            if (cfg.maps[j].kind==CairoRgb && cfg.maps[j].source==0xF5F5F5) {
+                background=cfg.maps[j].target; foundBackground=true;
+            }
+        if (!foundBackground) { printf("Missing changed-block mapping: %s\n",cfg.themeId); return 8; }
         for (DWORD j=0;j<cfg.mapCount;++j) {
             const auto& entry=cfg.maps[j];
             if (entry.kind!=CairoRgba) continue;
