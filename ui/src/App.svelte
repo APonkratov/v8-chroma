@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import ConfiguratorPreview from './lib/ConfiguratorPreview.svelte';
   import brandMark from './assets/brand-mark.svg';
   import { invoke } from '@tauri-apps/api/core';
-  import { Palette, Monitor, Settings2, Check, Search, Sun, Moon, Power, FolderOpen, RefreshCw, TriangleAlert, CheckCircle2, ChevronRight, FileCode2 } from '@lucide/svelte';
+  import { Palette, Monitor, Settings2, Check, Search, Sun, Moon, Power, FolderOpen, RefreshCw, TriangleAlert, CheckCircle2, ChevronRight } from '@lucide/svelte';
   type Theme = {id:string;name:string;dark:boolean;colors:Record<string,string>;editor:Record<string,string>};
   type Preferences = {selected_theme:string;auto_apply:boolean;custom_icons:boolean;window:{width:number;height:number;maximized:boolean}};
   type ProcessRow = {pid:number;created_time:string|null;title:string;exe:string|null;command_line:string|null;eligible:boolean;status:string;theme:string|null;detail:string|null;icons:string|null;icon_warning:string|null};
@@ -20,8 +21,8 @@
   const catalog = $derived([standard, ...themes]);
   const selectedId = $derived(appState?.settings?.settings.selected_theme ?? 'dracula');
   const selected = $derived(catalog.find(t=>t.id===selectedId) ?? themes[2] ?? standard);
-  const colors = $derived(selected.colors);
   const editor = $derived(selected.editor);
+  const customIcons = $derived(appState?.settings?.settings.custom_icons ?? false);
   const auto = $derived(appState?.settings?.settings.auto_apply ?? false);
   const eligible = $derived(appState?.processes.filter(p=>p.eligible).length ?? 0);
   const disabled = $derived(saving || !!appState?.busy || !!appState?.stopping || !appState?.settings);
@@ -32,7 +33,10 @@
     saving=true;error='';notice='';
     try {await action();await refresh();notice=message;}catch(e){error=String(e);}finally{saving=false;}
   }
-  function select(id:string){return perform(()=>invoke('save_settings',{patch:{selected_theme:id}}));}
+  async function select(id:string){
+    await perform(()=>invoke('save_settings',{patch:{selected_theme:id}}));
+    if(!error)window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+  }
   function toggleIcons(){return perform(()=>invoke('save_settings',{patch:{custom_icons:!appState?.settings?.settings.custom_icons}}),'Настройка значков сохранена');}
   function toggleAuto(){return perform(()=>invoke('save_settings',{patch:{auto_apply:!auto}}),auto?'Авто-применение выключено':'Авто-применение включено');}
   function apply(row?:ProcessRow){return perform(()=>invoke('apply_theme',{pid:row?.pid??null,createdTime:row?.created_time??null}));}
@@ -63,27 +67,21 @@
     {/if}
     {#if page==='themes'}
       <header class="page-header"><h1>Темы</h1></header>
-      <section class="hero" aria-label="Предпросмотр выбранной темы">
-        <div class="editor" style:background={colors['editor.background']} style:color={colors.text}>
-          <div class="editor-tab" style:background={colors.panel}><FileCode2 size={13}/><span>Модуль формы</span><span class="editor-dot"></span></div>
-          <div class="code-content">
-            <div class="numbers">1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8</div>
-            <pre style:color={editor.identifier}><span style:color={editor.comment}>// Проверка палитры</span>
-<span style:color={editor.keyword}>Процедура</span> ПроверитьПалитру<span style:color={editor.punctuation}>()</span>
-    НазваниеТемы <span style:color={editor.punctuation}>=</span> <span style:color={editor.string}>"Новая палитра"</span><span style:color={editor.punctuation}>;</span>
-    Количество <span style:color={editor.punctuation}>=</span> <span style:color={editor.number}>42</span><span style:color={editor.punctuation}>;</span>
-    <span style:color={editor.keyword}>Если</span> Количество <span style:color={editor.punctuation}>&gt;</span> <span style:color={editor.number}>0</span> <span style:color={editor.keyword}>Тогда</span>
-        <span style:color={editor.builtin}>Сообщить</span><span style:color={editor.punctuation}>(</span>НазваниеТемы<span style:color={editor.punctuation}>);</span>
-    <span style:color={editor.keyword}>КонецЕсли</span><span style:color={editor.punctuation}>;</span>
-<span style:color={editor.keyword}>КонецПроцедуры</span></pre>
-          </div>
-          <div class="editor-samples"><span style:background={colors['selection.background']} style:color={colors['selection.text']}>Выделение</span><span style:background={colors.hover} style:color={colors.text}>Наведение</span><small>Предпросмотр палитры</small></div>
+      <section class="hero appearance-hero" aria-label="Предпросмотр выбранной темы">
+        <div class="appearance-header">
+          <div class="current-theme"><h2>{selected.name}</h2><span class="kind-tag">{#if selected.dark}<Moon size={12}/>{:else}<Sun size={12}/>{/if}{selected.dark?'Тёмная':'Светлая'}</span></div>
+          <div class="swatches" aria-hidden="true">{#each ['keyword','identifier','comment','string'] as role}<i style:background={editor[role]}></i>{/each}</div>
         </div>
-        <div class="current-theme"><h2>{selected.name}</h2><span class="kind-tag">{#if selected.dark}<Moon size={12}/>{:else}<Sun size={12}/>{/if}{selected.dark?'Тёмная':'Светлая'}</span><div class="swatches">{#each ['keyword','identifier','comment','string'] as role}<i style:background={editor[role]}></i>{/each}</div>
+        <div class="appearance-controls">
+          <div class="appearance-icon-option"><label for="custom-icons"><strong>Новые значки</strong><small>Панели, дерево и меню</small></label><button id="custom-icons" class="switch" class:checked={customIcons} role="switch" aria-checked={customIcons} aria-label="Новые значки конфигуратора" disabled={disabled} onclick={toggleIcons}><i></i></button></div>
           <button class="primary" disabled={disabled || eligible===0} onclick={()=>apply()}>{#if appState?.busy}<RefreshCw size={14} class="spin"/>{:else}<Check size={15}/>{/if}Применить сейчас</button>
         </div>
+        <p class="appearance-policy">{auto?'Авто-применение включено: изменения применяются сразу.':'Изменения сохраняются. Нажмите «Применить сейчас», когда будете готовы.'}</p>
+        {#key `${selectedId}-${customIcons}`}
+          <ConfiguratorPreview theme={selected} {customIcons}/>
+        {/key}
       </section>
-      <p class="preview-note">Для стандартных цветов редактора 1С. Строки и числа пока используют общий цвет.</p>
+      <p class="preview-note">Пример оформления конфигуратора. Строки и числа пока используют общий цвет.</p>
       <section class="collection" aria-label="Коллекция тем">
         <div class="collection-header"><div class="filters" aria-label="Фильтр тем"><button class:chosen={filter==='all'} onclick={()=>filter='all'}>Все<span>{catalog.length}</span></button><button class:chosen={filter==='dark'} onclick={()=>filter='dark'}><Moon size={13}/>Тёмные</button><button class:chosen={filter==='light'} onclick={()=>filter='light'}><Sun size={13}/>Светлые</button></div><label class="search"><Search size={15}/><input aria-label="Поиск темы" placeholder="Найти тему…" bind:value={search}/></label></div>
         <div class="theme-grid">
@@ -107,11 +105,10 @@
     {:else}
       <header class="page-header"><h1>Настройки</h1></header>
       <section class="settings-group"><h2>Работа приложения</h2><div class="setting-row"><div><strong>Автоматическое применение</strong><p>Оформлять открытые и новые конфигураторы.</p></div><button class="switch" class:checked={auto} role="switch" aria-checked={auto} aria-label="Автоматическое применение" disabled={saving || !appState?.settings} onclick={toggleAuto}><i></i></button></div><div class="setting-row"><div><strong>Запускать при входе в Windows</strong><p>{appState?.custom_profile?'Для отдельного профиля автозапуск недоступен.':'В фоне, со значком в системном трее.'}</p></div><button class="switch" class:checked={appState?.autostart_enabled===true} role="switch" aria-checked={appState?.autostart_enabled===true} aria-label="Запускать при входе в Windows" disabled={saving || appState?.custom_profile || appState?.autostart_enabled==null} onclick={()=>perform(()=>invoke('set_autostart',{enabled:!appState?.autostart_enabled}),'Настройка автозапуска сохранена')}><i></i></button></div>{#if appState?.autostart_error}<p class="setting-warning">{appState.autostart_error}</p>{/if}</section>
-      <section class="settings-group"><h2>Значки конфигуратора</h2><div class="setting-row"><div><strong>Новые значки конфигуратора</strong><p>Панели, дерево и меню. Светлый или тёмный набор выбирается по теме.</p><p>При выключенном авто-применении нажмите «Применить сейчас».</p></div><button class="switch" class:checked={appState?.settings?.settings.custom_icons===true} role="switch" aria-checked={appState?.settings?.settings.custom_icons===true} aria-label="Новые значки конфигуратора" disabled={disabled} onclick={toggleIcons}><i></i></button></div></section>
       <section class="settings-group"><h2>Ваши настройки</h2><div class="settings-path"><span>Расположение файла</span><code>{appState?.settings?.path??'Файл настроек недоступен'}</code><button class="secondary" onclick={()=>perform(()=>invoke('open_settings_folder'))}><FolderOpen size={15}/>Открыть папку</button></div><div class="setting-row"><div><strong>Вернуть настройки по умолчанию</strong><p>Dracula и включённое авто-применение. Предыдущая копия сохраняется.</p></div><button class="secondary" disabled={saving} onclick={()=>perform(()=>invoke('reset_settings'),'Настройки восстановлены')}>Сбросить</button></div></section>
       <div class="quit-row"><p>Крестик сворачивает приложение в трей. Для полного выхода используйте кнопку; конфигураторы останутся открытыми.</p><button class="quit-button" disabled={appState?.stopping} onclick={()=>perform(()=>invoke('quit_app'))}><Power size={15}/>{appState?.stopping?'Завершаем…':'Завершить приложение'}</button></div>
     {/if}
-    {#if page==='settings' && (saving || appState?.stopping || notice)}
+    {#if (page==='settings' || page==='themes') && (saving || appState?.stopping || notice)}
       <footer role="status">{saving?'Сохраняем…':appState?.stopping?'Завершаем текущую операцию…':notice}</footer>
     {/if}
   </main>
