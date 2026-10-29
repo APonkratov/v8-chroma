@@ -139,6 +139,15 @@ extern "C" __declspec(dllexport) BOOL chrome_probe(const ProbeConfig* cfg) {
     ok &= ((uint32_t*)bytes(surface))[0]==(0xFF000000|(cfg->mode?cfg->colors.glyphBackground:0xFFFFFF));
     cairo_set_source_rgba(ctx,241./255.,241./255.,241./255.,1.); cairo_paint(ctx); flush(surface);
     ok &= ((uint32_t*)bytes(surface))[0]==(0xFF000000|(cfg->mode?cfg->colors.rasterBackground:0xF1F1F1));
+    // Managed-form tabs/headers use RGB on 8.3.27, not the RGBA logon path.
+    // Assert actual paint output so a profile missing one API variant fails.
+    for (DWORD c:{0xEBEBEBu,0xF2F2F2u,0xB3B3B3u}) for (unsigned alpha=0;alpha<2;++alpha) {
+        double r=((c>>16)&255)/255.,g=((c>>8)&255)/255.,b=(c&255)/255.;
+        if (alpha) cairo_set_source_rgba(ctx,r,g,b,1.); else cairo_set_source_rgb(ctx,r,g,b);
+        cairo_paint(ctx); flush(surface);
+        DWORD themed=c==0xB3B3B3?cfg->colors.border:cfg->colors.rasterBackground;
+        ok &= ((uint32_t*)bytes(surface))[0]==(0xFF000000|(cfg->mode?themed:c));
+    }
     // Modern logon uses solid enabled/disabled yellow, independently of the old gradients.
     const DWORD logon[]={0xFFDD00,0x403700,0xFFFCE5,0xCFB300,0x4D4D54,0x404040,0xF2F2F2};
     DWORD disabled=0;
@@ -180,7 +189,7 @@ extern "C" __declspec(dllexport) BOOL chrome_probe(const ProbeConfig* cfg) {
         DWORD actual=((DWORD)(r*255+.5)<<16)|((DWORD)(g*255+.5)<<8)|(DWORD)(b*255+.5);
         ok &= actual==(cfg->mode?(i<4?cfg->colors.rasterBackground:cfg->colors.border):c);
     }
-    printf("%s chrome: %s; RGBA caption, cached caption ink, logon states, tab gradients\n",cfg->themeId,ok?"PASS":"FAIL");
+    printf("%s chrome: %s; form headers/tabs, RGBA caption, cached caption ink, logon states, tab gradients\n",cfg->themeId,ok?"PASS":"FAIL");
     destroyPattern(gradient); destroyContext(ctx); destroySurface(surface);
     return ok;
 }

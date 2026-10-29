@@ -251,6 +251,12 @@ pub fn config(id: &str, target: &Path, log: &Path) -> Result<Config> {
     for (role, color) in comparison_backgrounds(colors["editor.background"], colors["text"]) {
         colors.insert(role, color);
     }
+    let link = readable_link(
+        colors["accent"],
+        colors["text"],
+        [colors["editor.background"], colors["panel"]],
+    );
+    colors.insert("link", link);
     ensure!(
         cfg.colors[0] != cfg.colors[2] || cfg.colors[1] == cfg.colors[3],
         "Неоднозначные цвета глифов"
@@ -342,6 +348,22 @@ fn contrast(left: u32, right: u32) -> f64 {
     (left.max(right) + 0.05) / (left.min(right) + 0.05)
 }
 
+// Retain the theme's accent where readable; otherwise move toward its text ink.
+fn readable_link(accent: u32, text: u32, backgrounds: [u32; 2]) -> u32 {
+    (0..=100)
+        .map(|amount| {
+            [16, 8, 0].into_iter().fold(0, |rgb, shift| {
+                rgb | (((((accent >> shift) & 255) * (100 - amount)
+                    + ((text >> shift) & 255) * amount
+                    + 50)
+                    / 100)
+                    << shift)
+            })
+        })
+        .find(|color| backgrounds.iter().all(|bg| contrast(*color, *bg) >= 4.5))
+        .unwrap_or(text)
+}
+
 // Derived profile roles keep the existing public EDT JSON schema unchanged.
 fn comparison_backgrounds(background: u32, text: u32) -> [(&'static str, u32); 3] {
     [
@@ -370,6 +392,38 @@ fn comparison_backgrounds(background: u32, text: u32) -> [(&'static str, u32); 3
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn managed_form_chrome_and_links_are_readable_in_every_theme() {
+        for theme in catalog().unwrap() {
+            let cfg = config(&theme.id, Path::new("x"), Path::new("y")).unwrap();
+            let color = |role: &str| u32::from_str_radix(&theme.colors[role][1..], 16).unwrap();
+            for kind in [5, 6] {
+                let target = |source| {
+                    cfg.maps[..cfg.map_count as usize]
+                        .iter()
+                        .find(|m| m.kind == kind && m.source == source)
+                        .unwrap()
+                        .target
+                };
+                for source in [0xEBEBEB, 0xF2F2F2] {
+                    assert_eq!(target(source), color("panel"), "{}", theme.id);
+                    assert!(
+                        contrast(target(source), color("text")) >= 4.5,
+                        "{}",
+                        theme.id
+                    );
+                }
+                assert_eq!(target(0xB3B3B3), color("border"));
+                for background in [color("panel"), color("editor.background")] {
+                    assert!(
+                        contrast(target(0x1C55AE), background) >= 4.5,
+                        "{}",
+                        theme.id
+                    );
+                }
+            }
+        }
+    }
     #[test]
     fn preview_catalog_matches_native_palettes() {
         let catalog = catalog().unwrap();
@@ -415,7 +469,7 @@ mod tests {
             )
             .unwrap();
             assert_eq!(cfg.bytes().len(), 4760);
-            assert_eq!(cfg.map_count, if *id == "diagnostic" { 0 } else { 193 });
+            assert_eq!(cfg.map_count, if *id == "diagnostic" { 0 } else { 200 });
         }
     }
     #[test]

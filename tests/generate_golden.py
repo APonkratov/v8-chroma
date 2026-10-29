@@ -28,6 +28,16 @@ for path in sorted((ROOT / 'assets/themes').glob('*.json')):
         a,b=luminance(a),luminance(b)
         return (max(a,b)+.05)/(min(a,b)+.05)
     colors = dict(theme.colors)
+    # Form hyperlinks preserve the accent as far as its contrast allows.
+    for text_weight in range(101):
+        link = sum((((colors['accent'] >> bit & 255)*(100-text_weight)
+                     +(colors['text'] >> bit & 255)*text_weight+50)//100) << bit
+                   for bit in (16,8,0))
+        if all(contrast(link,colors[bg]) >= 4.5 for bg in ('editor.background','panel')):
+            colors['link']=link
+            break
+    else:
+        colors['link']=colors['text']
     for role,tint in [('compare.changed',0x00B8C4),('compare.local',0xE99A49),('compare.file',0x55AA66)]:
         for amount in range(25,-1,-1):
             color = sum((((colors['editor.background'] >> shift & 255)*(100-amount)
