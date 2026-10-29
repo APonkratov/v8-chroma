@@ -11,3 +11,6 @@ extern "C" __declspec(dllexport) void cairo_paint(Color*) {}
 extern "C" __declspec(dllexport) void cairo_paint_with_alpha(Color*,double) {}
 extern "C" __declspec(dllexport) void cairo_fill(Color*) {}
 extern "C" __declspec(dllexport) void cairo_fill_preserve(Color*) {}
+extern "C" __declspec(dllexport) void cairo_set_source(void*,void*) {}
+extern "C" __declspec(dllexport) void cairo_mask(void*,void*) {}
+extern "C" __declspec(dllexport) void cairo_mask_surface(void*,void*,double,double) {}

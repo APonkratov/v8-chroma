@@ -11,7 +11,7 @@ impl Controller {
     pub fn pause(&mut self) {
         self.enabled = false;
     }
-    /// Explicit user actions apply even while background application is paused.
+    /// Explicit Apply commands work even while automatic application is paused.
     /// Keep other identities' attempts, so a single-process retry doesn't retry them.
     pub fn manual(&mut self, identities: &[Identity], settings: &Settings) -> Vec<Identity> {
         if settings.auto_apply {
@@ -70,7 +70,7 @@ mod tests {
         }
     }
     #[test]
-    fn manual_selection_applies_with_background_disabled() {
+    fn explicit_apply_works_with_auto_disabled() {
         let mut controller = Controller::default();
         let settings = Settings {
             auto_apply: false,

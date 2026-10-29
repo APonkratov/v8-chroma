@@ -70,6 +70,9 @@ def check(toolchain, target, preset, cairo):
         raise ValueError("The full drawing backend currently requires Windows x64. Use 'core' for portable checks.")
     native(preset)
     run(ROOT / "tests/fixtures/icon_theme_test.exe")
+    with tempfile.TemporaryDirectory(prefix="icon-bootstrap-") as temporary:
+        for mode in (1, 2):
+            run(ROOT / "tests/fixtures/icon_bootstrap_test.exe", Path(temporary) / "colors.csv", mode)
     basic_checks()
     cargo(toolchain, "fmt", "--all", "--check")
     npm("ci", "--no-audit", "--no-fund")

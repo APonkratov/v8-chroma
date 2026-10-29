@@ -493,8 +493,12 @@ extern "C" __declspec(dllexport) DWORD WINAPI ThemeInitialize(void* argument) {
     }
     if (!iconStatus) {
         DWORD error=0; auto prepared=prepareIconTheme(cfg.iconMode,error);
-        if (error) { rollback(); return error; }
-        activateIconTheme(prepared);
+        if (error) {
+            rollback(patchCount-iconPatchCount);
+            iconPatchCount=0;
+            iconStatus=error;
+            discardIconTheme(prepared);
+        } else activateIconTheme(prepared);
     }
     InterlockedExchange(&active,1);
     updateWindowTheme(cfg.mode!=0,toColor(cfg.colors.captionBackground),toColor(cfg.colors.captionText),toColor(cfg.colors.border),cfg.colors.darkCaption!=0);

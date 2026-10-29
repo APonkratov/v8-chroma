@@ -10,6 +10,14 @@ extern "C" __declspec(dllimport) void cairo_paint(Color*);
 extern "C" __declspec(dllimport) void cairo_paint_with_alpha(Color*,double);
 extern "C" __declspec(dllimport) void cairo_fill(Color*);
 extern "C" __declspec(dllimport) void cairo_fill_preserve(Color*);
+extern "C" __declspec(dllimport) void cairo_set_source(void*,void*);
+extern "C" __declspec(dllimport) void cairo_mask(void*,void*);
+extern "C" __declspec(dllimport) void cairo_mask_surface(void*,void*,double,double);
+extern "C" __declspec(dllexport) void graphics_icon_probe() {
+    cairo_set_source(nullptr,nullptr);
+    cairo_mask(nullptr,nullptr);
+    cairo_mask_surface(nullptr,nullptr,0,0);
+}
 static DWORD expected(const ProbeConfig* cfg,DWORD kind,DWORD source) {
     if (cfg->mode) for (DWORD i=0;i<cfg->mapCount;++i)
         if (cfg->maps[i].kind==kind && cfg->maps[i].source==source) return cfg->maps[i].target;
