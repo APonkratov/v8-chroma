@@ -58,6 +58,22 @@ extern "C" __declspec(dllexport) BOOL real_selection_probe(const ProbeConfig* cf
             if (((uint32_t*)bytes(output))[240*py+x]==(0xFF000000|ink)) ++found;
         ok &= found>4 && source(ctx)==original;
     }
+    // The current search hit uses a pale RGBA rectangle with ordinary identifier
+    // ink. It must use the selection fill while RGB UI skin keeps the panel role.
+    cairo_set_source_rgba(ctx,243./255.,238./255.,205./255.,1.);
+    rectangle(ctx,2,150,180,20); cairo_fill(ctx); flush(output);
+    ok &= ((uint32_t*)bytes(output))[240*154+5]==(0xFF000000|(cfg->mode?cfg->colors.selectionBackground:0xF3EECD));
+    cairo_set_source_rgba(ctx,0.,0.,1.,1.);
+    auto hitSource=source(ctx); Glyph* hitGlyphs=nullptr; int hitCount=0;
+    ok &= textGlyphs(getFont(ctx),10,166,"WWWW",4,&hitGlyphs,&hitCount,nullptr,nullptr,nullptr)==0;
+    cairo_show_glyphs(ctx,hitGlyphs,hitCount); freeGlyphs(hitGlyphs); flush(output);
+    DWORD hitInk=cfg->mode?cfg->colors.glyphForeground:0x0000FF;
+    unsigned readableHit=0;
+    for(int y=150;y<170;++y) for(int x=8;x<80;++x)
+        if (((uint32_t*)bytes(output))[240*y+x]==(0xFF000000|hitInk)) ++readableHit;
+    ok &= readableHit>4 && source(ctx)==hitSource;
+    cairo_set_source_rgb(ctx,243./255.,238./255.,205./255.); cairo_paint(ctx); flush(output);
+    ok &= ((uint32_t*)bytes(output))[0]==(0xFF000000|(cfg->mode?cfg->colors.rasterBackground:0xF3EECD));
     // An ordinary RGB UI brush stays foreground-colored, not selection-colored.
     cairo_set_source_rgb(ctx,0.,0.,0.); rectangle(ctx,2,150,80,12); cairo_fill(ctx); flush(output);
     ok &= ((uint32_t*)bytes(output))[240*154+5]==(0xFF000000|(cfg->mode?cfg->colors.glyphForeground:0));

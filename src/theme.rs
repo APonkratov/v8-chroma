@@ -393,6 +393,29 @@ fn comparison_backgrounds(background: u32, text: u32) -> [(&'static str, u32); 3
 mod tests {
     use super::*;
     #[test]
+    fn current_search_hit_uses_readable_selection_without_changing_rgb_ui_skin() {
+        for theme in catalog().unwrap() {
+            let cfg = config(&theme.id, Path::new("x"), Path::new("y")).unwrap();
+            let color = |role: &str| u32::from_str_radix(&theme.colors[role][1..], 16).unwrap();
+            let target = |kind| {
+                cfg.maps[..cfg.map_count as usize]
+                    .iter()
+                    .find(|m| m.kind == kind && m.source == 0xF3EECD)
+                    .unwrap()
+                    .target
+            };
+            assert_eq!(target(6), color("selection.background"), "{}", theme.id);
+            assert!(
+                contrast(target(6), color("selection.text")) >= 4.5,
+                "{}",
+                theme.id
+            );
+            // Search also paints ordinary identifier ink, not only inverse glyphs.
+            assert!(contrast(target(6), color("text")) >= 4.5, "{}", theme.id);
+            assert_eq!(target(5), color("panel"), "{}", theme.id);
+        }
+    }
+    #[test]
     fn managed_form_chrome_and_links_are_readable_in_every_theme() {
         for theme in catalog().unwrap() {
             let cfg = config(&theme.id, Path::new("x"), Path::new("y")).unwrap();
@@ -469,7 +492,7 @@ mod tests {
             )
             .unwrap();
             assert_eq!(cfg.bytes().len(), 4760);
-            assert_eq!(cfg.map_count, if *id == "diagnostic" { 0 } else { 200 });
+            assert_eq!(cfg.map_count, if *id == "diagnostic" { 0 } else { 201 });
         }
     }
     #[test]
