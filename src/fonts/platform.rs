@@ -6,7 +6,7 @@ use crate::{
 };
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeSet, fs, path::Path};
+use std::{collections::BTreeMap, fs, path::Path};
 use windows_sys::Win32::Graphics::Gdi::*;
 
 const DLL: &[u8] = include_bytes!("../../assets/FontProbe.dll");
@@ -27,20 +27,22 @@ pub fn installed() -> Result<Vec<String>> {
         data: isize,
     ) -> i32 {
         unsafe {
-            if (*tm).tmPitchAndFamily & TMPF_FIXED_PITCH != 0 {
-                return 1;
-            }
+            // Despite its name, GDI sets TMPF_FIXED_PITCH for proportional fonts.
+            let monospace = (*tm).tmPitchAndFamily & TMPF_FIXED_PITCH == 0;
             let face = &(*lf).lfFaceName;
             let name = String::from_utf16_lossy(
                 &face[..face.iter().position(|v| *v == 0).unwrap_or(face.len())],
             );
             if !name.starts_with('@') && !name.is_empty() {
-                (&mut *(data as *mut BTreeSet<String>)).insert(name);
+                (&mut *(data as *mut BTreeMap<String, bool>))
+                    .entry(name)
+                    .and_modify(|fixed| *fixed |= monospace)
+                    .or_insert(monospace);
             }
         }
         1
     }
-    let mut faces = BTreeSet::new();
+    let mut faces = BTreeMap::new();
     unsafe {
         let dc = CreateCompatibleDC(std::ptr::null_mut());
         ensure!(!dc.is_null(), "Не удалось прочитать установленные шрифты");
@@ -49,6 +51,10 @@ pub fn installed() -> Result<Vec<String>> {
         EnumFontFamiliesExW(dc, &filter, Some(visit), &mut faces as *mut _ as isize, 0);
         DeleteDC(dc);
     }
+    Ok(sort_fonts(faces))
+}
+
+fn sort_fonts(faces: BTreeMap<String, bool>) -> Vec<String> {
     let popular = [
         "JetBrains Mono Medium",
         "JetBrains Mono",
@@ -57,9 +63,10 @@ pub fn installed() -> Result<Vec<String>> {
         "Consolas",
         "Courier New",
     ];
-    let mut faces: Vec<String> = faces.into_iter().collect();
-    faces.sort_by_key(|name| {
+    let mut faces: Vec<_> = faces.into_iter().collect();
+    faces.sort_by_key(|(name, monospace)| {
         (
+            !monospace,
             popular
                 .iter()
                 .position(|p| name.eq_ignore_ascii_case(p))
@@ -67,7 +74,7 @@ pub fn installed() -> Result<Vec<String>> {
             name.to_lowercase(),
         )
     });
-    Ok(faces)
+    faces.into_iter().map(|(name, _)| name).collect()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -205,7 +212,7 @@ pub fn apply_to(expected: &Identity, font: &FontSettings) -> Result<FontApplied>
             installed()?
                 .iter()
                 .any(|name| name.eq_ignore_ascii_case(&font.family)),
-            "Шрифт «{}» не установлен или не моноширинный",
+            "Шрифт «{}» не установлен",
             font.family
         );
     }
@@ -336,10 +343,36 @@ mod tests {
         assert!(config(&FontSettings::default(), Path::new(&"x".repeat(520))).is_err());
     }
     #[test]
-    fn local_monospace_catalog_includes_stock_fonts() {
+    fn local_catalog_includes_proportional_and_monospace_fonts() {
         let fonts = installed().unwrap();
         assert!(fonts.iter().any(|name| name == "Courier New"));
-        assert!(!fonts.iter().any(|name| name == "Arial"));
+        assert!(fonts.iter().any(|name| name == "Arial"));
+        assert!(fonts.iter().any(|name| name == "Segoe UI"));
+        assert!(fonts.iter().all(|name| !name.starts_with('@')));
+        assert!(
+            fonts.iter().position(|name| name == "Courier New")
+                < fonts.iter().position(|name| name == "Arial")
+        );
+    }
+    #[test]
+    fn monospace_priority_does_not_filter_other_families() {
+        let faces = BTreeMap::from([
+            ("Arial".into(), false),
+            ("Consolas".into(), true),
+            ("Other Fixed".into(), true),
+            ("Segoe UI".into(), false),
+            ("JetBrains Mono Medium".into(), true),
+        ]);
+        assert_eq!(
+            sort_fonts(faces),
+            [
+                "JetBrains Mono Medium",
+                "Consolas",
+                "Other Fixed",
+                "Arial",
+                "Segoe UI"
+            ]
+        );
     }
     #[test]
     fn remote_log_resolves_an_existing_file_without_erasing_diagnostics() {
