@@ -19,7 +19,7 @@
     "error": "#E43938",
     "warning": "#FAD000",
     "disabled": "#A599E9",
-    "hover": "#202041"
+    "hover": "#3A315F"
   },
   "render": {
     "glyph.background": "editor.background",

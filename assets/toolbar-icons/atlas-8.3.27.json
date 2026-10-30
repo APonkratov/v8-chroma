@@ -4934,6 +4934,1590 @@
       "asset": "compare-refresh-16.png"
     },
     {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-text-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-image-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-chart-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-select-object-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 112,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-merge-cells-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 128,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-show-names-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 176,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-grid-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 192,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-headers-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 224,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-edit-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 240,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-freeze-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 304,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-add-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 320,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-remove-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 368,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-show-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 384,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-name-add-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 400,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-name-remove-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 416,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-show-cell-names-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 432,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-group-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 448,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-ungroup-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 480,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-previous-16.png"
+    },
+    {
+      "hash": "fc47f807a10fe6df",
+      "width": 592,
+      "height": 16,
+      "x": 496,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-next-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-text-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-image-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-chart-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-select-object-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 112,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-merge-cells-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 128,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-show-names-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 176,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-grid-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 192,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-headers-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 224,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-edit-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 240,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-freeze-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 304,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-add-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 320,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-remove-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 368,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-show-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 384,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-name-add-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 400,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-name-remove-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 416,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-show-cell-names-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 432,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-group-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 448,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-ungroup-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 480,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-previous-16.png"
+    },
+    {
+      "hash": "6ce7088515accf64",
+      "width": 592,
+      "height": 16,
+      "x": 496,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-next-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-text-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-image-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-chart-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-select-object-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 112,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-merge-cells-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 128,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-show-names-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 176,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-grid-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 192,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-headers-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 224,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-edit-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 240,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-freeze-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 304,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-add-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 320,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-remove-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 368,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-show-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 384,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-name-add-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 400,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-name-remove-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 416,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-show-cell-names-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 432,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-group-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 448,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-ungroup-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 480,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-previous-16.png"
+    },
+    {
+      "hash": "c15c5673f4b70e8d",
+      "width": 592,
+      "height": 16,
+      "x": 496,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-next-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-text-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-image-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-chart-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-select-object-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 112,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-merge-cells-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 128,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-show-names-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 176,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-grid-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 192,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-headers-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 224,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-edit-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 240,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-freeze-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 304,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-add-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 320,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-remove-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 368,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-show-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 384,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-name-add-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 400,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-name-remove-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 416,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-show-cell-names-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 432,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-group-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 448,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-ungroup-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 480,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-previous-16.png"
+    },
+    {
+      "hash": "1c4008224f9adec2",
+      "width": 592,
+      "height": 16,
+      "x": 496,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-next-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-text-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-image-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-chart-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-select-object-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 112,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-merge-cells-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 128,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-show-names-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 176,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-grid-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 192,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-headers-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 224,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-edit-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 240,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-freeze-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 304,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-add-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 320,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-remove-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 368,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-show-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 384,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-name-add-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 400,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-name-remove-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 416,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-show-cell-names-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 432,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-group-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 448,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-ungroup-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 480,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-previous-16.png"
+    },
+    {
+      "hash": "4e00bf6ec1699fa8",
+      "width": 592,
+      "height": 16,
+      "x": 496,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-next-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-text-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-image-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-chart-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-select-object-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 112,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-merge-cells-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 128,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-show-names-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 176,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-grid-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 192,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-headers-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 224,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-edit-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 240,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-freeze-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 304,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-add-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 320,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-remove-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 368,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-show-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 384,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-name-add-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 400,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-name-remove-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 416,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-show-cell-names-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 432,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-group-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 448,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-ungroup-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 480,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-previous-16.png"
+    },
+    {
+      "hash": "e899b75d73dc1fe5",
+      "width": 592,
+      "height": 16,
+      "x": 496,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-comment-next-16.png"
+    },
+    {
+      "hash": "9b9b690f2e97372e",
+      "width": 352,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-left-disabled-16.png"
+    },
+    {
+      "hash": "9b9b690f2e97372e",
+      "width": 352,
+      "height": 16,
+      "x": 320,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-center-disabled-16.png"
+    },
+    {
+      "hash": "9b9b690f2e97372e",
+      "width": 352,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-right-disabled-16.png"
+    },
+    {
+      "hash": "9b9b690f2e97372e",
+      "width": 352,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-top-disabled-16.png"
+    },
+    {
+      "hash": "9b9b690f2e97372e",
+      "width": 352,
+      "height": 16,
+      "x": 304,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-middle-disabled-16.png"
+    },
+    {
+      "hash": "9b9b690f2e97372e",
+      "width": 352,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-bottom-disabled-16.png"
+    },
+    {
+      "hash": "9b9b690f2e97372e",
+      "width": 352,
+      "height": 16,
+      "x": 64,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-center-horizontal-disabled-16.png"
+    },
+    {
+      "hash": "9b9b690f2e97372e",
+      "width": 352,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-center-vertical-disabled-16.png"
+    },
+    {
+      "hash": "9b9b690f2e97372e",
+      "width": 352,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-distribute-horizontal-disabled-16.png"
+    },
+    {
+      "hash": "9b9b690f2e97372e",
+      "width": 352,
+      "height": 16,
+      "x": 112,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-distribute-vertical-disabled-16.png"
+    },
+    {
+      "hash": "9b9b690f2e97372e",
+      "width": 352,
+      "height": 16,
+      "x": 128,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-same-width-disabled-16.png"
+    },
+    {
+      "hash": "9b9b690f2e97372e",
+      "width": 352,
+      "height": 16,
+      "x": 144,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-same-height-disabled-16.png"
+    },
+    {
+      "hash": "9b9b690f2e97372e",
+      "width": 352,
+      "height": 16,
+      "x": 160,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-same-size-disabled-16.png"
+    },
+    {
+      "hash": "fcfe6693dd4b8986",
+      "width": 352,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-left-disabled-16.png"
+    },
+    {
+      "hash": "fcfe6693dd4b8986",
+      "width": 352,
+      "height": 16,
+      "x": 320,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-center-disabled-16.png"
+    },
+    {
+      "hash": "fcfe6693dd4b8986",
+      "width": 352,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-right-disabled-16.png"
+    },
+    {
+      "hash": "fcfe6693dd4b8986",
+      "width": 352,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-top-disabled-16.png"
+    },
+    {
+      "hash": "fcfe6693dd4b8986",
+      "width": 352,
+      "height": 16,
+      "x": 304,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-middle-disabled-16.png"
+    },
+    {
+      "hash": "fcfe6693dd4b8986",
+      "width": 352,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-bottom-disabled-16.png"
+    },
+    {
+      "hash": "fcfe6693dd4b8986",
+      "width": 352,
+      "height": 16,
+      "x": 64,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-center-horizontal-disabled-16.png"
+    },
+    {
+      "hash": "fcfe6693dd4b8986",
+      "width": 352,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-center-vertical-disabled-16.png"
+    },
+    {
+      "hash": "fcfe6693dd4b8986",
+      "width": 352,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-distribute-horizontal-disabled-16.png"
+    },
+    {
+      "hash": "fcfe6693dd4b8986",
+      "width": 352,
+      "height": 16,
+      "x": 112,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-distribute-vertical-disabled-16.png"
+    },
+    {
+      "hash": "fcfe6693dd4b8986",
+      "width": 352,
+      "height": 16,
+      "x": 128,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-same-width-disabled-16.png"
+    },
+    {
+      "hash": "fcfe6693dd4b8986",
+      "width": 352,
+      "height": 16,
+      "x": 144,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-same-height-disabled-16.png"
+    },
+    {
+      "hash": "fcfe6693dd4b8986",
+      "width": 352,
+      "height": 16,
+      "x": 160,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-same-size-disabled-16.png"
+    },
+    {
+      "hash": "caae9b347266eb5e",
+      "width": 352,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-left-16.png"
+    },
+    {
+      "hash": "caae9b347266eb5e",
+      "width": 352,
+      "height": 16,
+      "x": 320,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-center-16.png"
+    },
+    {
+      "hash": "caae9b347266eb5e",
+      "width": 352,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-right-16.png"
+    },
+    {
+      "hash": "caae9b347266eb5e",
+      "width": 352,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-top-16.png"
+    },
+    {
+      "hash": "caae9b347266eb5e",
+      "width": 352,
+      "height": 16,
+      "x": 304,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-middle-16.png"
+    },
+    {
+      "hash": "caae9b347266eb5e",
+      "width": 352,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-bottom-16.png"
+    },
+    {
+      "hash": "caae9b347266eb5e",
+      "width": 352,
+      "height": 16,
+      "x": 64,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-center-horizontal-16.png"
+    },
+    {
+      "hash": "caae9b347266eb5e",
+      "width": 352,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-center-vertical-16.png"
+    },
+    {
+      "hash": "caae9b347266eb5e",
+      "width": 352,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-distribute-horizontal-16.png"
+    },
+    {
+      "hash": "caae9b347266eb5e",
+      "width": 352,
+      "height": 16,
+      "x": 112,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-distribute-vertical-16.png"
+    },
+    {
+      "hash": "caae9b347266eb5e",
+      "width": 352,
+      "height": 16,
+      "x": 128,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-same-width-16.png"
+    },
+    {
+      "hash": "caae9b347266eb5e",
+      "width": 352,
+      "height": 16,
+      "x": 144,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-same-height-16.png"
+    },
+    {
+      "hash": "caae9b347266eb5e",
+      "width": 352,
+      "height": 16,
+      "x": 160,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-same-size-16.png"
+    },
+    {
+      "hash": "c778b1fc6fb0f0c0",
+      "width": 352,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-left-16.png"
+    },
+    {
+      "hash": "c778b1fc6fb0f0c0",
+      "width": 352,
+      "height": 16,
+      "x": 320,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-center-16.png"
+    },
+    {
+      "hash": "c778b1fc6fb0f0c0",
+      "width": 352,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-right-16.png"
+    },
+    {
+      "hash": "c778b1fc6fb0f0c0",
+      "width": 352,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-top-16.png"
+    },
+    {
+      "hash": "c778b1fc6fb0f0c0",
+      "width": 352,
+      "height": 16,
+      "x": 304,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-middle-16.png"
+    },
+    {
+      "hash": "c778b1fc6fb0f0c0",
+      "width": 352,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-align-bottom-16.png"
+    },
+    {
+      "hash": "c778b1fc6fb0f0c0",
+      "width": 352,
+      "height": 16,
+      "x": 64,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-center-horizontal-16.png"
+    },
+    {
+      "hash": "c778b1fc6fb0f0c0",
+      "width": 352,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-center-vertical-16.png"
+    },
+    {
+      "hash": "c778b1fc6fb0f0c0",
+      "width": 352,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-distribute-horizontal-16.png"
+    },
+    {
+      "hash": "c778b1fc6fb0f0c0",
+      "width": 352,
+      "height": 16,
+      "x": 112,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-distribute-vertical-16.png"
+    },
+    {
+      "hash": "c778b1fc6fb0f0c0",
+      "width": 352,
+      "height": 16,
+      "x": 128,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-same-width-16.png"
+    },
+    {
+      "hash": "c778b1fc6fb0f0c0",
+      "width": 352,
+      "height": 16,
+      "x": 144,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-same-height-16.png"
+    },
+    {
+      "hash": "c778b1fc6fb0f0c0",
+      "width": 352,
+      "height": 16,
+      "x": 160,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-same-size-16.png"
+    },
+    {
+      "hash": "b481605d65dc5404",
+      "width": 352,
+      "height": 16,
+      "x": 336,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-format-string-16.png"
+    },
+    {
+      "hash": "b50158ba0af3c98a",
+      "width": 352,
+      "height": 16,
+      "x": 336,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-format-string-16.png"
+    },
+    {
+      "hash": "da74856aedbf2df5",
+      "width": 176,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-borders-16.png"
+    },
+    {
+      "hash": "673428d915730d8f",
+      "width": 304,
+      "height": 16,
+      "x": 256,
+      "y": 0,
+      "size": 16,
+      "asset": "sheet-opacity-16.png"
+    },
+    {
       "hash": "d4d98342da701f69",
       "width": 384,
       "height": 16,

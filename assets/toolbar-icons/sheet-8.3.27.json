@@ -1,0 +1,1039 @@
+{
+  "description": "Exact spreadsheet editor commands and prepared active/disabled image fingerprints for Designer 8.3.27.2325; no platform pixels.",
+  "sources": [
+    {
+      "hash": "93f19692e98dfaf0",
+      "icon": "sheet-format-string",
+      "label": "frntend_root-000e7910.png:21"
+    },
+    {
+      "hash": "138330323ec4e665",
+      "icon": "sheet-borders",
+      "label": "moxel_root-0000bf82.png:6"
+    },
+    {
+      "hash": "69dc7da4f7875e1b",
+      "icon": "sheet-opacity",
+      "label": "MXL opacity",
+      "disabled": true
+    },
+    {
+      "hash": "88805778fb5c2a9c",
+      "icon": "sheet-show-names",
+      "label": "moxel_root-00020f1c.png:8"
+    },
+    {
+      "hash": "3990c9e3c5262724",
+      "icon": "sheet-show-cell-names",
+      "label": "moxel_root-0001f322.png:26"
+    },
+    {
+      "hash": "b32e14f0903676d5",
+      "icon": "sheet-name-add",
+      "label": "moxel_root-0001f322.png:24"
+    },
+    {
+      "hash": "9235f220001dc870",
+      "icon": "sheet-name-remove",
+      "label": "moxel_root-0001f322.png:25"
+    },
+    {
+      "hash": "74993932999bbbcf",
+      "icon": "sheet-comment-add",
+      "label": "moxel_root-0001f322.png:19"
+    },
+    {
+      "hash": "f06e4957990721a4",
+      "icon": "sheet-comment-remove",
+      "label": "MXL comment-remove",
+      "disabled": true
+    },
+    {
+      "hash": "c465648ed1b11448",
+      "icon": "sheet-comment-previous",
+      "label": "moxel_root-0001f322.png:30"
+    },
+    {
+      "hash": "8e02edd018a0a757",
+      "icon": "sheet-comment-next",
+      "label": "moxel_root-0001f322.png:31"
+    },
+    {
+      "hash": "fb923401d20bce5f",
+      "icon": "sheet-comment-show",
+      "label": "moxel_root-0001f322.png:23"
+    },
+    {
+      "hash": "813319be9bfb2a2e",
+      "icon": "sheet-select-object",
+      "label": "moxel_root-0001f322.png:6"
+    },
+    {
+      "hash": "872c24611923230d",
+      "icon": "sheet-text",
+      "label": "moxel_root-0001f322.png:2"
+    },
+    {
+      "hash": "61255b77e4b59539",
+      "icon": "meta-image",
+      "label": "moxel_root-0001f322.png:3"
+    },
+    {
+      "hash": "8b53f3cf4bf2d30c",
+      "icon": "sheet-chart",
+      "label": "moxel_root-00020f1c.png:5"
+    },
+    {
+      "hash": "30d2ecc9349da5a1",
+      "icon": "sheet-merge-cells",
+      "label": "moxel_root-0001f322.png:7"
+    },
+    {
+      "hash": "cee0ae048dcbe846",
+      "icon": "sheet-group",
+      "label": "moxel_root-0001f322.png:27"
+    },
+    {
+      "hash": "d799d13013194d32",
+      "icon": "sheet-ungroup",
+      "label": "moxel_root-0001f322.png:28"
+    },
+    {
+      "hash": "d714d49884a25d85",
+      "icon": "sheet-grid",
+      "label": "moxel_root-0001f322.png:11"
+    },
+    {
+      "hash": "248ec37121f10a82",
+      "icon": "sheet-headers",
+      "label": "moxel_root-0001f322.png:12"
+    },
+    {
+      "hash": "fb477f7f8c24103b",
+      "icon": "sheet-edit",
+      "label": "moxel_root-0001f322.png:14"
+    },
+    {
+      "hash": "3f37a943dfd66b2e",
+      "icon": "sheet-freeze",
+      "label": "moxel_root-0001f322.png:15"
+    },
+    {
+      "hash": "e9259837631945c6",
+      "icon": "sheet-align-left",
+      "label": "MXL align-left",
+      "disabled": true
+    },
+    {
+      "hash": "82c63cfa197a784b",
+      "icon": "sheet-align-center",
+      "label": "MXL align-center",
+      "disabled": true
+    },
+    {
+      "hash": "e8162facadb4af0b",
+      "icon": "sheet-align-right",
+      "label": "MXL align-right",
+      "disabled": true
+    },
+    {
+      "hash": "eeb17928bd175d6b",
+      "icon": "sheet-align-top",
+      "label": "MXL align-top",
+      "disabled": true
+    },
+    {
+      "hash": "55277c8933a6796b",
+      "icon": "sheet-align-middle",
+      "label": "MXL align-middle",
+      "disabled": true
+    },
+    {
+      "hash": "91918102460b11fa",
+      "icon": "sheet-align-bottom",
+      "label": "MXL align-bottom",
+      "disabled": true
+    },
+    {
+      "hash": "0ee4ed29c058c777",
+      "icon": "sheet-center-horizontal",
+      "label": "MXL center-horizontal",
+      "disabled": true
+    },
+    {
+      "hash": "ae7d28a4d2b51a96",
+      "icon": "sheet-center-vertical",
+      "label": "MXL center-vertical",
+      "disabled": true
+    },
+    {
+      "hash": "be6a5e74a75f1c34",
+      "icon": "sheet-distribute-horizontal",
+      "label": "MXL distribute-horizontal",
+      "disabled": true
+    },
+    {
+      "hash": "4e56bedc62591b65",
+      "icon": "sheet-distribute-vertical",
+      "label": "MXL distribute-vertical",
+      "disabled": true
+    },
+    {
+      "hash": "f978b79b52451ca7",
+      "icon": "sheet-same-width",
+      "label": "MXL same-width",
+      "disabled": true
+    },
+    {
+      "hash": "9b46164660943561",
+      "icon": "sheet-same-height",
+      "label": "MXL same-height",
+      "disabled": true
+    },
+    {
+      "hash": "e46d1df62f901c32",
+      "icon": "sheet-same-size",
+      "label": "MXL same-size",
+      "disabled": true
+    },
+    {
+      "hash": "aa5024b3e0c82e5c",
+      "icon": "sheet-align-auto",
+      "label": "MXL align-auto",
+      "disabled": true
+    },
+    {
+      "hash": "fab4800bcbee4a35",
+      "icon": "sheet-text",
+      "label": "moxel_root-0001c5ba.png:2"
+    },
+    {
+      "hash": "a7497f9c2df85db5",
+      "icon": "meta-image",
+      "label": "moxel_root-0001c5ba.png:3"
+    },
+    {
+      "hash": "2109bd1a09a258d5",
+      "icon": "sheet-chart",
+      "label": "moxel_root-0001c5ba.png:5"
+    },
+    {
+      "hash": "fb5655a40a845531",
+      "icon": "sheet-select-object",
+      "label": "moxel_root-0001c5ba.png:6"
+    },
+    {
+      "hash": "35b798a4d084b5ad",
+      "icon": "sheet-merge-cells",
+      "label": "moxel_root-0001c5ba.png:7"
+    },
+    {
+      "hash": "2d8aade6450634a9",
+      "icon": "sheet-show-names",
+      "label": "moxel_root-0001c5ba.png:8"
+    },
+    {
+      "hash": "4ce4f91e85e66951",
+      "icon": "sheet-grid",
+      "label": "moxel_root-0001c5ba.png:11"
+    },
+    {
+      "hash": "6d0f41d895763301",
+      "icon": "sheet-headers",
+      "label": "moxel_root-0001c5ba.png:12"
+    },
+    {
+      "hash": "49f427e04cc87165",
+      "icon": "sheet-edit",
+      "label": "moxel_root-0001c5ba.png:14"
+    },
+    {
+      "hash": "02d2f1981a855a99",
+      "icon": "sheet-freeze",
+      "label": "moxel_root-0001c5ba.png:15"
+    },
+    {
+      "hash": "49e6b490c543e9c5",
+      "icon": "sheet-comment-add",
+      "label": "moxel_root-0001c5ba.png:19"
+    },
+    {
+      "hash": "89ebb69d62a5d211",
+      "icon": "sheet-comment-remove",
+      "label": "moxel_root-0001c5ba.png:20"
+    },
+    {
+      "hash": "1c443cbea9c4e3b9",
+      "icon": "sheet-comment-show",
+      "label": "moxel_root-0001c5ba.png:23"
+    },
+    {
+      "hash": "adc3e43dc779362d",
+      "icon": "sheet-name-add",
+      "label": "moxel_root-0001c5ba.png:24"
+    },
+    {
+      "hash": "c4c673bea1cbc6f5",
+      "icon": "sheet-name-remove",
+      "label": "moxel_root-0001c5ba.png:25"
+    },
+    {
+      "hash": "3e9d9a154fc850a9",
+      "icon": "sheet-show-cell-names",
+      "label": "moxel_root-0001c5ba.png:26"
+    },
+    {
+      "hash": "f581b5755e2032a1",
+      "icon": "sheet-group",
+      "label": "moxel_root-0001c5ba.png:27"
+    },
+    {
+      "hash": "147403f5155bd959",
+      "icon": "sheet-ungroup",
+      "label": "moxel_root-0001c5ba.png:28"
+    },
+    {
+      "hash": "dfd03f09bef8dbf5",
+      "icon": "sheet-comment-previous",
+      "label": "moxel_root-0001c5ba.png:30"
+    },
+    {
+      "hash": "cce31b47ce809981",
+      "icon": "sheet-comment-next",
+      "label": "moxel_root-0001c5ba.png:31"
+    },
+    {
+      "hash": "b82fa7adf51153f7",
+      "icon": "sheet-text",
+      "label": "moxel_root-0001f322.png:2"
+    },
+    {
+      "hash": "2df3afeb8ea17bc8",
+      "icon": "meta-image",
+      "label": "moxel_root-0001f322.png:3"
+    },
+    {
+      "hash": "0b269225836e681f",
+      "icon": "sheet-chart",
+      "label": "moxel_root-00020f1c.png:5"
+    },
+    {
+      "hash": "3b5da076dce03b25",
+      "icon": "sheet-select-object",
+      "label": "moxel_root-0001f322.png:6"
+    },
+    {
+      "hash": "3afc2b3ade251316",
+      "icon": "sheet-merge-cells",
+      "label": "moxel_root-0001f322.png:7"
+    },
+    {
+      "hash": "21679d98f5a8f892",
+      "icon": "sheet-show-names",
+      "label": "moxel_root-00020f1c.png:8"
+    },
+    {
+      "hash": "7ef78ca8ae8a453d",
+      "icon": "sheet-grid",
+      "label": "moxel_root-0001f322.png:11"
+    },
+    {
+      "hash": "0d79bce58cd1bf2c",
+      "icon": "sheet-headers",
+      "label": "moxel_root-0001f322.png:12"
+    },
+    {
+      "hash": "5ccade1ed5f2f598",
+      "icon": "sheet-edit",
+      "label": "moxel_root-0001f322.png:14"
+    },
+    {
+      "hash": "277905f0864fa655",
+      "icon": "sheet-freeze",
+      "label": "moxel_root-0001f322.png:15"
+    },
+    {
+      "hash": "46ed3149b20a5a01",
+      "icon": "sheet-comment-add",
+      "label": "moxel_root-0001f322.png:19"
+    },
+    {
+      "hash": "517ab41b65cb94ad",
+      "icon": "sheet-comment-remove",
+      "label": "moxel_root-0001f322.png:20"
+    },
+    {
+      "hash": "a395a2ff86b57d08",
+      "icon": "sheet-comment-show",
+      "label": "moxel_root-0001f322.png:23"
+    },
+    {
+      "hash": "02c12a473cd63753",
+      "icon": "sheet-name-add",
+      "label": "moxel_root-0001f322.png:24"
+    },
+    {
+      "hash": "d59b6b33560aa928",
+      "icon": "sheet-name-remove",
+      "label": "moxel_root-0001f322.png:25"
+    },
+    {
+      "hash": "2134cd67d18bb107",
+      "icon": "sheet-show-cell-names",
+      "label": "moxel_root-0001f322.png:26"
+    },
+    {
+      "hash": "663f2a9a999ce1d7",
+      "icon": "sheet-group",
+      "label": "moxel_root-0001f322.png:27"
+    },
+    {
+      "hash": "e855679b90af3011",
+      "icon": "sheet-ungroup",
+      "label": "moxel_root-0001f322.png:28"
+    },
+    {
+      "hash": "0a28acbf7135ba5a",
+      "icon": "sheet-comment-previous",
+      "label": "moxel_root-0001f322.png:30"
+    },
+    {
+      "hash": "f5e7f623754dc8fb",
+      "icon": "sheet-comment-next",
+      "label": "moxel_root-0001f322.png:31"
+    },
+    {
+      "hash": "ca6ab7b6bca96548",
+      "icon": "sheet-comment-remove",
+      "label": "moxel_root-0001f322.png:20"
+    },
+    {
+      "hash": "c8a5017149bf8ab9",
+      "icon": "sheet-text",
+      "label": "moxel_root-00020f1c.png:2"
+    },
+    {
+      "hash": "1554f6b50c7958e2",
+      "icon": "meta-image",
+      "label": "moxel_root-00020f1c.png:3"
+    },
+    {
+      "hash": "d511690689a4ada0",
+      "icon": "sheet-select-object",
+      "label": "moxel_root-00020f1c.png:6"
+    },
+    {
+      "hash": "d2da52b708f47474",
+      "icon": "sheet-merge-cells",
+      "label": "moxel_root-00020f1c.png:7"
+    },
+    {
+      "hash": "83d29d72df248601",
+      "icon": "sheet-grid",
+      "label": "moxel_root-00020f1c.png:11"
+    },
+    {
+      "hash": "562c3d32e0a6fd79",
+      "icon": "sheet-headers",
+      "label": "moxel_root-00020f1c.png:12"
+    },
+    {
+      "hash": "d0e85df9c78653a5",
+      "icon": "sheet-edit",
+      "label": "moxel_root-00020f1c.png:14"
+    },
+    {
+      "hash": "cd705aec2a77e80d",
+      "icon": "sheet-freeze",
+      "label": "moxel_root-00020f1c.png:15"
+    },
+    {
+      "hash": "0e7e04b347063dab",
+      "icon": "sheet-comment-add",
+      "label": "moxel_root-00020f1c.png:19"
+    },
+    {
+      "hash": "9f1781ec3314f9da",
+      "icon": "sheet-comment-remove",
+      "label": "moxel_root-00020f1c.png:20"
+    },
+    {
+      "hash": "762ae4786982470c",
+      "icon": "sheet-comment-show",
+      "label": "moxel_root-00020f1c.png:23"
+    },
+    {
+      "hash": "8a29cce620843e8b",
+      "icon": "sheet-name-add",
+      "label": "moxel_root-00020f1c.png:24"
+    },
+    {
+      "hash": "a573b83f4f5d1e6e",
+      "icon": "sheet-name-remove",
+      "label": "moxel_root-00020f1c.png:25"
+    },
+    {
+      "hash": "fa5024f48e3a02ab",
+      "icon": "sheet-show-cell-names",
+      "label": "moxel_root-00020f1c.png:26"
+    },
+    {
+      "hash": "15441b1d3c7fedb3",
+      "icon": "sheet-group",
+      "label": "moxel_root-00020f1c.png:27"
+    },
+    {
+      "hash": "a441fd6acdbde549",
+      "icon": "sheet-ungroup",
+      "label": "moxel_root-00020f1c.png:28"
+    },
+    {
+      "hash": "cdc4545ef2336ae0",
+      "icon": "sheet-comment-previous",
+      "label": "moxel_root-00020f1c.png:30"
+    },
+    {
+      "hash": "cce4ee74a04dc871",
+      "icon": "sheet-comment-next",
+      "label": "moxel_root-00020f1c.png:31"
+    },
+    {
+      "hash": "8a40773bec917330",
+      "icon": "sheet-text",
+      "label": "moxel_root-00020f1c.png:2"
+    },
+    {
+      "hash": "b0888d39efe2397e",
+      "icon": "meta-image",
+      "label": "moxel_root-00020f1c.png:3"
+    },
+    {
+      "hash": "ce67b8a03774a010",
+      "icon": "sheet-select-object",
+      "label": "moxel_root-00020f1c.png:6"
+    },
+    {
+      "hash": "a5b4a32131d5f177",
+      "icon": "sheet-merge-cells",
+      "label": "moxel_root-00020f1c.png:7"
+    },
+    {
+      "hash": "15d08006d65d0639",
+      "icon": "sheet-grid",
+      "label": "moxel_root-00020f1c.png:11"
+    },
+    {
+      "hash": "5bdb116986ebe386",
+      "icon": "sheet-headers",
+      "label": "moxel_root-00020f1c.png:12"
+    },
+    {
+      "hash": "24ad864df21bb608",
+      "icon": "sheet-edit",
+      "label": "moxel_root-00020f1c.png:14"
+    },
+    {
+      "hash": "c40c4ccd56dc49e6",
+      "icon": "sheet-freeze",
+      "label": "moxel_root-00020f1c.png:15"
+    },
+    {
+      "hash": "d59bb5766a3af58e",
+      "icon": "sheet-comment-add",
+      "label": "moxel_root-00020f1c.png:19"
+    },
+    {
+      "hash": "94202cf2c34a82a1",
+      "icon": "sheet-comment-remove",
+      "label": "moxel_root-00020f1c.png:20"
+    },
+    {
+      "hash": "cc6ec3f97fd7bdaf",
+      "icon": "sheet-comment-show",
+      "label": "moxel_root-00020f1c.png:23"
+    },
+    {
+      "hash": "c4799c5003cf9bb4",
+      "icon": "sheet-name-add",
+      "label": "moxel_root-00020f1c.png:24"
+    },
+    {
+      "hash": "4ebd95a5c266e15a",
+      "icon": "sheet-name-remove",
+      "label": "moxel_root-00020f1c.png:25"
+    },
+    {
+      "hash": "fbc03104d5d64884",
+      "icon": "sheet-show-cell-names",
+      "label": "moxel_root-00020f1c.png:26"
+    },
+    {
+      "hash": "c5563b91aea41056",
+      "icon": "sheet-group",
+      "label": "moxel_root-00020f1c.png:27"
+    },
+    {
+      "hash": "58df5ea40f3c871e",
+      "icon": "sheet-ungroup",
+      "label": "moxel_root-00020f1c.png:28"
+    },
+    {
+      "hash": "d7219f9bd75e60f3",
+      "icon": "sheet-comment-previous",
+      "label": "moxel_root-00020f1c.png:30"
+    },
+    {
+      "hash": "b04d5fa18df9dc5c",
+      "icon": "sheet-comment-next",
+      "label": "moxel_root-00020f1c.png:31"
+    },
+    {
+      "hash": "6007013ffd99a5e9",
+      "icon": "sheet-text",
+      "label": "moxel_root-0004f6b4.png:2"
+    },
+    {
+      "hash": "13f716f9ee7beb3f",
+      "icon": "meta-image",
+      "label": "moxel_root-0004f6b4.png:3"
+    },
+    {
+      "hash": "a8c6df6ea28b149c",
+      "icon": "sheet-chart",
+      "label": "moxel_root-0004f6b4.png:5"
+    },
+    {
+      "hash": "f4f4a95285316ac1",
+      "icon": "sheet-select-object",
+      "label": "moxel_root-0004f6b4.png:6"
+    },
+    {
+      "hash": "8fd919ebdc3710ed",
+      "icon": "sheet-merge-cells",
+      "label": "moxel_root-0004f6b4.png:7"
+    },
+    {
+      "hash": "ef831ee1d2a419dd",
+      "icon": "sheet-show-names",
+      "label": "moxel_root-0004f6b4.png:8"
+    },
+    {
+      "hash": "8a79c9f8f67438bd",
+      "icon": "sheet-grid",
+      "label": "moxel_root-0004f6b4.png:11"
+    },
+    {
+      "hash": "08f7e6dd1a8df35d",
+      "icon": "sheet-headers",
+      "label": "moxel_root-0004f6b4.png:12"
+    },
+    {
+      "hash": "ba4cc4a73c1f16b2",
+      "icon": "sheet-edit",
+      "label": "moxel_root-0004f6b4.png:14"
+    },
+    {
+      "hash": "20aab0b929434f15",
+      "icon": "sheet-freeze",
+      "label": "moxel_root-0004f6b4.png:15"
+    },
+    {
+      "hash": "0894ff61c6bc5279",
+      "icon": "sheet-comment-add",
+      "label": "moxel_root-0004f6b4.png:19"
+    },
+    {
+      "hash": "560b410a7e80925b",
+      "icon": "sheet-comment-remove",
+      "label": "moxel_root-0004f6b4.png:20"
+    },
+    {
+      "hash": "3ec1d8971f11728d",
+      "icon": "sheet-comment-show",
+      "label": "moxel_root-0004f6b4.png:23"
+    },
+    {
+      "hash": "267abd802dd541f4",
+      "icon": "sheet-name-add",
+      "label": "moxel_root-0004f6b4.png:24"
+    },
+    {
+      "hash": "c99b79d6eb10098d",
+      "icon": "sheet-name-remove",
+      "label": "moxel_root-0004f6b4.png:25"
+    },
+    {
+      "hash": "3bb9e1f47dfe869d",
+      "icon": "sheet-show-cell-names",
+      "label": "moxel_root-0004f6b4.png:26"
+    },
+    {
+      "hash": "44a0a22741918922",
+      "icon": "sheet-group",
+      "label": "moxel_root-0004f6b4.png:27"
+    },
+    {
+      "hash": "70838afe5dc52d72",
+      "icon": "sheet-ungroup",
+      "label": "moxel_root-0004f6b4.png:28"
+    },
+    {
+      "hash": "2462f829f795362e",
+      "icon": "sheet-comment-previous",
+      "label": "moxel_root-0004f6b4.png:30"
+    },
+    {
+      "hash": "7682c39f5f50d959",
+      "icon": "sheet-comment-next",
+      "label": "moxel_root-0004f6b4.png:31"
+    },
+    {
+      "hash": "0b1e915261d29331",
+      "icon": "sheet-align-left",
+      "label": "0207-352x16.png:0",
+      "disabled": true
+    },
+    {
+      "hash": "c0547bd306ceaa8a",
+      "icon": "sheet-align-center",
+      "label": "0207-352x16.png:20",
+      "disabled": true
+    },
+    {
+      "hash": "dffdd433d4ce36f0",
+      "icon": "sheet-align-right",
+      "label": "0207-352x16.png:1",
+      "disabled": true
+    },
+    {
+      "hash": "7a73747e00eea6f9",
+      "icon": "sheet-align-top",
+      "label": "0207-352x16.png:2",
+      "disabled": true
+    },
+    {
+      "hash": "ce4d23d1308770ee",
+      "icon": "sheet-align-middle",
+      "label": "0207-352x16.png:19",
+      "disabled": true
+    },
+    {
+      "hash": "a0dc4f030e7e39c1",
+      "icon": "sheet-align-bottom",
+      "label": "0207-352x16.png:3",
+      "disabled": true
+    },
+    {
+      "hash": "4274d08c80c0045d",
+      "icon": "sheet-center-horizontal",
+      "label": "0207-352x16.png:4",
+      "disabled": true
+    },
+    {
+      "hash": "9692462078e2ffc0",
+      "icon": "sheet-center-vertical",
+      "label": "0207-352x16.png:5",
+      "disabled": true
+    },
+    {
+      "hash": "77111e4f00d49154",
+      "icon": "sheet-distribute-horizontal",
+      "label": "0207-352x16.png:6",
+      "disabled": true
+    },
+    {
+      "hash": "6403d7edf095ae99",
+      "icon": "sheet-distribute-vertical",
+      "label": "0207-352x16.png:7",
+      "disabled": true
+    },
+    {
+      "hash": "5cc7a10dea0761dd",
+      "icon": "sheet-same-width",
+      "label": "0207-352x16.png:8",
+      "disabled": true
+    },
+    {
+      "hash": "801c8fb3037b2bee",
+      "icon": "sheet-same-height",
+      "label": "0207-352x16.png:9",
+      "disabled": true
+    },
+    {
+      "hash": "fe9dbf2ed32ab5c1",
+      "icon": "sheet-same-size",
+      "label": "0207-352x16.png:10",
+      "disabled": true
+    },
+    {
+      "hash": "639892a7ba64b0f2",
+      "icon": "sheet-align-left",
+      "label": "0207-352x16.png:0",
+      "disabled": true
+    },
+    {
+      "hash": "77e33c6e54aa9443",
+      "icon": "sheet-align-center",
+      "label": "0207-352x16.png:20",
+      "disabled": true
+    },
+    {
+      "hash": "c9c22d9871b549b7",
+      "icon": "sheet-align-right",
+      "label": "0207-352x16.png:1",
+      "disabled": true
+    },
+    {
+      "hash": "f7e20f5315a1ac74",
+      "icon": "sheet-align-top",
+      "label": "0207-352x16.png:2",
+      "disabled": true
+    },
+    {
+      "hash": "2d32daa536d4376f",
+      "icon": "sheet-align-middle",
+      "label": "0207-352x16.png:19",
+      "disabled": true
+    },
+    {
+      "hash": "d43019961d6cdb3c",
+      "icon": "sheet-align-bottom",
+      "label": "0207-352x16.png:3",
+      "disabled": true
+    },
+    {
+      "hash": "687c6c3916140dda",
+      "icon": "sheet-center-horizontal",
+      "label": "0207-352x16.png:4",
+      "disabled": true
+    },
+    {
+      "hash": "f7b4f548bcdbbb6a",
+      "icon": "sheet-center-vertical",
+      "label": "0207-352x16.png:5",
+      "disabled": true
+    },
+    {
+      "hash": "07b86a18c4b77b47",
+      "icon": "sheet-distribute-horizontal",
+      "label": "0207-352x16.png:6",
+      "disabled": true
+    },
+    {
+      "hash": "5e453baef19c2496",
+      "icon": "sheet-distribute-vertical",
+      "label": "0207-352x16.png:7",
+      "disabled": true
+    },
+    {
+      "hash": "0bebebadc8c99ad4",
+      "icon": "sheet-same-width",
+      "label": "0207-352x16.png:8",
+      "disabled": true
+    },
+    {
+      "hash": "137ea82c843480a5",
+      "icon": "sheet-same-height",
+      "label": "0207-352x16.png:9",
+      "disabled": true
+    },
+    {
+      "hash": "e4535c78301236a7",
+      "icon": "sheet-same-size",
+      "label": "0207-352x16.png:10",
+      "disabled": true
+    },
+    {
+      "hash": "38657ecd16f3c9de",
+      "icon": "sheet-align-left",
+      "label": "0209-352x16.png:0"
+    },
+    {
+      "hash": "866c44e049a88ece",
+      "icon": "sheet-align-center",
+      "label": "0209-352x16.png:20"
+    },
+    {
+      "hash": "ec66452e6219f829",
+      "icon": "sheet-align-right",
+      "label": "0209-352x16.png:1"
+    },
+    {
+      "hash": "52b3f53344067bed",
+      "icon": "sheet-align-top",
+      "label": "0209-352x16.png:2"
+    },
+    {
+      "hash": "359e886f72ee5352",
+      "icon": "sheet-align-middle",
+      "label": "0209-352x16.png:19"
+    },
+    {
+      "hash": "bca680b5478b84f4",
+      "icon": "sheet-align-bottom",
+      "label": "0209-352x16.png:3"
+    },
+    {
+      "hash": "b8224e69baab69e1",
+      "icon": "sheet-center-horizontal",
+      "label": "0209-352x16.png:4"
+    },
+    {
+      "hash": "9267f392f796dcc4",
+      "icon": "sheet-center-vertical",
+      "label": "0209-352x16.png:5"
+    },
+    {
+      "hash": "a576a1ce90b7332c",
+      "icon": "sheet-distribute-horizontal",
+      "label": "0209-352x16.png:6"
+    },
+    {
+      "hash": "5cb232b7da482ec1",
+      "icon": "sheet-distribute-vertical",
+      "label": "0209-352x16.png:7"
+    },
+    {
+      "hash": "f58972d8eb0940e3",
+      "icon": "sheet-same-width",
+      "label": "0209-352x16.png:8"
+    },
+    {
+      "hash": "bc29329cdd1344d1",
+      "icon": "sheet-same-height",
+      "label": "0209-352x16.png:9"
+    },
+    {
+      "hash": "eb53e17edb7b53f2",
+      "icon": "sheet-same-size",
+      "label": "0209-352x16.png:10"
+    },
+    {
+      "hash": "c1b62f0366ffce9e",
+      "icon": "sheet-align-left",
+      "label": "0209-352x16.png:0"
+    },
+    {
+      "hash": "e65a405c164b486f",
+      "icon": "sheet-align-center",
+      "label": "0209-352x16.png:20"
+    },
+    {
+      "hash": "6aaeefe82e36ab6e",
+      "icon": "sheet-align-right",
+      "label": "0209-352x16.png:1"
+    },
+    {
+      "hash": "f3caa5a196ef8a90",
+      "icon": "sheet-align-top",
+      "label": "0209-352x16.png:2"
+    },
+    {
+      "hash": "0beff0418f7ecad3",
+      "icon": "sheet-align-middle",
+      "label": "0209-352x16.png:19"
+    },
+    {
+      "hash": "8a8230ce3fb8beb8",
+      "icon": "sheet-align-bottom",
+      "label": "0209-352x16.png:3"
+    },
+    {
+      "hash": "8c0de3874310236b",
+      "icon": "sheet-center-horizontal",
+      "label": "0209-352x16.png:4"
+    },
+    {
+      "hash": "6fc2200d9f80ea6f",
+      "icon": "sheet-center-vertical",
+      "label": "0209-352x16.png:5"
+    },
+    {
+      "hash": "83ee81c179c15c67",
+      "icon": "sheet-distribute-horizontal",
+      "label": "0209-352x16.png:6"
+    },
+    {
+      "hash": "9e5218bea7d5dd9e",
+      "icon": "sheet-distribute-vertical",
+      "label": "0209-352x16.png:7"
+    },
+    {
+      "hash": "abc20770c22a4da3",
+      "icon": "sheet-same-width",
+      "label": "0209-352x16.png:8"
+    },
+    {
+      "hash": "1d40f862ae4be049",
+      "icon": "sheet-same-height",
+      "label": "0209-352x16.png:9"
+    },
+    {
+      "hash": "792840347139d49d",
+      "icon": "sheet-same-size",
+      "label": "0209-352x16.png:10"
+    },
+    {
+      "hash": "8200c4727984a773",
+      "icon": "sheet-format-string",
+      "label": "frntend_root-000e7910.png:21"
+    },
+    {
+      "hash": "09ae3ca4d4561493",
+      "icon": "sheet-opacity",
+      "label": "0327-304x16.png:16"
+    },
+    {
+      "hash": "fb1ae50b46e42d13",
+      "icon": "sheet-align-auto",
+      "label": "0048-16x16.png:0"
+    },
+    {
+      "hash": "3dbc0e89083b6583",
+      "icon": "sheet-align-auto",
+      "label": "0048-16x16.png:0"
+    },
+    {
+      "hash": "8c1f14e84d9fb659",
+      "icon": "sheet-document",
+      "size": 16,
+      "label": "MXL document 0000ba4c"
+    },
+    {
+      "hash": "1d81816a14a5251f",
+      "icon": "sheet-document",
+      "size": 16,
+      "label": "MXL document 0000ba4c"
+    },
+    {
+      "hash": "365788db413155f5",
+      "icon": "sheet-document",
+      "size": 16,
+      "label": "MXL document 0000e453"
+    },
+    {
+      "hash": "bf9a57f29caa6ddb",
+      "icon": "sheet-document",
+      "size": 16,
+      "label": "MXL document 0000e453"
+    },
+    {
+      "hash": "2595f68fa99369f9",
+      "icon": "sheet-document",
+      "size": 14,
+      "label": "MXL document 0000fe8e"
+    },
+    {
+      "hash": "537e4a09857aaa7c",
+      "icon": "sheet-document",
+      "size": 14,
+      "label": "MXL document 0000fe8e"
+    },
+    {
+      "hash": "c4b392340273310d",
+      "icon": "sheet-document",
+      "size": 16,
+      "label": "MXL document 000103a5"
+    }
+  ]
+}

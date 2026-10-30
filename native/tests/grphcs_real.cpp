@@ -164,6 +164,71 @@ extern "C" __declspec(dllexport) BOOL chrome_probe(const ProbeConfig* cfg) {
         DWORD themed=c==0xB3B3B3?cfg->colors.border:cfg->colors.rasterBackground;
         ok &= ((uint32_t*)bytes(surface))[0]==(0xFF000000|(cfg->mode?themed:c));
     }
+    // Spreadsheet headers emit individual RGB scanlines. Mapping only FCFAEB
+    // creates a dark band through the number; every band must share one fill.
+    auto rectangle=load<void(*)(void*,double,double,double,double)>(m,"cairo_rectangle");
+    DWORD hover=0,line=0;
+    for (unsigned i=0;i<cfg->mapCount;++i) {
+        auto map=cfg->maps[i];
+        if (map.kind==CairoRgb && map.source==0xFFFAD9) hover=map.target;
+        if (map.kind==CairoRgba && map.source==0xE6E6E6) line=map.target;
+    }
+    const DWORD normalBands[]={0xF7F5E6,0xF8F6E7,0xF9F7E8,0xFAF8E9,0xFBF9EA,
+        0xFCFAEB,0xFDFBEC,0xFEFCED,0xFFFDEE,0xFFFEEF,0xFFFFF0};
+    const DWORD selectedBands[]={0xE7E5D6,0xE8E6D7,0xE9E7D8,0xEAE8D9,0xEBE9DA,
+        0xECEADB,0xEDEBDC,0xEEECDD,0xEFEDDE,0xF0EEDF,0xF1EFE0};
+    for (unsigned selected=0;selected<2;++selected) for (unsigned y=0;y<11;++y) {
+        DWORD c=(selected?selectedBands:normalBands)[y];
+        cairo_set_source_rgb(ctx,((c>>16)&255)/255.,((c>>8)&255)/255.,(c&255)/255.);
+        rectangle(ctx,0,y+selected*11,80,1); cairo_fill(ctx);
+    }
+    flush(surface);
+    for (unsigned selected=0;selected<2;++selected) for (unsigned y=0;y<11;++y) {
+        DWORD c=(selected?selectedBands:normalBands)[y];
+        DWORD expected=cfg->mode?(selected?hover:cfg->colors.rasterBackground):c;
+        ok &= ((uint32_t*)bytes(surface))[(y+selected*11)*80+40]==(0xFF000000|expected);
+    }
+    cairo_set_source_rgb(ctx,229./255.,229./255.,229./255.); cairo_paint(ctx); flush(surface);
+    ok &= ((uint32_t*)bytes(surface))[0]==(0xFF000000|(cfg->mode?line:0xE5E5E5));
+    // Named MXL areas have their own near-white scanlines. Range selection is
+    // a solid RGB D3D9EF brush. Check actual pixels and proportional-font labels.
+    const DWORD areaBands[]={0xFAFAF2,0xFBFBF3,0xFCFCF4,0xFDFDF5,0xFEFEF6,
+        0xFFFFF7,0xFFFFF8,0xFFFFF9,0xFFFFFA,0xFFFFFB,0xFFFFFC};
+    for(unsigned y=0;y<11;++y) {
+        DWORD c=areaBands[y];
+        cairo_set_source_rgb(ctx,((c>>16)&255)/255.,((c>>8)&255)/255.,(c&255)/255.);
+        rectangle(ctx,0,y,80,1); cairo_fill(ctx);
+    }
+    flush(surface);
+    for(unsigned y=0;y<11;++y)
+        ok &= ((uint32_t*)bytes(surface))[y*80+40]==
+            (0xFF000000|(cfg->mode?cfg->colors.rasterBackground:areaBands[y]));
+    cairo_set_source_rgb(ctx,211./255.,217./255.,239./255.); cairo_paint(ctx); flush(surface);
+    ok &= ((uint32_t*)bytes(surface))[0]==
+        (0xFF000000|(cfg->mode?cfg->colors.selectionBackground:0xD3D9EF));
+    auto family=load<void(*)(void*,const char*,int,int)>(m,"cairo_select_font_face");
+    auto fontSize=load<void(*)(void*,double)>(m,"cairo_set_font_size");
+    auto getFont=load<void*(*)(void*)>(m,"cairo_get_scaled_font");
+    auto textGlyphs=load<int(*)(void*,double,double,const char*,int,Glyph**,int*,void**,int*,int*)>(m,"cairo_scaled_font_text_to_glyphs");
+    auto freeGlyphs=load<void(*)(Glyph*)>(m,"cairo_glyph_free");
+    family(ctx,"Arial",0,0); fontSize(ctx,14.);
+    auto source=load<void*(*)(void*)>(m,"cairo_get_source");
+    for(unsigned area=0;area<2;++area) {
+        DWORD c=area?0xFFFFF7:0xD3D9EF;
+        cairo_set_source_rgb(ctx,((c>>16)&255)/255.,((c>>8)&255)/255.,(c&255)/255.);
+        cairo_paint(ctx);
+        cairo_set_source_rgba(ctx,0.,0.,0.,1.); Glyph* glyphs=nullptr; int count=0;
+        ok &= textGlyphs(getFont(ctx),3,18,"WWWW",4,&glyphs,&count,nullptr,nullptr,nullptr)==0;
+        auto glyphSource=source(ctx);
+        cairo_show_glyphs(ctx,glyphs,count); freeGlyphs(glyphs); flush(surface);
+        unsigned found=0; DWORD ink=cfg->mode?cfg->colors.glyphForeground:0;
+        for(int y=0;y<24;++y) for(int x=0;x<70;++x)
+            if(((uint32_t*)bytes(surface))[y*80+x]==(0xFF000000|ink)) ++found;
+        ok &= found>4 && source(ctx)==glyphSource;
+    }
+    // Other API forms and unknown colors must not inherit an RGB-only match.
+    cairo_set_source_rgba(ctx,211./255.,217./255.,239./255.,1.); cairo_paint(ctx); flush(surface);
+    ok &= ((uint32_t*)bytes(surface))[0]==0xFFD3D9EF;
     // Modern logon uses solid enabled/disabled yellow, independently of the old gradients.
     const DWORD logon[]={0xFFDD00,0x403700,0xFFFCE5,0xCFB300,0x4D4D54,0x404040,0xF2F2F2};
     DWORD disabled=0;
