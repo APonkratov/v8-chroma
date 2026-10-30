@@ -2,12 +2,13 @@
 use crate::{process::Identity, settings::Settings};
 use std::collections::BTreeMap;
 
-type Appearance = (String, bool, Option<(String, u32)>);
+type Appearance = (String, bool, Option<(String, u32)>, Option<String>);
 fn appearance(settings: &Settings) -> Appearance {
     (
         settings.selected_theme.clone(),
         settings.custom_icons,
         settings.editor_font.appearance(),
+        settings.ui_font.appearance(),
     )
 }
 
@@ -168,6 +169,27 @@ mod tests {
         settings.editor_font.enabled = true;
         assert!(controller.plan(&identities, &settings).is_empty());
         assert_eq!(controller.manual(&identities, &settings).len(), 1);
+    }
+    #[test]
+    fn interface_font_changes_apply_once_and_native_mode_remembers_family() {
+        let mut controller = Controller::default();
+        let mut settings = Settings::default();
+        let identities = [id(10, 1)];
+        controller.plan(&identities, &settings);
+        settings.ui_font.family = "Segoe UI".into();
+        assert_eq!(controller.plan(&identities, &settings), identities);
+        assert!(controller.plan(&identities, &settings).is_empty());
+        settings.ui_font.enabled = false;
+        assert_eq!(controller.plan(&identities, &settings), identities);
+        settings.ui_font.family = "Roboto".into();
+        assert!(controller.plan(&identities, &settings).is_empty());
+        settings.auto_apply = false;
+        settings.ui_font.enabled = true;
+        assert!(controller.plan(&identities, &settings).is_empty());
+        assert_eq!(controller.manual(&identities, &settings), identities);
+        settings.auto_apply = true;
+        assert_eq!(controller.plan(&identities, &settings), identities);
+        assert!(controller.plan(&identities, &settings).is_empty());
     }
     #[test]
     fn disabling_and_reenabling_reasserts_saved_theme() {

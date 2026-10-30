@@ -50,6 +50,54 @@ fn until(mut predicate: impl FnMut() -> bool) {
 }
 
 #[test]
+fn interface_font_flags_persist_native_mode_and_reject_invalid_names() {
+    let temp = tempfile::tempdir().unwrap();
+    let profile = temp.path().join("profile");
+    let saved = value(cli(
+        &profile,
+        &[
+            "settings",
+            "set",
+            "--auto-apply",
+            "off",
+            "--ui-font",
+            "Segoe UI",
+        ],
+    ));
+    assert_eq!(
+        saved["settings"]["ui_font"],
+        serde_json::json!({"enabled":true,"family":"Segoe UI"})
+    );
+    let saved = value(cli(&profile, &["settings", "set", "--native-ui-font"]));
+    assert_eq!(
+        saved["settings"]["ui_font"],
+        serde_json::json!({"enabled":false,"family":"Segoe UI"})
+    );
+    assert_eq!(saved["settings"]["auto_apply"], false);
+    let before = fs::read(profile.join("settings.json")).unwrap();
+    assert!(
+        !cli(&profile, &["settings", "set", "--ui-font", "bad\nfont"])
+            .status
+            .success()
+    );
+    assert_eq!(fs::read(profile.join("settings.json")).unwrap(), before);
+    assert!(
+        !cli(
+            &profile,
+            &[
+                "settings",
+                "set",
+                "--native-ui-font",
+                "--ui-font",
+                "Segoe UI"
+            ]
+        )
+        .status
+        .success()
+    );
+    assert_eq!(fs::read(profile.join("settings.json")).unwrap(), before);
+}
+#[test]
 fn separate_processes_persist_preferences_and_override_is_temporary() {
     let temp = tempfile::tempdir().unwrap();
     let profile = temp.path().join("Настройки пользователя");

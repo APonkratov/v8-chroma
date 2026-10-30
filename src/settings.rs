@@ -39,16 +39,18 @@ pub struct Settings {
     pub auto_apply: bool,
     pub custom_icons: bool,
     pub editor_font: crate::fonts::FontSettings,
+    pub ui_font: crate::ui_fonts::UiFontSettings,
     pub window: WindowSettings,
 }
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            schema_version: 3,
+            schema_version: 4,
             selected_theme: "dracula".into(),
             auto_apply: true,
             custom_icons: false,
             editor_font: Default::default(),
+            ui_font: Default::default(),
             window: WindowSettings::default(),
         }
     }
@@ -56,7 +58,7 @@ impl Default for Settings {
 impl Settings {
     pub fn validate(&self) -> Result<()> {
         ensure!(
-            self.schema_version == 3,
+            self.schema_version == 4,
             "Неизвестная схема настроек: {}",
             self.schema_version
         );
@@ -71,7 +73,8 @@ impl Settings {
             (640..=3840).contains(&self.window.width) && (480..=2160).contains(&self.window.height),
             "Размер окна вне диапазона 640..3840 x 480..2160"
         );
-        self.editor_font.validate()
+        self.editor_font.validate()?;
+        self.ui_font.validate()
     }
 }
 
@@ -89,6 +92,7 @@ pub struct SettingsPatch {
     pub auto_apply: Option<bool>,
     pub custom_icons: Option<bool>,
     pub editor_font: Option<crate::fonts::FontSettings>,
+    pub ui_font: Option<crate::ui_fonts::UiFontSettings>,
     pub window: Option<WindowPatch>,
 }
 impl SettingsPatch {
@@ -104,6 +108,9 @@ impl SettingsPatch {
         }
         if let Some(value) = self.editor_font {
             settings.editor_font = value;
+        }
+        if let Some(value) = self.ui_font {
+            settings.ui_font = value;
         }
         if let Some(window) = self.window {
             if let Some(value) = window.width {
@@ -175,7 +182,7 @@ fn parse(bytes: &[u8]) -> Result<Settings> {
             let old: Legacy = serde_json::from_slice(bytes)?;
             ensure!(old.schema_version == 1, "Некорректная схема миграции");
             Settings {
-                schema_version: 3,
+                schema_version: 4,
                 selected_theme: if old.selected_theme == "diagnostic" {
                     "standard".into()
                 } else {
@@ -185,6 +192,7 @@ fn parse(bytes: &[u8]) -> Result<Settings> {
                 window: old.window,
                 custom_icons: false,
                 editor_font: Default::default(),
+                ui_font: Default::default(),
             }
         }
         2 => {
@@ -200,15 +208,39 @@ fn parse(bytes: &[u8]) -> Result<Settings> {
             let old: Legacy = serde_json::from_slice(bytes)?;
             ensure!(old.schema_version == 2, "Некорректная схема миграции");
             Settings {
-                schema_version: 3,
+                schema_version: 4,
                 selected_theme: old.selected_theme,
                 auto_apply: old.auto_apply,
                 custom_icons: old.custom_icons,
                 window: old.window,
                 editor_font: Default::default(),
+                ui_font: Default::default(),
             }
         }
-        3 => serde_json::from_slice(bytes)?,
+        3 => {
+            #[derive(Deserialize)]
+            #[serde(deny_unknown_fields)]
+            struct Legacy {
+                schema_version: u32,
+                selected_theme: String,
+                auto_apply: bool,
+                custom_icons: bool,
+                editor_font: crate::fonts::FontSettings,
+                window: WindowSettings,
+            }
+            let old: Legacy = serde_json::from_slice(bytes)?;
+            ensure!(old.schema_version == 3, "Некорректная схема миграции");
+            Settings {
+                schema_version: 4,
+                selected_theme: old.selected_theme,
+                auto_apply: old.auto_apply,
+                custom_icons: old.custom_icons,
+                editor_font: old.editor_font,
+                window: old.window,
+                ui_font: Default::default(),
+            }
+        }
+        4 => serde_json::from_slice(bytes)?,
         version => return Err(UnsupportedSchema(version).into()),
     };
     settings.validate()?;
@@ -312,7 +344,10 @@ impl Store {
         if let Document::Valid { settings, bytes } = &primary {
             let raw: serde_json::Value =
                 serde_json::from_slice(bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(bytes))?;
-            if raw["schema_version"] == 1 || raw["schema_version"] == 2 {
+            if raw["schema_version"] == 1
+                || raw["schema_version"] == 2
+                || raw["schema_version"] == 3
+            {
                 self.persist(settings, &primary, &backup)?;
                 return Ok((read(&self.path())?, read(&self.backup())?));
             }
@@ -483,7 +518,7 @@ mod tests {
         let old=br#"{"schema_version":1,"selected_theme":"diagnostic","auto_apply":false,"window":{"width":1200,"height":800,"maximized":true}}"#;
         fs::write(store.path(), old).unwrap();
         let migrated = store.load().unwrap().settings;
-        assert_eq!(migrated.schema_version, 3);
+        assert_eq!(migrated.schema_version, 4);
         assert_eq!(migrated.selected_theme, "standard");
         assert!(!migrated.custom_icons && !migrated.auto_apply);
         assert_eq!(migrated.window.width, 1200);
@@ -505,7 +540,7 @@ mod tests {
         let old=br#"{"schema_version":2,"selected_theme":"monokai","auto_apply":false,"custom_icons":true,"window":{"width":1200,"height":800,"maximized":false}}"#;
         fs::write(store.path(), old).unwrap();
         let loaded = store.load().unwrap().settings;
-        assert_eq!(loaded.schema_version, 3);
+        assert_eq!(loaded.schema_version, 4);
         assert_eq!(loaded.selected_theme, "monokai");
         assert!(loaded.custom_icons && !loaded.auto_apply && !loaded.editor_font.enabled);
         assert_eq!(fs::read(store.backup()).unwrap(), old);
@@ -535,6 +570,54 @@ mod tests {
                 .is_err()
         );
         assert_eq!(fs::read(store.path()).unwrap(), before);
+    }
+    #[test]
+    fn v3_migration_preserves_editor_and_auto_policy_with_exact_backup() {
+        let (_temp, store) = profile();
+        fs::create_dir_all(&store.directory).unwrap();
+        let old = br#"{"schema_version":3,"selected_theme":"darcula","auto_apply":false,"custom_icons":true,"editor_font":{"enabled":true,"family":"Consolas","points10":145},"window":{"width":1200,"height":800,"maximized":false}}"#;
+        fs::write(store.path(), old).unwrap();
+        let loaded = store.load().unwrap().settings;
+        assert_eq!(loaded.schema_version, 4);
+        assert_eq!(loaded.selected_theme, "darcula");
+        assert!(!loaded.auto_apply && loaded.custom_icons && loaded.editor_font.enabled);
+        assert_eq!(loaded.editor_font.family, "Consolas");
+        assert_eq!(loaded.editor_font.points10, 145);
+        assert_eq!(loaded.ui_font, crate::ui_fonts::UiFontSettings::default());
+        assert_eq!(fs::read(store.backup()).unwrap(), old);
+        assert_eq!(store.load().unwrap().settings, loaded);
+        assert_eq!(fs::read(store.backup()).unwrap(), old);
+    }
+    #[test]
+    fn interface_font_native_mode_roundtrips_and_invalid_update_is_atomic() {
+        let (_temp, store) = profile();
+        let font = crate::ui_fonts::UiFontSettings {
+            enabled: false,
+            family: "Roboto".into(),
+        };
+        let saved = store
+            .update(SettingsPatch {
+                ui_font: Some(font.clone()),
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(saved.settings.ui_font, font);
+        assert_eq!(store.load().unwrap().settings.ui_font, font);
+        let before = fs::read(store.path()).unwrap();
+        for family in ["", "Segoe\nUI", &"🦀".repeat(16)] {
+            assert!(
+                store
+                    .update(SettingsPatch {
+                        ui_font: Some(crate::ui_fonts::UiFontSettings {
+                            family: family.into(),
+                            ..font.clone()
+                        }),
+                        ..Default::default()
+                    })
+                    .is_err()
+            );
+            assert_eq!(fs::read(store.path()).unwrap(), before);
+        }
     }
     #[test]
     fn future_schema_is_never_overwritten() {
@@ -616,8 +699,8 @@ mod tests {
             parse(
                 valid
                     .replace(
-                        "\"schema_version\": 3",
-                        "\"schema_version\": 3, \"typo\": 3"
+                        "\"schema_version\": 4",
+                        "\"schema_version\": 4, \"typo\": 3"
                     )
                     .as_bytes()
             )

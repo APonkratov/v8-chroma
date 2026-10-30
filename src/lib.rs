@@ -1,6 +1,7 @@
 /// Stable name for per-user storage and the desktop autostart entry.
 pub const APP_NAME: &str = "v8-chroma";
 pub mod fonts;
+pub mod ui_fonts;
 
 #[cfg(all(
     target_os = "windows",

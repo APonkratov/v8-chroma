@@ -21,12 +21,7 @@ impl Default for FontSettings {
 }
 impl FontSettings {
     pub fn validate(&self) -> Result<()> {
-        ensure!(
-            !self.family.trim().is_empty()
-                && self.family.encode_utf16().count() < 32
-                && !self.family.chars().any(char::is_control),
-            "Некорректное имя шрифта (до 31 символа UTF-16)"
-        );
+        validate_family(&self.family)?;
         ensure!(
             (80..=320).contains(&self.points10) && self.points10.is_multiple_of(5),
             "Размер шрифта: от 8 до 32 pt с шагом 0,5"
@@ -36,6 +31,15 @@ impl FontSettings {
     pub fn appearance(&self) -> Option<(String, u32)> {
         self.enabled.then(|| (self.family.clone(), self.points10))
     }
+}
+pub(crate) fn validate_family(family: &str) -> Result<()> {
+    ensure!(
+        !family.trim().is_empty()
+            && family.encode_utf16().count() < 32
+            && !family.chars().any(char::is_control),
+        "Некорректное имя шрифта (до 31 символа UTF-16)"
+    );
+    Ok(())
 }
 
 #[cfg(all(
