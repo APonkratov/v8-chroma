@@ -3,7 +3,7 @@
   import PreviewIcon from './PreviewIcon.svelte';
   import type {ThemePreview} from './preview';
   import {stockReference} from './preview';
-  let {theme, customIcons, fontFamily, fontSize}:{theme:ThemePreview;customIcons:boolean;fontFamily?:string;fontSize?:number} = $props();
+  let {theme, customIcons, fontFamily, fontSize, uiFontFamily}:{theme:ThemePreview;customIcons:boolean;fontFamily?:string;fontSize?:number;uiFontFamily?:string} = $props();
   const fontStyle = $derived(fontFamily && fontSize ? `font-family:${fontFamily};font-size:${fontSize}pt;line-height:1.65` : undefined);
   const colors = $derived(theme.colors);
   const editor = $derived(theme.editor);
@@ -21,7 +21,7 @@
   ];
 </script>
 
-<div class="configurator-preview" style:background={colors['editor.background']} style:color={colors.text} style:--preview-panel={colors.panel} style:--preview-border={colors.border} aria-label={`Пример конфигуратора: ${theme.name}, ${customIcons?'новые':'штатные'} значки`}>
+<div class="configurator-preview" style:font-family={uiFontFamily} style:background={colors['editor.background']} style:color={colors.text} style:--preview-panel={colors.panel} style:--preview-border={colors.border} aria-label={`Пример конфигуратора: ${theme.name}, ${customIcons?'новые':'штатные'} значки`}>
   <div class="preview-menubar" aria-hidden="true"><span>Файл</span><span>Правка</span><span>Конфигурация</span><span>Отладка</span><span>Сервис</span></div>
   <div class="preview-toolbar" aria-label="Пример панели команд">
     {#each commands as command,i}

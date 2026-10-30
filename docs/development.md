@@ -68,8 +68,8 @@ Cairo включаются параметром `--cairo <platform-bin>/cairo.dl
 Уведомления о лицензиях генерируются при выпуске; см.
 [licenses/README](../licenses/README.md).
 
-Созданные assets/ThemeProbe.dll, assets/FontProbe.dll, native/bin/, tests/fixtures/
-и build/ игнорируются Git. Обе DLL встраиваются в EXE. Проверки шрифтов и лигатур
+Созданные assets/ThemeProbe.dll, assets/FontProbe.dll, assets/UiFontEngine.dll, native/bin/, tests/fixtures/
+и build/ игнорируются Git. Все три DLL встраиваются в EXE. Проверки шрифтов и лигатур
 описаны в [fonts.md](fonts.md).
 
 ## Кэш CI

@@ -71,6 +71,7 @@ def check(toolchain, target, preset, cairo):
     native(preset)
     run(ROOT / "tests/fixtures/icon_theme_test.exe")
     run(ROOT / "tests/fixtures/font_shaping.exe", "Consolas")
+    run(ROOT / "tests/fixtures/ui_font_policy_test.exe")
     run(ROOT / "tests/fixtures/contrast_test.exe", *sorted((ROOT / "tests/golden").glob("*.bin")))
     with tempfile.TemporaryDirectory(prefix="icon-bootstrap-") as temporary:
         for mode in (1, 2):
@@ -89,6 +90,7 @@ def check(toolchain, target, preset, cairo):
     cargo(toolchain, "test", "--workspace", "--target", target, "--locked", env=env)
     cargo(toolchain, "clippy", "--workspace", "--all-targets", "--target", target, "--locked", "--", "-D", "warnings", env=env)
     if cairo:
+        run(ROOT / "tests/fixtures/ui_font_discovery_test.exe", cairo.parent)
         for executable in ("raster_test.exe", "editor_selection_test.exe"):
             run(ROOT / "native/bin/demo" / executable, cairo)
         run(sys.executable, "native/tests/run_real_cairo.py", "--cairo", cairo)
@@ -114,7 +116,7 @@ def release(tag, toolchain):
     binaries = [target / "x86_64-pc-windows-msvc/release" / name for name in ("v8-chroma.exe", "v8-chroma-cli.exe")]
     run(sys.executable, "scripts/release_checks.py", "--tag", tag,
         "--binary", binaries[0], "--binary", binaries[1], "--binary", "assets/ThemeProbe.dll",
-        "--binary", "assets/FontProbe.dll")
+        "--binary", "assets/FontProbe.dll", "--binary", "assets/UiFontEngine.dll")
     run(sys.executable, "scripts/collect_licenses.py", "--toolchain", toolchain)
     destination = ROOT / "dist/release"
     destination.mkdir(parents=True, exist_ok=True)

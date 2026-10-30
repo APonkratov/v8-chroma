@@ -12,6 +12,7 @@ use std::{
 use v8_chroma_core::{
     fonts, manager,
     settings::{Loaded, Settings, SettingsPatch, Store, WindowPatch},
+    ui_fonts,
     watch::Controller,
     win::Identity,
 };
@@ -31,6 +32,8 @@ pub struct ProcessRow {
     pub icon_warning: Option<String>,
     pub font: Option<String>,
     pub font_warning: Option<String>,
+    pub ui_font: Option<String>,
+    pub ui_font_warning: Option<String>,
 }
 #[derive(Clone, Serialize)]
 pub struct Snapshot {
@@ -192,6 +195,8 @@ impl Service {
                                         icon_warning: None,
                                         font: None,
                                         font_warning: None,
+                                        ui_font: None,
+                                        ui_font_warning: None,
                                         detail: if candidate.eligible {
                                             None
                                         } else {
@@ -221,6 +226,19 @@ impl Service {
                                         Ok(Some(font)) => {
                                             row.font = Some(font.label);
                                             row.font_warning = font.warning;
+                                        }
+                                        Err(error) => {
+                                            row.status = "error".into();
+                                            row.detail = Some(format!("{error:#}"));
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                                if let Some(identity) = identity {
+                                    match ui_fonts::last_applied(identity) {
+                                        Ok(Some(font)) => {
+                                            row.ui_font = Some(font.label);
+                                            row.ui_font_warning = font.warning;
                                         }
                                         Err(error) => {
                                             row.status = "error".into();
@@ -307,7 +325,8 @@ impl Service {
                 && patch.window.is_none()
                 && (patch.selected_theme.is_some()
                     || patch.custom_icons.is_some()
-                    || patch.editor_font.is_some()),
+                    || patch.editor_font.is_some()
+                    || patch.ui_font.is_some()),
             "Укажите тему, значки или шрифт"
         );
         ensure!(
@@ -423,12 +442,17 @@ impl Service {
             settings.custom_icons,
         );
         let font_result = fonts::apply_to(identity, &settings.editor_font);
-        let detail = [result.as_ref().err(), font_result.as_ref().err()]
-            .into_iter()
-            .flatten()
-            .map(|e| format!("{e:#}"))
-            .collect::<Vec<_>>()
-            .join("\n");
+        let ui_font_result = ui_fonts::apply_to(identity, &settings.ui_font);
+        let detail = [
+            result.as_ref().err(),
+            font_result.as_ref().err(),
+            ui_font_result.as_ref().err(),
+        ]
+        .into_iter()
+        .flatten()
+        .map(|e| format!("{e:#}"))
+        .collect::<Vec<_>>()
+        .join("\n");
         let row = ProcessRow {
             pid: identity.pid,
             created_time: Some(identity.created_time.to_string()),
@@ -436,7 +460,7 @@ impl Service {
             exe: Some(identity.exe.display().to_string()),
             command_line: None,
             eligible: true,
-            status: if result.is_ok() && font_result.is_ok() {
+            status: if result.is_ok() && font_result.is_ok() && ui_font_result.is_ok() {
                 "applied".into()
             } else {
                 "error".into()
@@ -446,6 +470,8 @@ impl Service {
             icon_warning: result.as_ref().ok().and_then(|r| r.icon_warning.clone()),
             font: font_result.as_ref().ok().map(|r| r.label.clone()),
             font_warning: font_result.as_ref().ok().and_then(|r| r.warning.clone()),
+            ui_font: ui_font_result.as_ref().ok().map(|r| r.label.clone()),
+            ui_font_warning: ui_font_result.as_ref().ok().and_then(|r| r.warning.clone()),
             detail: (!detail.is_empty()).then_some(detail),
         };
         results.insert((identity.pid, identity.created_time), row.clone());
@@ -516,6 +542,20 @@ mod tests {
         let mut controller = Controller::default();
         for patch in [
             SettingsPatch {
+                ui_font: Some(v8_chroma_core::ui_fonts::UiFontSettings {
+                    enabled: true,
+                    family: "Segoe UI".into(),
+                }),
+                ..Default::default()
+            },
+            SettingsPatch {
+                ui_font: Some(v8_chroma_core::ui_fonts::UiFontSettings {
+                    enabled: false,
+                    family: "Segoe UI".into(),
+                }),
+                ..Default::default()
+            },
+            SettingsPatch {
                 editor_font: Some(v8_chroma_core::fonts::FontSettings {
                     enabled: true,
                     family: "Consolas".into(),
@@ -576,6 +616,20 @@ mod tests {
         let mut controller = Controller::default();
         controller.plan(&identities, &service.store.load().unwrap().settings);
         for patch in [
+            SettingsPatch {
+                ui_font: Some(v8_chroma_core::ui_fonts::UiFontSettings {
+                    enabled: true,
+                    family: "Segoe UI".into(),
+                }),
+                ..Default::default()
+            },
+            SettingsPatch {
+                ui_font: Some(v8_chroma_core::ui_fonts::UiFontSettings {
+                    enabled: false,
+                    family: "Segoe UI".into(),
+                }),
+                ..Default::default()
+            },
             SettingsPatch {
                 selected_theme: Some("monokai".into()),
                 ..Default::default()
@@ -655,6 +709,8 @@ mod tests {
                 icon_warning: None,
                 font: None,
                 font_warning: None,
+                ui_font: None,
+                ui_font_warning: None,
             }];
         });
         service.request_apply(Some((123, 456))).unwrap();
@@ -686,6 +742,8 @@ mod tests {
             icon_warning: None,
             font: None,
             font_warning: None,
+            ui_font: None,
+            ui_font_warning: None,
             detail: None,
         };
         let json = serde_json::to_value(row).unwrap();

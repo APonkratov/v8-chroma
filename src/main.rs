@@ -6,7 +6,7 @@ use std::{
 };
 use v8_chroma_core::{
     manager,
-    settings::{Loaded, SettingsPatch, Store, WindowPatch},
+    settings::{Loaded, Settings, SettingsPatch, Store, WindowPatch},
     theme,
     watch::Controller,
 };
@@ -75,6 +75,12 @@ enum SettingsCommand {
         auto_apply: Option<Switch>,
         #[arg(long, value_enum)]
         custom_icons: Option<Switch>,
+        /// Семейство шрифта интерфейса; одновременно включает его подмену.
+        #[arg(long)]
+        ui_font: Option<String>,
+        /// Вернуть штатный шрифт интерфейса 1С, сохранив выбранное семейство.
+        #[arg(long, conflicts_with = "ui_font")]
+        native_ui_font: bool,
         #[arg(long)]
         width: Option<u32>,
         #[arg(long)]
@@ -102,36 +108,21 @@ fn store(directory: Option<PathBuf>) -> Result<Store> {
         None => Store::system(),
     }
 }
-fn selected(
-    store: &Store,
-    override_theme: Option<String>,
-) -> Result<(String, bool, v8_chroma_core::fonts::FontSettings)> {
-    let (id, icons, font) = if let Some(id) = override_theme {
+fn selected(store: &Store, override_theme: Option<String>) -> Result<Settings> {
+    let settings = if let Some(id) = override_theme {
         // Explicit manual theme remains usable even with broken preferences.
-        (
-            id,
-            store
-                .load()
-                .map(|s| s.settings.custom_icons)
-                .unwrap_or(false),
-            store
-                .load()
-                .map(|s| s.settings.editor_font)
-                .unwrap_or_default(),
-        )
+        let mut settings = store.load().map(|s| s.settings).unwrap_or_default();
+        settings.selected_theme = id;
+        settings
     } else {
         let loaded = store.load()?;
         if let Some(warning) = loaded.warning {
             eprintln!("Предупреждение: {warning}");
         }
-        (
-            loaded.settings.selected_theme,
-            loaded.settings.custom_icons,
-            loaded.settings.editor_font,
-        )
+        loaded.settings
     };
-    theme::config(&id, Path::new("x"), Path::new("y"))?;
-    Ok((id, icons, font))
+    theme::config(&settings.selected_theme, Path::new("x"), Path::new("y"))?;
+    Ok(settings)
 }
 fn main() -> std::process::ExitCode {
     match run() {
@@ -149,25 +140,49 @@ fn run() -> Result<()> {
         Some(Command::List) => print(&manager::discover()?)?,
         Some(Command::Themes) => print(&theme::IDS)?,
         Some(Command::Attach { pid, theme }) => {
-            let (id, icons, font) = selected(&store(cli.config_dir)?, theme)?;
-            let applied = manager::attach_with_icons(pid, &id, icons)?;
+            let settings = selected(&store(cli.config_dir)?, theme)?;
+            let applied =
+                manager::attach_with_icons(pid, &settings.selected_theme, settings.custom_icons)?;
             let mut result = serde_json::to_value(&applied)?;
-            result["font"] =
-                serde_json::to_value(v8_chroma_core::fonts::apply_to(&applied.identity, &font)?)?;
+            result["font"] = serde_json::to_value(v8_chroma_core::fonts::apply_to(
+                &applied.identity,
+                &settings.editor_font,
+            )?)?;
+            result["ui_font"] = serde_json::to_value(v8_chroma_core::ui_fonts::apply_to(
+                &applied.identity,
+                &settings.ui_font,
+            )?)?;
             print(&result)?;
         }
         Some(Command::ApplyAll { theme }) => {
-            let (id, icons, font) = selected(&store(cli.config_dir)?, theme)?;
+            let settings = selected(&store(cli.config_dir)?, theme)?;
             let mut failed = false;
             for candidate in manager::discover()?.into_iter().filter(|c| c.eligible) {
-                match manager::attach_with_icons(candidate.pid, &id, icons) {
+                match manager::attach_with_icons(
+                    candidate.pid,
+                    &settings.selected_theme,
+                    settings.custom_icons,
+                ) {
                     Ok(result) => {
                         let mut value = serde_json::to_value(&result)?;
-                        match v8_chroma_core::fonts::apply_to(&result.identity, &font) {
+                        match v8_chroma_core::fonts::apply_to(
+                            &result.identity,
+                            &settings.editor_font,
+                        ) {
                             Ok(font) => value["font"] = serde_json::to_value(font)?,
                             Err(error) => {
                                 failed = true;
                                 value["font_error"] = serde_json::json!(format!("{error:#}"));
+                            }
+                        }
+                        match v8_chroma_core::ui_fonts::apply_to(
+                            &result.identity,
+                            &settings.ui_font,
+                        ) {
+                            Ok(font) => value["ui_font"] = serde_json::to_value(font)?,
+                            Err(error) => {
+                                failed = true;
+                                value["ui_font_error"] = serde_json::json!(format!("{error:#}"));
                             }
                         }
                         print(&value)?;
@@ -194,6 +209,8 @@ fn run() -> Result<()> {
                     theme,
                     auto_apply,
                     custom_icons,
+                    ui_font,
+                    native_ui_font,
                     width,
                     height,
                     maximized,
@@ -202,6 +219,8 @@ fn run() -> Result<()> {
                         theme.is_some()
                             || auto_apply.is_some()
                             || custom_icons.is_some()
+                            || ui_font.is_some()
+                            || native_ui_font
                             || width.is_some()
                             || height.is_some()
                             || maximized.is_some(),
@@ -216,10 +235,21 @@ fn run() -> Result<()> {
                     } else {
                         None
                     };
+                    let ui_font = if ui_font.is_some() || native_ui_font {
+                        let mut font = store.load()?.settings.ui_font;
+                        font.enabled = !native_ui_font;
+                        if let Some(family) = ui_font {
+                            font.family = family;
+                        }
+                        Some(font)
+                    } else {
+                        None
+                    };
                     show(store.update(SettingsPatch {
                         selected_theme: theme,
                         auto_apply: auto_apply.map(Switch::value),
                         custom_icons: custom_icons.map(Switch::value),
+                        ui_font,
                         window,
                         ..Default::default()
                     })?)?;
@@ -259,10 +289,12 @@ fn watch(store: &Store, override_theme: Option<String>, seconds: u64) -> Result<
                     settings.selected_theme.clone(),
                     settings.auto_apply,
                     settings.custom_icons,
+                    settings.editor_font.appearance(),
+                    settings.ui_font.appearance(),
                 );
                 if last_policy.as_ref() != Some(&policy) {
                     print(
-                        &serde_json::json!({"event":"settings","theme":policy.0,"auto_apply":policy.1,"custom_icons":policy.2,"path":loaded.path}),
+                        &serde_json::json!({"event":"settings","theme":policy.0,"auto_apply":policy.1,"custom_icons":policy.2,"editor_font":policy.3,"ui_font":policy.4,"path":loaded.path}),
                     )?;
                     last_policy = Some(policy);
                 }
@@ -282,22 +314,31 @@ fn watch(store: &Store, override_theme: Option<String>, seconds: u64) -> Result<
                                     &settings.selected_theme,
                                     settings.custom_icons,
                                 ) {
-                                    Ok(result) => {
-                                        print(&result)?;
-                                        match v8_chroma_core::fonts::apply_to(
-                                            &identity,
-                                            &settings.editor_font,
-                                        ) {
-                                            Ok(font) => print(
-                                                &serde_json::json!({"pid":identity.pid,"font":font}),
-                                            )?,
-                                            Err(error) => print(
-                                                &serde_json::json!({"pid":identity.pid,"font_error":format!("{error:#}")}),
-                                            )?,
-                                        }
-                                    }
+                                    Ok(result) => print(&result)?,
                                     Err(error) => print(
                                         &serde_json::json!({"pid":identity.pid,"error":format!("{error:#}")}),
+                                    )?,
+                                }
+                                match v8_chroma_core::fonts::apply_to(
+                                    &identity,
+                                    &settings.editor_font,
+                                ) {
+                                    Ok(font) => {
+                                        print(&serde_json::json!({"pid":identity.pid,"font":font}))?
+                                    }
+                                    Err(error) => print(
+                                        &serde_json::json!({"pid":identity.pid,"font_error":format!("{error:#}")}),
+                                    )?,
+                                }
+                                match v8_chroma_core::ui_fonts::apply_to(
+                                    &identity,
+                                    &settings.ui_font,
+                                ) {
+                                    Ok(font) => print(
+                                        &serde_json::json!({"pid":identity.pid,"ui_font":font}),
+                                    )?,
+                                    Err(error) => print(
+                                        &serde_json::json!({"pid":identity.pid,"ui_font_error":format!("{error:#}")}),
                                     )?,
                                 }
                             }
