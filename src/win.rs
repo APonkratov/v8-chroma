@@ -340,13 +340,33 @@ impl Process {
         }
     }
     pub fn exports(&self, dll: &Path) -> Result<BTreeMap<&'static str, usize>> {
+        self.named_exports(
+            dll,
+            &[
+                "ThemeInitialize",
+                "ThemeApply",
+                "ThemeSnapshot",
+                "ThemeStop",
+            ],
+        )
+    }
+    pub fn named_exports(
+        &self,
+        dll: &Path,
+        names: &[&'static str],
+    ) -> Result<BTreeMap<&'static str, usize>> {
         let modules = self.modules()?;
+        let name = dll
+            .file_name()
+            .context("Нет имени DLL")?
+            .to_string_lossy()
+            .to_lowercase();
         let (base, path) = modules
-            .get("themeprobe.dll")
-            .context("ThemeProbe.dll не загружена")?;
+            .get(&name)
+            .with_context(|| format!("{name} не загружена"))?;
         ensure!(
             same_path(path, dll),
-            "В процессе уже загружена другая ThemeProbe.dll; требуется штатный перезапуск 1С"
+            "В процессе уже загружена другая {name}; требуется штатный перезапуск 1С"
         );
         unsafe {
             // Read export RVAs without running DllMain in the manager.
@@ -362,15 +382,10 @@ impl Process {
             );
             let result = (|| {
                 let mut result = BTreeMap::new();
-                for name in [
-                    "ThemeInitialize",
-                    "ThemeApply",
-                    "ThemeSnapshot",
-                    "ThemeStop",
-                ] {
+                for &name in names {
                     let name_c = std::ffi::CString::new(name)?;
                     let address = GetProcAddress(local, name_c.as_ptr() as _)
-                        .context("Отсутствует экспорт ThemeProbe")?
+                        .with_context(|| format!("Отсутствует экспорт {name}"))?
                         as usize;
                     result.insert(name, base + address - local as usize);
                 }

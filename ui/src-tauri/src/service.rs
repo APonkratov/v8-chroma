@@ -10,7 +10,7 @@ use std::{
     time::{Duration, Instant},
 };
 use v8_chroma_core::{
-    manager,
+    fonts, manager,
     settings::{Loaded, Settings, SettingsPatch, Store, WindowPatch},
     watch::Controller,
     win::Identity,
@@ -29,6 +29,8 @@ pub struct ProcessRow {
     pub detail: Option<String>,
     pub icons: Option<String>,
     pub icon_warning: Option<String>,
+    pub font: Option<String>,
+    pub font_warning: Option<String>,
 }
 #[derive(Clone, Serialize)]
 pub struct Snapshot {
@@ -108,12 +110,7 @@ impl Service {
                                         if background.shared.stop.load(Ordering::Acquire) {
                                             break;
                                         }
-                                        background.apply(
-                                            &identity,
-                                            &settings.selected_theme,
-                                            settings.custom_icons,
-                                            &mut results,
-                                        );
+                                        background.apply(&identity, &settings, &mut results);
                                     }
                                     background.shared.busy.store(false, Ordering::Release);
                                     last_scan = Instant::now() - Duration::from_secs(3);
@@ -193,6 +190,8 @@ impl Service {
                                         theme: None,
                                         icons: None,
                                         icon_warning: None,
+                                        font: None,
+                                        font_warning: None,
                                         detail: if candidate.eligible {
                                             None
                                         } else {
@@ -209,6 +208,19 @@ impl Service {
                                             row.icons = Some(applied.icons);
                                             row.icon_warning = applied.icon_warning;
                                             row.status = "applied".into();
+                                        }
+                                        Err(error) => {
+                                            row.status = "error".into();
+                                            row.detail = Some(format!("{error:#}"));
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                                if let Some(identity) = identity {
+                                    match fonts::last_applied(identity) {
+                                        Ok(Some(font)) => {
+                                            row.font = Some(font.label);
+                                            row.font_warning = font.warning;
                                         }
                                         Err(error) => {
                                             row.status = "error".into();
@@ -234,12 +246,7 @@ impl Service {
                                     if background.shared.stop.load(Ordering::Acquire) {
                                         break;
                                     }
-                                    background.apply(
-                                        &identity,
-                                        &settings.selected_theme,
-                                        settings.custom_icons,
-                                        &mut results,
-                                    );
+                                    background.apply(&identity, &settings, &mut results);
                                 }
                                 background.shared.busy.store(false, Ordering::Release);
                             }
@@ -298,8 +305,10 @@ impl Service {
         ensure!(
             patch.auto_apply.is_none()
                 && patch.window.is_none()
-                && (patch.selected_theme.is_some() || patch.custom_icons.is_some()),
-            "Укажите тему или настройку значков"
+                && (patch.selected_theme.is_some()
+                    || patch.custom_icons.is_some()
+                    || patch.editor_font.is_some()),
+            "Укажите тему, значки или шрифт"
         );
         ensure!(
             !self.shared.busy.load(Ordering::Acquire),
@@ -393,8 +402,7 @@ impl Service {
     fn apply(
         &self,
         identity: &Identity,
-        theme: &str,
-        custom_icons: bool,
+        settings: &Settings,
         results: &mut BTreeMap<(u32, u64), ProcessRow>,
     ) {
         self.edit(|s| {
@@ -409,7 +417,18 @@ impl Service {
                 row.detail = None;
             }
         });
-        let result = manager::attach_to_with_icons(identity, theme, custom_icons);
+        let result = manager::attach_to_with_icons(
+            identity,
+            &settings.selected_theme,
+            settings.custom_icons,
+        );
+        let font_result = fonts::apply_to(identity, &settings.editor_font);
+        let detail = [result.as_ref().err(), font_result.as_ref().err()]
+            .into_iter()
+            .flatten()
+            .map(|e| format!("{e:#}"))
+            .collect::<Vec<_>>()
+            .join("\n");
         let row = ProcessRow {
             pid: identity.pid,
             created_time: Some(identity.created_time.to_string()),
@@ -417,7 +436,7 @@ impl Service {
             exe: Some(identity.exe.display().to_string()),
             command_line: None,
             eligible: true,
-            status: if result.is_ok() {
+            status: if result.is_ok() && font_result.is_ok() {
                 "applied".into()
             } else {
                 "error".into()
@@ -425,7 +444,9 @@ impl Service {
             theme: result.as_ref().ok().map(|r| r.theme.clone()),
             icons: result.as_ref().ok().map(|r| r.icons.clone()),
             icon_warning: result.as_ref().ok().and_then(|r| r.icon_warning.clone()),
-            detail: result.err().map(|e| format!("{e:#}")),
+            font: font_result.as_ref().ok().map(|r| r.label.clone()),
+            font_warning: font_result.as_ref().ok().and_then(|r| r.warning.clone()),
+            detail: (!detail.is_empty()).then_some(detail),
         };
         results.insert((identity.pid, identity.created_time), row.clone());
         self.edit(|s| {
@@ -494,6 +515,14 @@ mod tests {
         }];
         let mut controller = Controller::default();
         for patch in [
+            SettingsPatch {
+                editor_font: Some(v8_chroma_core::fonts::FontSettings {
+                    enabled: true,
+                    family: "Consolas".into(),
+                    points10: 145,
+                }),
+                ..Default::default()
+            },
             SettingsPatch {
                 selected_theme: Some("monokai".into()),
                 ..Default::default()
@@ -624,6 +653,8 @@ mod tests {
                 detail: None,
                 icons: None,
                 icon_warning: None,
+                font: None,
+                font_warning: None,
             }];
         });
         service.request_apply(Some((123, 456))).unwrap();
@@ -653,6 +684,8 @@ mod tests {
             theme: None,
             icons: None,
             icon_warning: None,
+            font: None,
+            font_warning: None,
             detail: None,
         };
         let json = serde_json::to_value(row).unwrap();

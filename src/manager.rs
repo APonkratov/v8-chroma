@@ -109,7 +109,7 @@ pub fn discover() -> Result<Vec<Candidate>> {
         .collect())
 }
 
-fn identity(pid: u32) -> Result<Identity> {
+pub(crate) fn identity(pid: u32) -> Result<Identity> {
     inspect(
         rows(Some(pid))?
             .into_iter()

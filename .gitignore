@@ -6,6 +6,7 @@
 /native/bin/
 /tests/fixtures/
 /assets/ThemeProbe.dll
+/assets/FontProbe.dll
 /dist/
 /build/
 /native/CMakeUserPresets.json

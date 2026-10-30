@@ -102,8 +102,11 @@ fn store(directory: Option<PathBuf>) -> Result<Store> {
         None => Store::system(),
     }
 }
-fn selected(store: &Store, override_theme: Option<String>) -> Result<(String, bool)> {
-    let (id, icons) = if let Some(id) = override_theme {
+fn selected(
+    store: &Store,
+    override_theme: Option<String>,
+) -> Result<(String, bool, v8_chroma_core::fonts::FontSettings)> {
+    let (id, icons, font) = if let Some(id) = override_theme {
         // Explicit manual theme remains usable even with broken preferences.
         (
             id,
@@ -111,16 +114,24 @@ fn selected(store: &Store, override_theme: Option<String>) -> Result<(String, bo
                 .load()
                 .map(|s| s.settings.custom_icons)
                 .unwrap_or(false),
+            store
+                .load()
+                .map(|s| s.settings.editor_font)
+                .unwrap_or_default(),
         )
     } else {
         let loaded = store.load()?;
         if let Some(warning) = loaded.warning {
             eprintln!("Предупреждение: {warning}");
         }
-        (loaded.settings.selected_theme, loaded.settings.custom_icons)
+        (
+            loaded.settings.selected_theme,
+            loaded.settings.custom_icons,
+            loaded.settings.editor_font,
+        )
     };
     theme::config(&id, Path::new("x"), Path::new("y"))?;
-    Ok((id, icons))
+    Ok((id, icons, font))
 }
 fn main() -> std::process::ExitCode {
     match run() {
@@ -138,15 +149,29 @@ fn run() -> Result<()> {
         Some(Command::List) => print(&manager::discover()?)?,
         Some(Command::Themes) => print(&theme::IDS)?,
         Some(Command::Attach { pid, theme }) => {
-            let (id, icons) = selected(&store(cli.config_dir)?, theme)?;
-            print(&manager::attach_with_icons(pid, &id, icons)?)?;
+            let (id, icons, font) = selected(&store(cli.config_dir)?, theme)?;
+            let applied = manager::attach_with_icons(pid, &id, icons)?;
+            let mut result = serde_json::to_value(&applied)?;
+            result["font"] =
+                serde_json::to_value(v8_chroma_core::fonts::apply_to(&applied.identity, &font)?)?;
+            print(&result)?;
         }
         Some(Command::ApplyAll { theme }) => {
-            let (id, icons) = selected(&store(cli.config_dir)?, theme)?;
+            let (id, icons, font) = selected(&store(cli.config_dir)?, theme)?;
             let mut failed = false;
             for candidate in manager::discover()?.into_iter().filter(|c| c.eligible) {
                 match manager::attach_with_icons(candidate.pid, &id, icons) {
-                    Ok(result) => print(&result)?,
+                    Ok(result) => {
+                        let mut value = serde_json::to_value(&result)?;
+                        match v8_chroma_core::fonts::apply_to(&result.identity, &font) {
+                            Ok(font) => value["font"] = serde_json::to_value(font)?,
+                            Err(error) => {
+                                failed = true;
+                                value["font_error"] = serde_json::json!(format!("{error:#}"));
+                            }
+                        }
+                        print(&value)?;
+                    }
                     Err(error) => {
                         failed = true;
                         print(
@@ -196,6 +221,7 @@ fn run() -> Result<()> {
                         auto_apply: auto_apply.map(Switch::value),
                         custom_icons: custom_icons.map(Switch::value),
                         window,
+                        ..Default::default()
                     })?)?;
                 }
             }
@@ -256,7 +282,20 @@ fn watch(store: &Store, override_theme: Option<String>, seconds: u64) -> Result<
                                     &settings.selected_theme,
                                     settings.custom_icons,
                                 ) {
-                                    Ok(result) => print(&result)?,
+                                    Ok(result) => {
+                                        print(&result)?;
+                                        match v8_chroma_core::fonts::apply_to(
+                                            &identity,
+                                            &settings.editor_font,
+                                        ) {
+                                            Ok(font) => print(
+                                                &serde_json::json!({"pid":identity.pid,"font":font}),
+                                            )?,
+                                            Err(error) => print(
+                                                &serde_json::json!({"pid":identity.pid,"font_error":format!("{error:#}")}),
+                                            )?,
+                                        }
+                                    }
                                     Err(error) => print(
                                         &serde_json::json!({"pid":identity.pid,"error":format!("{error:#}")}),
                                     )?,

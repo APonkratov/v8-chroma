@@ -2,9 +2,18 @@
 use crate::{process::Identity, settings::Settings};
 use std::collections::BTreeMap;
 
+type Appearance = (String, bool, Option<(String, u32)>);
+fn appearance(settings: &Settings) -> Appearance {
+    (
+        settings.selected_theme.clone(),
+        settings.custom_icons,
+        settings.editor_font.appearance(),
+    )
+}
+
 #[derive(Default)]
 pub struct Controller {
-    attempted: BTreeMap<(u32, u64), (String, bool)>,
+    attempted: BTreeMap<(u32, u64), Appearance>,
     enabled: bool,
 }
 impl Controller {
@@ -20,10 +29,8 @@ impl Controller {
                 self.enabled = true;
             }
             for identity in identities {
-                self.attempted.insert(
-                    (identity.pid, identity.created_time),
-                    (settings.selected_theme.clone(), settings.custom_icons),
-                );
+                self.attempted
+                    .insert((identity.pid, identity.created_time), appearance(settings));
             }
         } else {
             self.pause();
@@ -45,7 +52,7 @@ impl Controller {
             self.attempted.clear();
             self.enabled = true;
         }
-        let appearance = (settings.selected_theme.clone(), settings.custom_icons);
+        let appearance = appearance(settings);
         let mut requests = vec![];
         for identity in identities {
             let key = (identity.pid, identity.created_time);
@@ -141,6 +148,26 @@ mod tests {
         assert!(controller.plan(&identities, &settings).is_empty());
         settings.custom_icons = false;
         assert_eq!(controller.plan(&identities, &settings).len(), 2);
+    }
+    #[test]
+    fn fonts_reapply_once_and_disabled_preview_does_not_dispatch() {
+        let mut controller = Controller::default();
+        let mut settings = Settings::default();
+        let identities = [id(10, 1)];
+        controller.plan(&identities, &settings);
+        settings.editor_font.points10 = 180;
+        assert!(controller.plan(&identities, &settings).is_empty());
+        settings.editor_font.enabled = true;
+        assert_eq!(controller.plan(&identities, &settings).len(), 1);
+        assert!(controller.plan(&identities, &settings).is_empty());
+        settings.editor_font.family = "Consolas".into();
+        assert_eq!(controller.plan(&identities, &settings).len(), 1);
+        settings.editor_font.enabled = false;
+        assert_eq!(controller.plan(&identities, &settings).len(), 1);
+        settings.auto_apply = false;
+        settings.editor_font.enabled = true;
+        assert!(controller.plan(&identities, &settings).is_empty());
+        assert_eq!(controller.manual(&identities, &settings).len(), 1);
     }
     #[test]
     fn disabling_and_reenabling_reasserts_saved_theme() {
