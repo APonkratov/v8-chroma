@@ -1,0 +1,260 @@
+{
+  "description": "Exact repository commands, checkout and support-state fingerprints for Designer 8.3.27.2325. Resource and prepared floor-premultiplied variants; no platform pixels.",
+  "sources": [
+    {
+      "hash": "0aaeb657fd7c141a",
+      "icon": "repository-get",
+      "label": "devtool_root-00064d40.png:0"
+    },
+    {
+      "hash": "618c1af2dd123091",
+      "icon": "repository-checkout",
+      "label": "devtool_root-00064d40.png:1"
+    },
+    {
+      "hash": "0343b36604fe3957",
+      "icon": "repository-checkin",
+      "label": "devtool_root-00064d40.png:2"
+    },
+    {
+      "hash": "f980330bf158c15b",
+      "icon": "repository-undo-checkout",
+      "label": "devtool_root-00064d40.png:3"
+    },
+    {
+      "hash": "e6aee6c6ab588c43",
+      "icon": "repository-history",
+      "label": "devtool_root-00064d40.png:21"
+    },
+    {
+      "hash": "37d2023f89d13cb3",
+      "icon": "menu-database-compare",
+      "label": "devtool_root-00064d40.png:22"
+    },
+    {
+      "hash": "46e298d598e28596",
+      "icon": "repository-get",
+      "label": "devtool_root-00064d40.png:0"
+    },
+    {
+      "hash": "dd4059ca3400ad1b",
+      "icon": "repository-checkout",
+      "label": "devtool_root-00064d40.png:1"
+    },
+    {
+      "hash": "f11538bc194811d0",
+      "icon": "repository-checkin",
+      "label": "devtool_root-00064d40.png:2"
+    },
+    {
+      "hash": "acfdb4cebf1cc047",
+      "icon": "repository-undo-checkout",
+      "label": "devtool_root-00064d40.png:3"
+    },
+    {
+      "hash": "ceed1279803d28a7",
+      "icon": "repository-history",
+      "label": "devtool_root-00064d40.png:21"
+    },
+    {
+      "hash": "aeabb25e001d84c5",
+      "icon": "menu-database-compare",
+      "label": "devtool_root-00064d40.png:22"
+    },
+    {
+      "hash": "1236a28942191f6c",
+      "icon": "repository-lock",
+      "label": "frntend_root-002d4190.png:0"
+    },
+    {
+      "hash": "076f8114e3902bf1",
+      "icon": "repository-owned",
+      "label": "devtool_root-00068360.png:1"
+    },
+    {
+      "hash": "bde2e7c1d030d208",
+      "icon": "repository-owned-lock",
+      "label": "devtool_root-00068360.png:2"
+    },
+    {
+      "hash": "2c8fdbc76e0026b0",
+      "icon": "repository-blocked-lock",
+      "label": "devtool_root-00068360.png:4"
+    },
+    {
+      "hash": "13c069d5d8be35be",
+      "icon": "repository-owned-lock-overlay",
+      "label": "devtool_root-00068360.png:5"
+    },
+    {
+      "hash": "c7866dfc92383c2d",
+      "icon": "repository-lock",
+      "label": "devtool_root-00068360.png:6"
+    },
+    {
+      "hash": "c4cedc52b2779522",
+      "icon": "repository-blocked-lock-overlay",
+      "label": "devtool_root-00068360.png:7"
+    },
+    {
+      "hash": "2719484937db82af",
+      "icon": "repository-owned",
+      "label": "devtool_root-00068360.png:1"
+    },
+    {
+      "hash": "3513d249f09b10b3",
+      "icon": "repository-owned-lock",
+      "label": "devtool_root-00068360.png:2"
+    },
+    {
+      "hash": "57849cad55486cc2",
+      "icon": "repository-blocked-lock",
+      "label": "devtool_root-00068360.png:4"
+    },
+    {
+      "hash": "9d8c3882ccf64425",
+      "icon": "repository-owned-lock-overlay",
+      "label": "devtool_root-00068360.png:5"
+    },
+    {
+      "hash": "c7491c948e5db07a",
+      "icon": "repository-lock",
+      "label": "devtool_root-00068360.png:6"
+    },
+    {
+      "hash": "f027110e402654a6",
+      "icon": "repository-blocked-lock-overlay",
+      "label": "devtool_root-00068360.png:7"
+    },
+    {
+      "hash": "6ab78e33a3c4a2b6",
+      "icon": "repository-lock",
+      "label": "frntend_root-002d42d0.png:1"
+    },
+    {
+      "hash": "a85859064a12f005",
+      "icon": "repository-lock",
+      "label": "frntend_root-002d42d0.png:1"
+    },
+    {
+      "hash": "4821a5c80e73708d",
+      "icon": "repository-lock",
+      "label": "frntend_root-002d5010.png:0"
+    },
+    {
+      "hash": "62a46e987e916273",
+      "icon": "repository-lock",
+      "label": "frntend_root-002d5010.png:0"
+    },
+    {
+      "hash": "852d81ba0aa4462c",
+      "icon": "support-lock",
+      "label": "frntend_root-002d5a30.png:0"
+    },
+    {
+      "hash": "da0ba19853586ae7",
+      "icon": "support-module",
+      "label": "frntend_root-002d5a30.png:1"
+    },
+    {
+      "hash": "0bac6ae59cbcff8f",
+      "icon": "support-package",
+      "label": "frntend_root-002d5a30.png:3"
+    },
+    {
+      "hash": "4b984c8dd08cb82e",
+      "icon": "support-package-neutral",
+      "label": "frntend_root-002d5a30.png:4"
+    },
+    {
+      "hash": "0c8f4885af83cd66",
+      "icon": "support-lock-neutral",
+      "label": "frntend_root-002d5a30.png:5"
+    },
+    {
+      "hash": "4bca537ed826e5cf",
+      "icon": "support-settings",
+      "label": "frntend_root-002d5a30.png:6"
+    },
+    {
+      "hash": "2bfc8c2f0f29c517",
+      "icon": "support-tree",
+      "label": "frntend_root-002d5a30.png:7"
+    },
+    {
+      "hash": "5480b8bd29c8f2b2",
+      "icon": "support-unavailable",
+      "label": "frntend_root-002d5a30.png:8"
+    },
+    {
+      "hash": "76a887e7fb20c674",
+      "icon": "support-warning",
+      "label": "frntend_root-002d5a30.png:9"
+    },
+    {
+      "hash": "8e7f328a22f7c898",
+      "icon": "support-enabled",
+      "label": "frntend_root-002d5a30.png:10"
+    },
+    {
+      "hash": "1fc6d552bef9d6d0",
+      "icon": "support-module-editable",
+      "label": "frntend_root-002d5a30.png:11"
+    },
+    {
+      "hash": "147e368065b59cb6",
+      "icon": "support-settings-editable",
+      "label": "frntend_root-002d5a30.png:12"
+    },
+    {
+      "hash": "9d1d678293d0ccd8",
+      "icon": "support-packages",
+      "label": "frntend_root-002d5a30.png:13"
+    },
+    {
+      "hash": "68fd38841140369d",
+      "icon": "support-lock",
+      "label": "frntend_root-002d5a30.png:0"
+    },
+    {
+      "hash": "f507d3f1732cc798",
+      "icon": "support-module",
+      "label": "frntend_root-002d5a30.png:1"
+    },
+    {
+      "hash": "92655d90f2f26733",
+      "icon": "support-package",
+      "label": "frntend_root-002d5a30.png:3"
+    },
+    {
+      "hash": "dad9ef75cdd40396",
+      "icon": "support-package-neutral",
+      "label": "frntend_root-002d5a30.png:4"
+    },
+    {
+      "hash": "f9fde2b12d0d6263",
+      "icon": "support-lock-neutral",
+      "label": "frntend_root-002d5a30.png:5"
+    },
+    {
+      "hash": "f06ada4b5e066402",
+      "icon": "support-unavailable",
+      "label": "frntend_root-002d5a30.png:8"
+    },
+    {
+      "hash": "15398c8267acd326",
+      "icon": "support-warning",
+      "label": "frntend_root-002d5a30.png:9"
+    },
+    {
+      "hash": "d366e8bd539f4b75",
+      "icon": "support-enabled",
+      "label": "frntend_root-002d5a30.png:10"
+    },
+    {
+      "hash": "45b95b54b1384363",
+      "icon": "support-packages",
+      "label": "frntend_root-002d5a30.png:13"
+    }
+  ]
+}
