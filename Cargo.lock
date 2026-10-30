@@ -4233,7 +4233,7 @@ dependencies = [
 
 [[package]]
 name = "v8-chroma-app"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "dunce",
@@ -4250,7 +4250,7 @@ dependencies = [
 
 [[package]]
 name = "v8-chroma-core"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "chrono",
