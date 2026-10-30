@@ -277,6 +277,116 @@
       "hash": "efe965e8ff46e268",
       "icon": "meta-template",
       "label": "Макеты объекта"
+    },
+    {
+      "hash": "e27176fe569470fc",
+      "icon": "meta-characteristic-plan",
+      "label": "План видов характеристик (объект)"
+    },
+    {
+      "hash": "11608f470a7a2044",
+      "icon": "meta-characteristic-plan",
+      "label": "План видов характеристик (объект)"
+    },
+    {
+      "hash": "32ee2890938d7c5f",
+      "icon": "meta-account-plan",
+      "label": "План счетов"
+    },
+    {
+      "hash": "65ed827f81224564",
+      "icon": "meta-account-plan",
+      "label": "План счетов"
+    },
+    {
+      "hash": "e3e59137862778f2",
+      "icon": "meta-accounting-flag",
+      "label": "Признак учета"
+    },
+    {
+      "hash": "cb5c3ab531eb6e93",
+      "icon": "meta-subconto-flag",
+      "label": "Признак учета субконто"
+    },
+    {
+      "hash": "8a523597bfce0fdc",
+      "icon": "meta-subconto-flag",
+      "label": "Признак учета субконто"
+    },
+    {
+      "hash": "aab0becdadaa1763",
+      "icon": "meta-account-plan",
+      "label": "План счетов"
+    },
+    {
+      "hash": "423276a08535d3da",
+      "icon": "meta-accounting-flag",
+      "label": "Признак учета"
+    },
+    {
+      "hash": "e0466cef1ea223fc",
+      "icon": "meta-subconto-flag",
+      "label": "Признак учета субконто"
+    },
+    {
+      "hash": "5c5e7db0ca3299a5",
+      "icon": "meta-subconto-flag",
+      "label": "Признак учета субконто"
+    },
+    {
+      "hash": "55146d11c9e4467a",
+      "icon": "meta-calculation-plan",
+      "label": "План видов расчета"
+    },
+    {
+      "hash": "217325262eb0c222",
+      "icon": "meta-calculation-plan",
+      "label": "План видов расчета"
+    },
+    {
+      "hash": "875181369fe37f8c",
+      "icon": "meta-dimension",
+      "label": "Измерение"
+    },
+    {
+      "hash": "5de14d44939c84c3",
+      "icon": "meta-resource",
+      "label": "Ресурс"
+    },
+    {
+      "hash": "21fe06aaa2a8be59",
+      "icon": "meta-recalculation",
+      "label": "Перерасчет"
+    },
+    {
+      "hash": "93eb6ef8057b2d7e",
+      "icon": "meta-calculation-plan",
+      "label": "План видов расчета"
+    },
+    {
+      "hash": "b18e90119db99351",
+      "icon": "meta-dimension",
+      "label": "Измерение"
+    },
+    {
+      "hash": "2839920a995e6982",
+      "icon": "meta-resource",
+      "label": "Ресурс"
+    },
+    {
+      "hash": "5ebe72dd471e9a85",
+      "icon": "meta-recalculation",
+      "label": "Перерасчет"
+    },
+    {
+      "hash": "e21d7887e640489c",
+      "icon": "meta-enumeration-value",
+      "label": "Значение перечисления"
+    },
+    {
+      "hash": "a90d4ac01d57cf6b",
+      "icon": "meta-enumeration-value",
+      "label": "Значение перечисления"
     }
   ]
 }

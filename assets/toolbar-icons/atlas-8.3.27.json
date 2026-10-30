@@ -4932,6 +4932,816 @@
       "y": 0,
       "size": 16,
       "asset": "compare-refresh-16.png"
+    },
+    {
+      "hash": "d4d98342da701f69",
+      "width": 384,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-get-16.png"
+    },
+    {
+      "hash": "d4d98342da701f69",
+      "width": 384,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-checkout-16.png"
+    },
+    {
+      "hash": "d4d98342da701f69",
+      "width": 384,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-checkin-16.png"
+    },
+    {
+      "hash": "d4d98342da701f69",
+      "width": 384,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-undo-checkout-16.png"
+    },
+    {
+      "hash": "d4d98342da701f69",
+      "width": 384,
+      "height": 16,
+      "x": 336,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-history-16.png"
+    },
+    {
+      "hash": "d4d98342da701f69",
+      "width": 384,
+      "height": 16,
+      "x": 352,
+      "y": 0,
+      "size": 16,
+      "asset": "menu-database-compare-16.png"
+    },
+    {
+      "hash": "850dfb3ee7746858",
+      "width": 384,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-get-16.png"
+    },
+    {
+      "hash": "850dfb3ee7746858",
+      "width": 384,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-checkout-16.png"
+    },
+    {
+      "hash": "850dfb3ee7746858",
+      "width": 384,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-checkin-16.png"
+    },
+    {
+      "hash": "850dfb3ee7746858",
+      "width": 384,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-undo-checkout-16.png"
+    },
+    {
+      "hash": "850dfb3ee7746858",
+      "width": 384,
+      "height": 16,
+      "x": 336,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-history-16.png"
+    },
+    {
+      "hash": "850dfb3ee7746858",
+      "width": 384,
+      "height": 16,
+      "x": 352,
+      "y": 0,
+      "size": 16,
+      "asset": "menu-database-compare-16.png"
+    },
+    {
+      "hash": "7f9b85b59a6c1124",
+      "width": 128,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-owned-16.png"
+    },
+    {
+      "hash": "7f9b85b59a6c1124",
+      "width": 128,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-owned-lock-16.png"
+    },
+    {
+      "hash": "7f9b85b59a6c1124",
+      "width": 128,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-lock-16.png"
+    },
+    {
+      "hash": "7f9b85b59a6c1124",
+      "width": 128,
+      "height": 16,
+      "x": 64,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-blocked-lock-16.png"
+    },
+    {
+      "hash": "7f9b85b59a6c1124",
+      "width": 128,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-owned-lock-overlay-16.png"
+    },
+    {
+      "hash": "7f9b85b59a6c1124",
+      "width": 128,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-lock-16.png"
+    },
+    {
+      "hash": "7f9b85b59a6c1124",
+      "width": 128,
+      "height": 16,
+      "x": 112,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-blocked-lock-overlay-16.png"
+    },
+    {
+      "hash": "7ec586eb2f7fcb0f",
+      "width": 128,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-owned-16.png"
+    },
+    {
+      "hash": "7ec586eb2f7fcb0f",
+      "width": 128,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-owned-lock-16.png"
+    },
+    {
+      "hash": "7ec586eb2f7fcb0f",
+      "width": 128,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-lock-16.png"
+    },
+    {
+      "hash": "7ec586eb2f7fcb0f",
+      "width": 128,
+      "height": 16,
+      "x": 64,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-blocked-lock-16.png"
+    },
+    {
+      "hash": "7ec586eb2f7fcb0f",
+      "width": 128,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-owned-lock-overlay-16.png"
+    },
+    {
+      "hash": "7ec586eb2f7fcb0f",
+      "width": 128,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-lock-16.png"
+    },
+    {
+      "hash": "7ec586eb2f7fcb0f",
+      "width": 128,
+      "height": 16,
+      "x": 112,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-blocked-lock-overlay-16.png"
+    },
+    {
+      "hash": "da6e99f61e583591",
+      "width": 32,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-lock-16.png"
+    },
+    {
+      "hash": "cff0a1e2ce650a69",
+      "width": 32,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-lock-16.png"
+    },
+    {
+      "hash": "a7572bf5b7e34597",
+      "width": 32,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-lock-16.png"
+    },
+    {
+      "hash": "b2ea2faa13c13077",
+      "width": 32,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "repository-lock-16.png"
+    },
+    {
+      "hash": "0ca0ca054a3686f0",
+      "width": 224,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "support-lock-16.png"
+    },
+    {
+      "hash": "0ca0ca054a3686f0",
+      "width": 224,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "support-module-16.png"
+    },
+    {
+      "hash": "0ca0ca054a3686f0",
+      "width": 224,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "support-package-16.png"
+    },
+    {
+      "hash": "0ca0ca054a3686f0",
+      "width": 224,
+      "height": 16,
+      "x": 64,
+      "y": 0,
+      "size": 16,
+      "asset": "support-package-neutral-16.png"
+    },
+    {
+      "hash": "0ca0ca054a3686f0",
+      "width": 224,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "support-lock-neutral-16.png"
+    },
+    {
+      "hash": "0ca0ca054a3686f0",
+      "width": 224,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "support-settings-16.png"
+    },
+    {
+      "hash": "0ca0ca054a3686f0",
+      "width": 224,
+      "height": 16,
+      "x": 112,
+      "y": 0,
+      "size": 16,
+      "asset": "support-tree-16.png"
+    },
+    {
+      "hash": "0ca0ca054a3686f0",
+      "width": 224,
+      "height": 16,
+      "x": 128,
+      "y": 0,
+      "size": 16,
+      "asset": "support-unavailable-16.png"
+    },
+    {
+      "hash": "0ca0ca054a3686f0",
+      "width": 224,
+      "height": 16,
+      "x": 144,
+      "y": 0,
+      "size": 16,
+      "asset": "support-warning-16.png"
+    },
+    {
+      "hash": "0ca0ca054a3686f0",
+      "width": 224,
+      "height": 16,
+      "x": 160,
+      "y": 0,
+      "size": 16,
+      "asset": "support-enabled-16.png"
+    },
+    {
+      "hash": "0ca0ca054a3686f0",
+      "width": 224,
+      "height": 16,
+      "x": 176,
+      "y": 0,
+      "size": 16,
+      "asset": "support-module-editable-16.png"
+    },
+    {
+      "hash": "0ca0ca054a3686f0",
+      "width": 224,
+      "height": 16,
+      "x": 192,
+      "y": 0,
+      "size": 16,
+      "asset": "support-settings-editable-16.png"
+    },
+    {
+      "hash": "0ca0ca054a3686f0",
+      "width": 224,
+      "height": 16,
+      "x": 208,
+      "y": 0,
+      "size": 16,
+      "asset": "support-packages-16.png"
+    },
+    {
+      "hash": "009d7089d5da3353",
+      "width": 224,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "support-lock-16.png"
+    },
+    {
+      "hash": "009d7089d5da3353",
+      "width": 224,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "support-module-16.png"
+    },
+    {
+      "hash": "009d7089d5da3353",
+      "width": 224,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "support-package-16.png"
+    },
+    {
+      "hash": "009d7089d5da3353",
+      "width": 224,
+      "height": 16,
+      "x": 64,
+      "y": 0,
+      "size": 16,
+      "asset": "support-package-neutral-16.png"
+    },
+    {
+      "hash": "009d7089d5da3353",
+      "width": 224,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "support-lock-neutral-16.png"
+    },
+    {
+      "hash": "009d7089d5da3353",
+      "width": 224,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "support-settings-16.png"
+    },
+    {
+      "hash": "009d7089d5da3353",
+      "width": 224,
+      "height": 16,
+      "x": 112,
+      "y": 0,
+      "size": 16,
+      "asset": "support-tree-16.png"
+    },
+    {
+      "hash": "009d7089d5da3353",
+      "width": 224,
+      "height": 16,
+      "x": 128,
+      "y": 0,
+      "size": 16,
+      "asset": "support-unavailable-16.png"
+    },
+    {
+      "hash": "009d7089d5da3353",
+      "width": 224,
+      "height": 16,
+      "x": 144,
+      "y": 0,
+      "size": 16,
+      "asset": "support-warning-16.png"
+    },
+    {
+      "hash": "009d7089d5da3353",
+      "width": 224,
+      "height": 16,
+      "x": 160,
+      "y": 0,
+      "size": 16,
+      "asset": "support-enabled-16.png"
+    },
+    {
+      "hash": "009d7089d5da3353",
+      "width": 224,
+      "height": 16,
+      "x": 176,
+      "y": 0,
+      "size": 16,
+      "asset": "support-module-editable-16.png"
+    },
+    {
+      "hash": "009d7089d5da3353",
+      "width": 224,
+      "height": 16,
+      "x": 192,
+      "y": 0,
+      "size": 16,
+      "asset": "support-settings-editable-16.png"
+    },
+    {
+      "hash": "009d7089d5da3353",
+      "width": 224,
+      "height": 16,
+      "x": 208,
+      "y": 0,
+      "size": 16,
+      "asset": "support-packages-16.png"
+    },
+    {
+      "hash": "cb96eda5b7964ece",
+      "width": 96,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-characteristic-plan-16.png"
+    },
+    {
+      "hash": "fbea3d78c9a2c0fd",
+      "width": 96,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-characteristic-plan-16.png"
+    },
+    {
+      "hash": "7f9cd8326d6de055",
+      "width": 128,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-account-plan-16.png"
+    },
+    {
+      "hash": "7f9cd8326d6de055",
+      "width": 128,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-account-plan-16.png"
+    },
+    {
+      "hash": "7f9cd8326d6de055",
+      "width": 128,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-accounting-flag-16.png"
+    },
+    {
+      "hash": "7f9cd8326d6de055",
+      "width": 128,
+      "height": 16,
+      "x": 64,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-accounting-flag-16.png"
+    },
+    {
+      "hash": "7f9cd8326d6de055",
+      "width": 128,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-subconto-flag-16.png"
+    },
+    {
+      "hash": "7f9cd8326d6de055",
+      "width": 128,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-subconto-flag-16.png"
+    },
+    {
+      "hash": "26a81fd1f99c77bd",
+      "width": 128,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-account-plan-16.png"
+    },
+    {
+      "hash": "26a81fd1f99c77bd",
+      "width": 128,
+      "height": 16,
+      "x": 96,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-account-plan-16.png"
+    },
+    {
+      "hash": "26a81fd1f99c77bd",
+      "width": 128,
+      "height": 16,
+      "x": 32,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-accounting-flag-16.png"
+    },
+    {
+      "hash": "26a81fd1f99c77bd",
+      "width": 128,
+      "height": 16,
+      "x": 64,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-accounting-flag-16.png"
+    },
+    {
+      "hash": "26a81fd1f99c77bd",
+      "width": 128,
+      "height": 16,
+      "x": 48,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-subconto-flag-16.png"
+    },
+    {
+      "hash": "26a81fd1f99c77bd",
+      "width": 128,
+      "height": 16,
+      "x": 80,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-subconto-flag-16.png"
+    },
+    {
+      "hash": "84e3419b3d48c08a",
+      "width": 288,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-calculation-plan-16.png"
+    },
+    {
+      "hash": "84e3419b3d48c08a",
+      "width": 288,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-calculation-plan-16.png"
+    },
+    {
+      "hash": "84e3419b3d48c08a",
+      "width": 288,
+      "height": 16,
+      "x": 160,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-dimension-16.png"
+    },
+    {
+      "hash": "84e3419b3d48c08a",
+      "width": 288,
+      "height": 16,
+      "x": 176,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-dimension-16.png"
+    },
+    {
+      "hash": "84e3419b3d48c08a",
+      "width": 288,
+      "height": 16,
+      "x": 192,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-resource-16.png"
+    },
+    {
+      "hash": "84e3419b3d48c08a",
+      "width": 288,
+      "height": 16,
+      "x": 208,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-resource-16.png"
+    },
+    {
+      "hash": "84e3419b3d48c08a",
+      "width": 288,
+      "height": 16,
+      "x": 224,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-recalculation-16.png"
+    },
+    {
+      "hash": "84e3419b3d48c08a",
+      "width": 288,
+      "height": 16,
+      "x": 240,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-recalculation-16.png"
+    },
+    {
+      "hash": "82a4639678902a36",
+      "width": 288,
+      "height": 16,
+      "x": 0,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-calculation-plan-16.png"
+    },
+    {
+      "hash": "82a4639678902a36",
+      "width": 288,
+      "height": 16,
+      "x": 16,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-calculation-plan-16.png"
+    },
+    {
+      "hash": "82a4639678902a36",
+      "width": 288,
+      "height": 16,
+      "x": 160,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-dimension-16.png"
+    },
+    {
+      "hash": "82a4639678902a36",
+      "width": 288,
+      "height": 16,
+      "x": 176,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-dimension-16.png"
+    },
+    {
+      "hash": "82a4639678902a36",
+      "width": 288,
+      "height": 16,
+      "x": 192,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-resource-16.png"
+    },
+    {
+      "hash": "82a4639678902a36",
+      "width": 288,
+      "height": 16,
+      "x": 208,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-resource-16.png"
+    },
+    {
+      "hash": "82a4639678902a36",
+      "width": 288,
+      "height": 16,
+      "x": 224,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-recalculation-16.png"
+    },
+    {
+      "hash": "82a4639678902a36",
+      "width": 288,
+      "height": 16,
+      "x": 240,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-recalculation-16.png"
+    },
+    {
+      "hash": "566553d68b8abb0e",
+      "width": 727,
+      "height": 16,
+      "x": 160,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-enumeration-value-16.png"
+    },
+    {
+      "hash": "566553d68b8abb0e",
+      "width": 727,
+      "height": 16,
+      "x": 176,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-enumeration-value-16.png"
+    },
+    {
+      "hash": "47c91ae6c4ce5755",
+      "width": 727,
+      "height": 16,
+      "x": 160,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-enumeration-value-16.png"
+    },
+    {
+      "hash": "47c91ae6c4ce5755",
+      "width": 727,
+      "height": 16,
+      "x": 176,
+      "y": 0,
+      "size": 16,
+      "asset": "meta-enumeration-value-16.png"
     }
   ]
 }
