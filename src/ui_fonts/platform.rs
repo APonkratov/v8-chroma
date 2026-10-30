@@ -27,12 +27,13 @@ const EXPORTS: &[&str] = &[
 #[serde(rename_all = "snake_case")]
 enum Stage {
     Loading,
+    Loaded,
     Applying,
     Ready,
     Unsupported,
     Failed,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Session {
     identity: Identity,
@@ -58,7 +59,10 @@ fn session_result(session: &Session) -> Result<Option<FontApplied>> {
             .unwrap_or("Ошибка шрифта интерфейса; перезапустите этот Конфигуратор")
     );
     ensure!(
-        matches!(session.stage, Stage::Ready | Stage::Unsupported),
+        matches!(
+            session.stage,
+            Stage::Loaded | Stage::Ready | Stage::Unsupported
+        ),
         "Предыдущее применение шрифта интерфейса не завершено. Повтор запрещён до перезапуска этого Конфигуратора"
     );
     Ok(session.applied.clone())
@@ -90,6 +94,37 @@ fn run<T>(path: &Path, state: &mut Session, operation: impl FnOnce() -> Result<T
             Err(error)
         }
     }
+}
+fn configure(
+    path: &Path,
+    state: &mut Session,
+    previous: Session,
+    operation: impl FnOnce(&str) -> Result<u32>,
+) -> Result<()> {
+    let first = matches!(previous.stage, Stage::Loading | Stage::Loaded);
+    let command = if first { "UiFontStart" } else { "UiFontApply" };
+    state.stage = Stage::Applying;
+    save(path, state)?;
+    let code = run(path, state, || operation(command))?;
+    if code == ERROR_NOT_READY {
+        // Start/Apply preflight has not changed the target font or installed hooks.
+        // The DLL is already loaded; retry Start without another LoadLibrary call.
+        if first {
+            state.stage = Stage::Loaded;
+            state.applied = None;
+            state.failure = None;
+        } else {
+            *state = previous;
+        }
+        save(path, state)?;
+        anyhow::bail!(
+            "Конфигуратор ещё запускается; повторите применение после открытия главного окна"
+        );
+    }
+    run(path, state, || {
+        ensure!(code == 0, "{command}: Win32={code}");
+        Ok(())
+    })
 }
 fn effective(
     font: &UiFontSettings,
@@ -308,7 +343,8 @@ pub fn apply_to(expected: &Identity, font: &UiFontSettings) -> Result<FontApplie
             failure: None,
         }
     };
-    let first = state.stage == Stage::Loading;
+    let load = state.stage == Stage::Loading;
+    let previous = state.clone();
     state.requested = font.clone();
     state.effective = family.clone();
     if state.stage == Stage::Unsupported {
@@ -319,7 +355,7 @@ pub fn apply_to(expected: &Identity, font: &UiFontSettings) -> Result<FontApplie
     }
     save(&path, &state)?;
     let exports = run(&path, &mut state, || {
-        if first {
+        if load {
             process.load_dll(&dll)?;
         }
         process.named_exports(&dll, EXPORTS)
@@ -335,12 +371,10 @@ pub fn apply_to(expected: &Identity, font: &UiFontSettings) -> Result<FontApplie
             .applied
             .context("Нет результата проверки шрифта интерфейса");
     }
-    state.stage = Stage::Applying;
-    save(&path, &state)?;
+    configure(&path, &mut state, previous, |command| {
+        retry_ready(&process, exports[command], &payload)
+    })?;
     let result = run(&path, &mut state, || {
-        let command = if first { "UiFontStart" } else { "UiFontApply" };
-        let code = retry_ready(&process, exports[command], &payload)?;
-        ensure!(code == 0, "{command}: Win32={code}");
         let mut refresh = 8u32.to_le_bytes().to_vec();
         refresh.extend(5u32.to_le_bytes());
         let code = retry_ready(&process, exports["UiFontRefresh"], &refresh)?;
@@ -371,6 +405,124 @@ pub fn apply_to(expected: &Identity, font: &UiFontSettings) -> Result<FontApplie
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn session(stage: Stage) -> Session {
+        Session {
+            identity: Identity {
+                pid: 1,
+                created_time: 2,
+                exe: "1cv8.exe".into(),
+            },
+            dll_sha256: "hash".into(),
+            stage,
+            requested: UiFontSettings::default(),
+            effective: Some(DEFAULT_FAMILY.into()),
+            applied: None,
+            failure: None,
+        }
+    }
+    fn restore(path: &Path) -> Session {
+        serde_json::from_slice(&fs::read(path).unwrap()).unwrap()
+    }
+    #[test]
+    fn not_ready_start_can_be_retried_after_reloading_session() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("session.json");
+        let mut state = session(Stage::Loading);
+        for _ in 0..2 {
+            let previous = state.clone();
+            let error = configure(&path, &mut state, previous, |command| {
+                assert_eq!(command, "UiFontStart");
+                Ok(ERROR_NOT_READY)
+            })
+            .unwrap_err();
+            assert!(error.to_string().contains("Конфигуратор ещё запускается"));
+            state = restore(&path);
+            assert_eq!(state.stage, Stage::Loaded);
+            assert!(session_result(&state).unwrap().is_none());
+            assert!(state.failure.is_none());
+        }
+        let previous = state.clone();
+        configure(&path, &mut state, previous, |command| {
+            assert_eq!(command, "UiFontStart");
+            Ok(0)
+        })
+        .unwrap();
+        assert_eq!(restore(&path).stage, Stage::Applying);
+    }
+    #[test]
+    fn not_ready_apply_preserves_previous_font_and_allows_retry() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("session.json");
+        let mut state = session(Stage::Ready);
+        state.applied = Some(FontApplied {
+            label: DEFAULT_FAMILY.into(),
+            warning: Some("previous warning".into()),
+        });
+        let previous = state.clone();
+        let expected = serde_json::to_value(&previous).unwrap();
+        state.requested.family = "Roboto".into();
+        state.effective = Some("Roboto".into());
+        assert!(
+            configure(&path, &mut state, previous, |command| {
+                assert_eq!(command, "UiFontApply");
+                Ok(ERROR_NOT_READY)
+            })
+            .is_err()
+        );
+        state = restore(&path);
+        assert_eq!(serde_json::to_value(&state).unwrap(), expected);
+        assert_eq!(
+            session_result(&state).unwrap().unwrap().label,
+            DEFAULT_FAMILY
+        );
+        let previous = state.clone();
+        state.requested.family = "Roboto".into();
+        state.effective = Some("Roboto".into());
+        configure(&path, &mut state, previous, |command| {
+            assert_eq!(command, "UiFontApply");
+            Ok(0)
+        })
+        .unwrap();
+        assert_eq!(restore(&path).effective.as_deref(), Some("Roboto"));
+    }
+    #[test]
+    fn other_configuration_failures_remain_terminal() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("session.json");
+        for stage in [Stage::Loading, Stage::Loaded, Stage::Ready] {
+            for timeout in [false, true] {
+                let mut state = session(stage);
+                let previous = state.clone();
+                let error = configure(&path, &mut state, previous, |_| {
+                    if timeout {
+                        anyhow::bail!("timeout 1460");
+                    }
+                    Ok(50)
+                })
+                .unwrap_err();
+                let saved = restore(&path);
+                assert_eq!(saved.stage, Stage::Failed);
+                let diagnostic = format!("{:#}", session_result(&saved).unwrap_err());
+                assert!(diagnostic.contains(if timeout { "1460" } else { "Win32=50" }));
+                assert_eq!(diagnostic, format!("{error:#}"));
+            }
+        }
+    }
+    #[test]
+    fn not_ready_refresh_after_successful_configuration_remains_terminal() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("session.json");
+        let mut state = session(Stage::Loading);
+        let previous = state.clone();
+        configure(&path, &mut state, previous, |_| Ok(0)).unwrap();
+        assert!(
+            run::<()>(&path, &mut state, || {
+                anyhow::bail!("UiFontRefresh: Win32={ERROR_NOT_READY}")
+            })
+            .is_err()
+        );
+        assert_eq!(restore(&path).stage, Stage::Failed);
+    }
     #[test]
     fn default_fallback_and_custom_missing_fonts() {
         let font = UiFontSettings::default();
