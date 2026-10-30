@@ -47,17 +47,17 @@
   {
     "theme": "shades-of-purple",
     "bytes": 4760,
-    "sha256": "315f7b039a813b709a81cfdf3f46bb00ad346eeae2eab588c57bf7051dcc6651"
+    "sha256": "878a2ef6f380a664163478561b5da8b24186e34544f276a24cf6dd9d23efff10"
   },
   {
     "theme": "visual-studio-dark-cpp",
     "bytes": 4760,
-    "sha256": "0180354280fa2c95a51c06d5fa627f8d8bb8ff8fb5a018d4a09cb5d7d55f2b83"
+    "sha256": "32480af8722a8012cb8dbc0c9ea2282ac26a5aec08bf9865d70dc4347c45c5cf"
   },
   {
     "theme": "visual-studio-light",
     "bytes": 4760,
-    "sha256": "b67730b55473eb576bdd545d2eb58d5fa7409918588cfa6d9b16ccb92edbc280"
+    "sha256": "4e0a5784f346f428bed192d8b1b3ed28262821f400e66343f8abcab5f8067d6b"
   },
   {
     "theme": "winter-is-coming-dark-blue",

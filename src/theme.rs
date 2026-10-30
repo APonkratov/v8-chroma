@@ -430,6 +430,14 @@ mod tests {
             }
             assert_eq!(target(0xD3D9EF), color("selection.background"));
             assert!(contrast(target(0xD3D9EF), color("text")) >= 4.5);
+            assert!(
+                contrast(target(0xE5E5E5), target(0xD3D9EF)) >= 1.1,
+                "{} grid must remain visible over selected cells",
+                theme.id
+            );
+            if theme.id == "shades-of-purple" {
+                assert!(contrast(target(0xE7E5D6), target(0xF7F5E6)) >= 1.2);
+            }
             assert_eq!(target(0xFFFFFF), color("editor.background"));
             // MXL uses RGB brushes; these values in other API forms stay native.
             assert!(
