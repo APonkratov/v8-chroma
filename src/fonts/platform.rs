@@ -90,6 +90,58 @@ struct Session {
     stage: String,
     requested: FontSettings,
     applied: Option<FontApplied>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    failure: Option<String>,
+}
+fn session_result(saved: &Session) -> Result<Option<FontApplied>> {
+    if saved.stage == "failed" {
+        anyhow::bail!(
+            "{}",
+            saved
+                .failure
+                .as_deref()
+                .unwrap_or("Ошибка движка шрифтов; перезапустите этот Конфигуратор")
+        );
+    }
+    ensure!(
+        saved.stage == "ready" || saved.stage == "unsupported",
+        "Предыдущее применение шрифта не завершено. Повтор запрещён; перезапустите этот Конфигуратор"
+    );
+    Ok(saved.applied.clone())
+}
+fn unsupported_session(state: &mut Session, path: &Path) -> Result<FontApplied> {
+    let applied = FontApplied {
+        label: "Шрифт 1С".into(),
+        warning: state.requested.enabled.then(|| {
+            "API шрифта этой платформы несовместим с движком; тема применяется независимо".into()
+        }),
+    };
+    state.stage = "unsupported".into();
+    state.applied = Some(applied.clone());
+    state.failure = None;
+    atomic_write(path, &serde_json::to_vec_pretty(state)?)?;
+    Ok(applied)
+}
+fn prepare_engine<T>(
+    state: &mut Session,
+    path: &Path,
+    probe: impl FnOnce() -> Result<(T, u32)>,
+) -> Result<Option<(T, u32)>> {
+    match probe() {
+        Ok((exports, capabilities)) if capabilities & 1 != 0 => Ok(Some((exports, capabilities))),
+        Ok(_) => {
+            unsupported_session(state, path)?;
+            Ok(None)
+        }
+        Err(error) => {
+            let error = error.context("Не удалось подготовить движок шрифтов; повтор запрещён до перезапуска Конфигуратора");
+            state.stage = "failed".into();
+            state.failure = Some(format!("{error:#}"));
+            state.applied = None;
+            atomic_write(path, &serde_json::to_vec_pretty(state)?)?;
+            Err(error)
+        }
+    }
 }
 fn directory(identity: &Identity) -> Result<std::path::PathBuf> {
     Ok(manager::data_dir()?
@@ -107,11 +159,7 @@ pub fn last_applied(identity: &Identity) -> Result<Option<FontApplied>> {
         saved.identity == *identity && saved.dll_sha256 == manager::hash(DLL),
         "Изменилась версия движка шрифтов; перезапустите этот Конфигуратор"
     );
-    ensure!(
-        saved.stage == "ready",
-        "Предыдущее применение шрифта не завершено. Повтор запрещён; перезапустите этот Конфигуратор"
-    );
-    Ok(saved.applied)
+    session_result(&saved)
 }
 fn push_wide(out: &mut Vec<u8>, value: &str, capacity: usize) -> Result<()> {
     let units: Vec<_> = value.encode_utf16().collect();
@@ -260,11 +308,15 @@ pub fn apply_to(expected: &Identity, font: &FontSettings) -> Result<FontApplied>
             .as_ref()
             .context("Движок шрифтов загружен вне менеджера; перезапустите этот Конфигуратор")?;
         ensure!(
-            state.identity == *expected
-                && state.dll_sha256 == manager::hash(DLL)
-                && state.stage == "ready",
+            state.identity == *expected && state.dll_sha256 == manager::hash(DLL),
             "Незавершённое или несовместимое применение шрифта. Повтор запрещён; перезапустите этот Конфигуратор"
         );
+        if state.stage == "unsupported" {
+            let state = saved.as_mut().context("Нет сессии шрифта")?;
+            state.requested = font.clone();
+            return unsupported_session(state, &state_path);
+        }
+        session_result(state)?;
     } else {
         ensure!(
             saved.is_none(),
@@ -276,17 +328,26 @@ pub fn apply_to(expected: &Identity, font: &FontSettings) -> Result<FontApplied>
             stage: "loading".into(),
             requested: font.clone(),
             applied: None,
+            failure: None,
         });
         atomic_write(&state_path, &serde_json::to_vec_pretty(&saved)?)?;
-        process.load_dll(&dll)?;
     }
-    let exports = process.named_exports(&dll, EXPORTS)?;
-    let capabilities = process.call(exports["FontProbeCapabilities"], None)?;
-    ensure!(
-        capabilities & 1 != 0,
-        "API шрифта этой платформы несовместим с движком; тема применяется независимо"
-    );
     let state = saved.as_mut().context("Нет сессии шрифта")?;
+    state.requested = font.clone();
+    let Some((exports, capabilities)) = prepare_engine(state, &state_path, || {
+        if !modules.contains_key("fontprobe.dll") {
+            process.load_dll(&dll)?;
+        }
+        let exports = process.named_exports(&dll, EXPORTS)?;
+        let capabilities = process.call(exports["FontProbeCapabilities"], None)?;
+        Ok((exports, capabilities))
+    })?
+    else {
+        return state
+            .applied
+            .clone()
+            .context("Нет результата проверки API шрифта");
+    };
     let first = state.stage == "loading";
     state.stage = "applying".into();
     state.requested = font.clone();
@@ -335,6 +396,90 @@ pub fn apply_to(expected: &Identity, font: &FontSettings) -> Result<FontApplied>
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn loading_session() -> Session {
+        Session {
+            identity: Identity {
+                pid: 42,
+                created_time: 7,
+                exe: "C:/Platform/1cv8.exe".into(),
+            },
+            dll_sha256: manager::hash(DLL),
+            stage: "loading".into(),
+            requested: FontSettings {
+                enabled: true,
+                ..Default::default()
+            },
+            applied: None,
+            failure: None,
+        }
+    }
+    #[test]
+    fn preparation_failures_remain_terminal_and_keep_original_diagnostics() {
+        for cause in [
+            "LoadLibrary failed",
+            "missing FontProbeCapabilities export",
+            "capabilities Win32=1460",
+        ] {
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("session.json");
+            let mut state = loading_session();
+            let error =
+                prepare_engine::<()>(&mut state, &path, || anyhow::bail!("{cause}")).unwrap_err();
+            let restored: Session = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+            assert_eq!(restored.stage, "failed");
+            let diagnostic = format!("{:#}", session_result(&restored).unwrap_err());
+            assert_eq!(diagnostic, format!("{error:#}"));
+            assert!(diagnostic.contains(cause) && diagnostic.contains("перезапуска"));
+            assert!(!diagnostic.contains("не завершено"));
+        }
+    }
+    #[test]
+    fn unsupported_api_is_a_persisted_warning_and_can_return_to_stock() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("session.json");
+        let mut state = loading_session();
+        assert!(
+            prepare_engine(&mut state, &path, || Ok(((), 0)))
+                .unwrap()
+                .is_none()
+        );
+        let mut restored: Session = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        assert_eq!(restored.stage, "unsupported");
+        let applied = session_result(&restored).unwrap().unwrap();
+        assert_eq!(applied.label, "Шрифт 1С");
+        assert!(
+            applied
+                .warning
+                .unwrap()
+                .contains("тема применяется независимо")
+        );
+        restored.requested.enabled = false;
+        assert!(
+            unsupported_session(&mut restored, &path)
+                .unwrap()
+                .warning
+                .is_none()
+        );
+        let disabled: Session = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+        assert!(
+            session_result(&disabled)
+                .unwrap()
+                .unwrap()
+                .warning
+                .is_none()
+        );
+    }
+    #[test]
+    fn interrupted_sessions_and_old_documents_still_fail_closed() {
+        let mut state = loading_session();
+        for stage in ["loading", "applying"] {
+            state.stage = stage.into();
+            let bytes = serde_json::to_vec(&state).unwrap();
+            assert!(!String::from_utf8_lossy(&bytes).contains("failure"));
+            let restored: Session = serde_json::from_slice(&bytes).unwrap();
+            assert!(session_result(&restored).is_err());
+        }
+    }
     #[test]
     fn font_payload_layout_and_unicode_log_path() {
         let data = config(&FontSettings::default(), Path::new("C:/Профиль/шрифт.txt")).unwrap();
