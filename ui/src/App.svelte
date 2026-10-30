@@ -63,7 +63,7 @@
     </nav>
     <div class="sidebar-bottom">
       <div class="live-status"><i class:on={auto && !appState?.error}></i><span>{appState?.stopping?'Завершаем работу':appState?.error?'Наблюдение приостановлено':auto?'Наблюдение включено':'Авто-применение выключено'}</span></div>
-      <div class="version">v{appState?.version??'0.2.1'}</div>
+      <div class="version">v{appState?.version??'0.3.0'}</div>
     </div>
   </aside>
   <main>
