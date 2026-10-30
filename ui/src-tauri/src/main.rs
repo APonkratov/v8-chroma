@@ -1,4 +1,7 @@
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![cfg_attr(
+    any(not(debug_assertions), feature = "custom-protocol"),
+    windows_subsystem = "windows"
+)]
 mod service;
 mod shell;
 #[cfg(all(not(debug_assertions), not(feature = "custom-protocol")))]
@@ -44,6 +47,10 @@ fn get_state(
 #[tauri::command]
 fn get_themes() -> Result<Vec<theme::Preview>, String> {
     theme::catalog().map_err(|e| format!("{e:#}"))
+}
+#[tauri::command]
+fn get_fonts() -> Result<Vec<String>, String> {
+    v8_chroma_core::fonts::installed().map_err(|e| format!("{e:#}"))
 }
 #[tauri::command]
 async fn save_settings(service: State<'_, Service>, patch: SettingsPatch) -> Result<(), String> {
@@ -171,6 +178,7 @@ fn run() -> anyhow::Result<()> {
         .invoke_handler(tauri::generate_handler![
             get_state,
             get_themes,
+            get_fonts,
             save_settings,
             set_appearance,
             reset_settings,
