@@ -47,8 +47,11 @@
   function apply(row?:ProcessRow){return perform(()=>invoke('apply_theme',{pid:row?.pid??null,createdTime:row?.created_time??null}));}
   onMount(()=>{
     let disposed=false;
-    Promise.all([invoke<Theme[]>('get_themes'),invoke<string[]>('get_fonts'),refresh()]).then(([catalog,installed])=>{if(!disposed){themes=catalog;fonts=installed;}}).catch(e=>error=String(e));
-    const timer=setInterval(()=>{if(!disposed)refresh().catch(e=>error=String(e));},1000);
+    const reportError=(e:unknown)=>{if(!disposed)error=String(e);};
+    invoke<Theme[]>('get_themes').then(catalog=>{if(!disposed)themes=catalog;}).catch(reportError);
+    invoke<string[]>('get_fonts').then(installed=>{if(!disposed)fonts=installed;}).catch(reportError);
+    refresh().catch(reportError);
+    const timer=setInterval(()=>{if(!disposed)refresh().catch(reportError);},1000);
     return()=>{disposed=true;clearInterval(timer);};
   });
 </script>

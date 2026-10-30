@@ -122,25 +122,35 @@ fn unsupported_session(state: &mut Session, path: &Path) -> Result<FontApplied> 
     atomic_write(path, &serde_json::to_vec_pretty(state)?)?;
     Ok(applied)
 }
-fn prepare_engine<T>(
+fn persist_failure<T>(
     state: &mut Session,
     path: &Path,
-    probe: impl FnOnce() -> Result<(T, u32)>,
-) -> Result<Option<(T, u32)>> {
-    match probe() {
-        Ok((exports, capabilities)) if capabilities & 1 != 0 => Ok(Some((exports, capabilities))),
-        Ok(_) => {
-            unsupported_session(state, path)?;
-            Ok(None)
-        }
+    operation: impl FnOnce() -> Result<T>,
+) -> Result<T> {
+    match operation() {
+        Ok(value) => Ok(value),
         Err(error) => {
-            let error = error.context("Не удалось подготовить движок шрифтов; повтор запрещён до перезапуска Конфигуратора");
+            let error = error
+                .context("Ошибка движка шрифтов; повтор запрещён до перезапуска Конфигуратора");
             state.stage = "failed".into();
             state.failure = Some(format!("{error:#}"));
             state.applied = None;
             atomic_write(path, &serde_json::to_vec_pretty(state)?)?;
             Err(error)
         }
+    }
+}
+fn prepare_engine<T>(
+    state: &mut Session,
+    path: &Path,
+    probe: impl FnOnce() -> Result<(T, u32)>,
+) -> Result<Option<(T, u32)>> {
+    let (exports, capabilities) = persist_failure(state, path, probe)?;
+    if capabilities & 1 != 0 {
+        Ok(Some((exports, capabilities)))
+    } else {
+        unsupported_session(state, path)?;
+        Ok(None)
     }
 }
 fn directory(identity: &Identity) -> Result<std::path::PathBuf> {
@@ -359,34 +369,36 @@ pub fn apply_to(expected: &Identity, font: &FontSettings) -> Result<FontApplied>
     } else {
         "FontProbeStop"
     };
-    let code = process.call(
-        exports[command],
-        if font.enabled { Some(&payload) } else { None },
-    )?;
-    ensure!(
-        code == 0,
-        "{command}: Win32={code}; повтор запрещён до перезапуска Конфигуратора"
-    );
-    let before = String::from_utf8_lossy(&fs::read(&log)?).into_owned();
-    let replaced = field(&before, "replaced")?;
-    let mut warning = None;
-    if modules.contains_key("txtedui.dll") && capabilities & 2 != 0 {
-        let mut refresh = 8u32.to_le_bytes().to_vec();
-        refresh.extend(4u32.to_le_bytes());
-        let code = process.call(exports["FontProbeRefresh"], Some(&refresh))?;
-        let data = String::from_utf8_lossy(&fs::read(&log)?).into_owned();
-        warning = confirm_refresh(code, &data, font.enabled, replaced)?;
-    } else if modules.contains_key("txtedui.dll") {
-        warning = Some(REOPEN_EDITOR.into());
-    }
-    let applied = if font.enabled {
-        FontApplied {
-            label: format!("{} · {} pt", font.family, font.points10 as f32 / 10.),
-            warning,
+    let applied = persist_failure(state, &state_path, || {
+        let code = process.call(
+            exports[command],
+            if font.enabled { Some(&payload) } else { None },
+        )?;
+        ensure!(
+            code == 0,
+            "{command}: Win32={code}; повтор запрещён до перезапуска Конфигуратора"
+        );
+        let before = String::from_utf8_lossy(&fs::read(&log)?).into_owned();
+        let replaced = field(&before, "replaced")?;
+        let mut warning = None;
+        if modules.contains_key("txtedui.dll") && capabilities & 2 != 0 {
+            let mut refresh = 8u32.to_le_bytes().to_vec();
+            refresh.extend(4u32.to_le_bytes());
+            let code = process.call(exports["FontProbeRefresh"], Some(&refresh))?;
+            let data = String::from_utf8_lossy(&fs::read(&log)?).into_owned();
+            warning = confirm_refresh(code, &data, font.enabled, replaced)?;
+        } else if modules.contains_key("txtedui.dll") {
+            warning = Some(REOPEN_EDITOR.into());
         }
-    } else {
-        FontApplied { warning, ..stock }
-    };
+        Ok(if font.enabled {
+            FontApplied {
+                label: format!("{} · {} pt", font.family, font.points10 as f32 / 10.),
+                warning,
+            }
+        } else {
+            FontApplied { warning, ..stock }
+        })
+    })?;
     state.stage = "ready".into();
     state.applied = Some(applied.clone());
     atomic_write(&state_path, &serde_json::to_vec_pretty(state)?)?;
@@ -431,6 +443,30 @@ mod tests {
             assert_eq!(diagnostic, format!("{error:#}"));
             assert!(diagnostic.contains(cause) && diagnostic.contains("перезапуска"));
             assert!(!diagnostic.contains("не завершено"));
+        }
+    }
+    #[test]
+    fn application_failures_keep_diagnostics_and_never_look_incomplete() {
+        for cause in [
+            "FontProbeStart: Win32=50",
+            "FontProbeApply: Win32=5",
+            "FontProbeStop: Win32=1460",
+            "FontProbeRefresh: Win32=1460",
+            "Движок не подтвердил применение шрифта",
+        ] {
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("session.json");
+            let mut state = loading_session();
+            state.stage = "applying".into();
+            let error =
+                persist_failure::<()>(&mut state, &path, || anyhow::bail!("{cause}")).unwrap_err();
+            let restored: Session = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+            assert_eq!(restored.stage, "failed");
+            assert_eq!(
+                format!("{:#}", session_result(&restored).unwrap_err()),
+                format!("{error:#}")
+            );
+            assert!(restored.applied.is_none());
         }
     }
     #[test]
