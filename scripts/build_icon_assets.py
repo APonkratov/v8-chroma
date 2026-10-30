@@ -15,7 +15,7 @@ ASSETS = ROOT / "assets/toolbar-icons"
 def patches():
     rows = json.loads((ASSETS / "atlas-8.3.27.json").read_text(encoding="utf-8"))["sources"]
     manual = {}
-    for name in ("platform", "tree", "menus", "editor", "formatting", "comparison"):
+    for name in ("platform", "tree", "menus", "editor", "formatting", "comparison", "sheet"):
         for e in json.loads((ASSETS / f"{name}-8.3.27.json").read_text(encoding="utf-8"))["sources"]:
             size = e.get("size", 16)
             row = dict(hash=e["hash"], width=size, height=size, x=0, y=0, size=size,

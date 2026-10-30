@@ -393,6 +393,53 @@ fn comparison_backgrounds(background: u32, text: u32) -> [(&'static str, u32); 3
 mod tests {
     use super::*;
     #[test]
+    fn spreadsheet_header_bands_keep_labels_readable_in_every_theme() {
+        for theme in catalog().unwrap() {
+            let cfg = config(&theme.id, Path::new("x"), Path::new("y")).unwrap();
+            let color = |role: &str| u32::from_str_radix(&theme.colors[role][1..], 16).unwrap();
+            let target = |source| {
+                cfg.maps[..cfg.map_count as usize]
+                    .iter()
+                    .find(|m| m.kind == 5 && m.source == source)
+                    .unwrap()
+                    .target
+            };
+            let normal = (247..255)
+                .map(|r| (r << 16) | ((r - 2) << 8) | (r - 17))
+                .chain([0xFFFDEE, 0xFFFEEF, 0xFFFFF0]);
+            let selected = (231..242).map(|r| (r << 16) | ((r - 2) << 8) | (r - 17));
+            for (sources, role) in [
+                (normal.collect::<Vec<_>>(), "panel"),
+                (selected.collect::<Vec<_>>(), "hover"),
+            ] {
+                for source in sources {
+                    assert_eq!(target(source), color(role), "{} {source:06X}", theme.id);
+                    assert!(
+                        contrast(target(source), color("text")) >= 4.5,
+                        "{}",
+                        theme.id
+                    );
+                }
+            }
+            assert_eq!(target(0xE5E5E5), color("line"));
+            let areas = (250..255)
+                .map(|r| (r << 16) | (r << 8) | (r - 8))
+                .chain(0xFFFFF7..=0xFFFFFC);
+            for source in areas {
+                assert_eq!(target(source), color("panel"), "{} {source:06X}", theme.id);
+            }
+            assert_eq!(target(0xD3D9EF), color("selection.background"));
+            assert!(contrast(target(0xD3D9EF), color("text")) >= 4.5);
+            assert_eq!(target(0xFFFFFF), color("editor.background"));
+            // MXL uses RGB brushes; these values in other API forms stay native.
+            assert!(
+                !cfg.maps[..cfg.map_count as usize]
+                    .iter()
+                    .any(|m| { m.kind == 6 && matches!(m.source, 0xD3D9EF | 0xFAFAF2 | 0xFFFFF7) })
+            );
+        }
+    }
+    #[test]
     fn current_search_hit_uses_readable_selection_without_changing_rgb_ui_skin() {
         for theme in catalog().unwrap() {
             let cfg = config(&theme.id, Path::new("x"), Path::new("y")).unwrap();
@@ -492,7 +539,7 @@ mod tests {
             )
             .unwrap();
             assert_eq!(cfg.bytes().len(), 4760);
-            assert_eq!(cfg.map_count, if *id == "diagnostic" { 0 } else { 201 });
+            assert_eq!(cfg.map_count, if *id == "diagnostic" { 0 } else { 235 });
         }
     }
     #[test]
