@@ -24,31 +24,74 @@ def release_version(tag):
     return match[1]
 
 
+def markdown_mask(text):
+    """Mask comments/code examples while preserving offsets into the original text."""
+    masked = list(text)
+    fence = None
+    comment = False
+    inline_end = offset = 0
+
+    def hide(start, end, replacement=" "):
+        masked[start:end] = [char if char in "\r\n" else replacement for char in text[start:end]]
+
+    for line in text.splitlines(keepends=True):
+        start, end = offset, offset + len(line)
+        offset = end
+        if fence:
+            if re.fullmatch(r" {0,3}" + re.escape(fence[0]) + "{" + str(len(fence)) + r",}[ \t\r\n]*", line):
+                fence = None
+            hide(start, end)
+            continue
+        if not comment and inline_end <= start:
+            # Indented code and fenced examples keep comment markers literal.
+            if line.expandtabs(4).startswith("    "):
+                hide(start, end)
+                continue
+            opening = re.match(r" {0,3}(`{3,}|~{3,})(.*)", line)
+            if opening and (opening[1][0] != "`" or "`" not in opening[2]):
+                fence = opening[1]
+                hide(start, end)
+                continue
+        pos = max(start, inline_end)
+        while pos < end:
+            if comment:
+                closing = text.find("-->", pos, end)
+                finish = end if closing < 0 else closing + 3
+                hide(pos, finish)
+                comment = closing < 0
+                pos = finish
+            elif text.startswith("<!--", pos):
+                comment = True
+            elif text[pos] == "\\" and pos + 1 < end:
+                pos += 2
+            elif text[pos] == "`":
+                marker = re.match(r"`+", text[pos:])[0]
+                closing = re.compile(r"(?<!`)" + marker + r"(?!`)").search(text, pos + len(marker))
+                if closing:
+                    inline_end = closing.end()
+                    # Inline code is visible content, but cannot supply Markdown syntax.
+                    hide(pos, inline_end, "x")
+                    pos = inline_end
+                else:
+                    pos += len(marker)
+            else:
+                pos += 1
+    return "".join(masked)
+
+
 def release_notes(changelog, tag):
     """Extract only the exact tagged version; missing or ambiguous notes stop publication."""
     version = release_version(tag)
-    headings = list(re.finditer(r"^##[ \t]+(\S+)[^\n]*", changelog, re.MULTILINE))
+    visible = markdown_mask(changelog)
+    headings = list(re.finditer(r"^ {0,3}##[ \t]+(\S+)[^\n]*", visible, re.MULTILINE))
     matches = [index for index, heading in enumerate(headings) if heading[1] == version]
     if len(matches) != 1:
         raise ValueError(f"Expected exactly one CHANGELOG section for {version}")
     index = matches[0]
     end = headings[index + 1].start() if index + 1 < len(headings) else len(changelog)
     notes = changelog[headings[index].end():end].strip("\r\n")
-    visible = re.sub(r"<!--.*?(?:-->|$)", "", notes, flags=re.DOTALL)
-    fence = None
-    for line in visible.splitlines():
-        if fence:
-            if re.fullmatch(r" {0,3}" + re.escape(fence[0]) + "{" + str(len(fence)) + r",}[ \t]*", line):
-                fence = None
-            continue
-        opening = re.match(r" {0,3}(`{3,}|~{3,})(.*)", line)
-        if opening and (opening[1][0] != "`" or "`" not in opening[2]):
-            fence = opening[1]
-            continue
-        # Four columns of indentation start a code block, not a change list.
-        if re.match(r" {0,3}(?:[-+*]|\d+[.)])[ \t]+\S", line.expandtabs(4)):
-            break
-    else:
+    body = visible[headings[index].end():end].expandtabs(4)
+    if not re.search(r"^ {0,3}(?:[-+*]|\d+[.)])[ \t]+\S", body, re.MULTILINE):
         raise ValueError(f"Empty CHANGELOG section for {version}")
     return notes
 

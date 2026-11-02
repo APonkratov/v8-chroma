@@ -68,6 +68,21 @@ class ReleaseChecks(unittest.TestCase):
             notes = f"{example}\n\n- Исправлен шрифт."
             self.assertEqual(release.release_notes(f"## 1.2.3\n{notes}\n", "v1.2.3"), notes)
 
+    def test_notes_ignore_example_headings_and_preserve_original_offsets(self):
+        notes = "<!--\n## 1.2.3\n```\n-->\n```md\n## 1.2.3\n## 9.9.9\nconst marker = '<!--';\n```\n    <!--\n    ## 1.2.3\n- Исправлен шрифт."
+        for newline in ["\n", "\r\n"]:
+            changelog = f"## 1.2.3 — дата\n{notes}\n\n## 1.2.2\n- Старое.\n".replace("\n", newline)
+            self.assertEqual(release.release_notes(changelog, "v1.2.3"), notes.replace("\n", newline))
+        for hidden in ["<!--\n## 1.2.3\n- Скрыто.\n-->", "```md\n## 1.2.3\n- Пример.\n```"]:
+            with self.assertRaisesRegex(ValueError, "exactly one"):
+                release.release_notes(hidden, "v1.2.3")
+
+    def test_inline_code_and_escaped_comment_markers_remain_visible(self):
+        for notes in ["- `<!--`", "- \\<!-- Исправлен шрифт.",
+                      "``const marker = '<!--';``\n- Исправлен шрифт.",
+                      "`многострочный\n## 1.2.3\n<!--`\n- Исправлен шрифт."]:
+            self.assertEqual(release.release_notes(f"## 1.2.3\n{notes}\n", "v1.2.3"), notes)
+
     def test_all_manifests_and_locks_must_match_the_tag(self):
         root = Path(__file__).parents[1]
         paths = ["Cargo.toml", "Cargo.lock", "ui/package.json", "ui/package-lock.json", "ui/src-tauri/Cargo.toml", "ui/src-tauri/tauri.conf.json"]
