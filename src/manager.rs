@@ -209,7 +209,7 @@ fn read_snapshot(log: &Path) -> Result<EngineSnapshot> {
     let icon_mode: u32 = field("icon_mode")?.parse()?;
     let pack: u32 = field("icon_pack")?.parse()?;
     ensure!(
-        matches!(base, 14 | 22)
+        matches!(base, 14 | 22 | 23)
             && hooks == base + icon_hooks
             && icon_mode <= 2
             && pack == u32::from(icon_mode != 0)
@@ -220,6 +220,14 @@ fn read_snapshot(log: &Path) -> Result<EngineSnapshot> {
             },
         "Snapshot не подтвердил состояние подсистем движка"
     );
+    if base == 23 {
+        ensure!(
+            field("browser_lifetime_guard")? == "1"
+                && field("browser_patched_imports")? == "9"
+                && field("browser_guard_failures")? == "0",
+            "Snapshot не подтвердил защиту HTML-окна при закрытии"
+        );
+    }
     Ok(EngineSnapshot {
         theme: field("theme")?,
         generation: field("generation")?.parse()?,
@@ -538,6 +546,23 @@ mod tests {
     #[test]
     fn rejects_non_platform_executable() {
         assert!(validate_platform(&std::env::current_exe().unwrap()).is_err());
+    }
+    #[test]
+    fn browser_lifetime_capability_requires_a_confirmed_guard() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let log = directory.path().join("snapshot.csv");
+        let valid = "# protocol=3\n# theme=dracula\n# generation=1\n# base_patched_imports=23\n# patched_imports=26\n# icon_patched_imports=3\n# icon_status=0\n# icon_mode=2\n# icon_pack=1\n# browser_lifetime_guard=1\n# browser_patched_imports=9\n# browser_guard_failures=0\n";
+        fs::write(&log, valid)?;
+        assert_eq!(read_snapshot(&log)?.hooks, 26);
+        for invalid in [
+            valid.replace("browser_lifetime_guard=1", "browser_lifetime_guard=0"),
+            valid.replace("browser_patched_imports=9", "browser_patched_imports=8"),
+            valid.replace("browser_guard_failures=0", "browser_guard_failures=1"),
+        ] {
+            fs::write(&log, invalid)?;
+            assert!(read_snapshot(&log).is_err());
+        }
+        Ok(())
     }
     #[test]
     fn installed_platform_releases_are_not_filtered_by_version() -> Result<()> {

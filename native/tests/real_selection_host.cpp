@@ -16,8 +16,10 @@ int wmain(int argc,wchar_t** argv) {
     auto renderChrome=load<BOOL(*)(const ProbeConfig*)>(graphics,"chrome_probe");
     auto renderComparison=load<BOOL(*)(const ProbeConfig*)>(graphics,"comparison_probe");
     auto renderBrowser=load<BOOL(*)(const ProbeConfig*)>(browser,"browser_probe");
+    auto lifetime=load<BOOL(*)(BOOL)>(browser,"browser_lifetime_probe");
     auto systemColor=load<DWORD(*)(int)>(frame,"system_color_probe");
-    bool ok=initialize && apply && stop && render && renderBrowser && systemColor && renderChrome && renderComparison;
+    bool ok=initialize && apply && stop && render && renderBrowser && systemColor && renderChrome && renderComparison && lifetime;
+    if (lifetime) ok &= lifetime(FALSE)!=FALSE;
     for (int i=3;ok && i<argc;++i) {
         ProbeConfig cfg={}; FILE* file=_wfopen(argv[i],L"rb");
         if (!file) return 4;
@@ -27,6 +29,7 @@ int wmain(int argc,wchar_t** argv) {
         if (result) { printf("Theme call failed: %lu\n",result); ok=false; break; }
         ok=render(&cfg)!=0;
         ok &= renderBrowser(&cfg)!=0;
+        ok &= lifetime(TRUE)!=FALSE;
         ok &= renderChrome(&cfg)!=0;
         ok &= renderComparison(&cfg)!=0;
         auto nativeRgb=[](int index)->DWORD { COLORREF c=GetSysColor(index); return (GetRValue(c)<<16)|(GetGValue(c)<<8)|GetBValue(c); };
@@ -35,6 +38,7 @@ int wmain(int argc,wchar_t** argv) {
         ok &= systemColor(COLOR_SCROLLBAR)==(cfg.mode?cfg.colors.rasterBackground:nativeRgb(COLOR_SCROLLBAR));
     }
     if (stop) stop(nullptr);
+    if (lifetime) ok &= lifetime(FALSE)!=FALSE;
     printf("Production IAT with real Cairo: %s\n",ok?"PASS":"FAIL");
     return ok?0:1;
 }

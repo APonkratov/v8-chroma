@@ -3,6 +3,7 @@
 #include "raster_theme.h"
 #include "editor_selection.h"
 #include "icon_theme.h"
+#include "browser_lifetime.h"
 #include <stdio.h>
 #include <math.h>
 #include <wchar.h>
@@ -39,6 +40,12 @@ static Row rows[capacity];
 static unsigned long long dropped;
 static unsigned patchCount;
 static unsigned browserPatchCount, iconPatchCount;
+static bool browserLifetimePatched;
+static BrowserDestroyWindow realBrowserDestroyWindow;
+static BOOL WINAPI hookedBrowserDestroyWindow(HWND window) {
+    return destroyBrowserWindow(window,realBrowserDestroyWindow,
+        InterlockedCompareExchange(&active,0,0) && !InterlockedCompareExchange(&stopping,0,0));
+}
 static DWORD iconStatus=ERROR_PROC_NOT_FOUND;
 static void (__cdecl *realIconSource)(void*,void*),(*realIconMask)(void*,void*);
 static void (__cdecl *realIconMaskSurface)(void*,void*,double,double);
@@ -322,6 +329,9 @@ static DWORD snapshotUnlocked() {
     if (file) {
         fprintf(file,"# theme-probe-v3\n# mode=%s\n# theme=%s\n# protocol=3\n# generation=%lu\n# patched_imports=%u\n# browser_patched_imports=%u\n# themed_windows=%u\n# raster_supported=%u\n# raster_changes=%llu\n# hover_frames=%llu\n# selection_supported=%u\n# selection_fills=%llu\n# selection_glyphs=%llu\n# dropped=%llu\nmodule,api,source_rgb,alpha,calls,target_rgb\n",cfg.mode?"theme":"diagnostic",cfg.themeId,generation,patchCount,browserPatchCount,themedWindowCount(),rasterSupported()?1:0,rasterChanges(),rasterHoverFrames(),editorSelectionSupported()?1:0,editorSelectionFills(),editorSelectionGlyphs(),lost);
         auto icons=iconStats();
+        fprintf(file,"# browser_color_patched_imports=%u\n# browser_lifetime_guard=%u\n# browser_destroy_calls=%llu\n# browser_blocked_requests=%llu\n# browser_guard_failures=%llu\n",
+            browserPatchCount-(browserLifetimePatched?1u:0u),browserLifetimePatched?1u:0u,
+            browserDestroyCalls(),browserBlockedRequests(),browserGuardFailures());
         fprintf(file,"# base_patched_imports=%u\n# icon_patched_imports=%u\n# icon_status=%lu\n# icon_mode=%u\n# icon_pack=%u\n# icon_cache_bytes=%llu\n# icon_cache_entries=%u\n# icon_calls=%llu\n# icon_matches=%llu\n",patchCount-iconPatchCount,iconPatchCount,iconStatus,icons.mode,icons.mode?1:0,icons.bytes,icons.cached,icons.calls,icons.matches);
         for (unsigned i=0;i<capacity;++i) if (copy[i].count) {
             auto &r=copy[i]; fprintf(file,"%s,%s,%06lX,%lu,%llu,%06lX\n",r.browser?"WebKit.dll":r.kind<=Pen?"frame.dll":"grphcs.dll",apiNames[r.kind],r.rgb,r.alpha,r.count,r.target);
@@ -471,6 +481,8 @@ extern "C" __declspec(dllexport) DWORD WINAPI ThemeInitialize(void* argument) {
         ok &= patchImport(browser,"cairo.dll","cairo_paint_with_alpha",(void*)browserPaintAlpha,(void**)&realPaintAlpha);
         ok &= patchImport(browser,"cairo.dll","cairo_fill",(void*)browserFill,(void**)&realFill);
         ok &= patchImport(browser,"cairo.dll","cairo_fill_preserve",(void*)browserFillPreserve,(void**)&realFillPreserve);
+        browserLifetimePatched=patchImport(browser,"user32.dll","DestroyWindow",(void*)hookedBrowserDestroyWindow,(void**)&realBrowserDestroyWindow);
+        ok &= browserLifetimePatched;
         browserPatchCount=patchCount-first;
     }
     if (!ok) { rollback(); ThemeSnapshot(nullptr); return ERROR_PROC_NOT_FOUND; }
