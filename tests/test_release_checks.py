@@ -46,6 +46,16 @@ class ReleaseChecks(unittest.TestCase):
             with self.assertRaises(ValueError):
                 release.release_notes(changelog, "v1.2.3")
 
+    def test_notes_require_a_visible_nonempty_change_item(self):
+        for notes in ["### Исправлено", "### Добавлено\n\n### Исправлено\n<!-- TODO -->",
+                      "<!-- - Скрытый пункт. -->", "- <!-- TODO -->", "- \n* \n1. ",
+                      "<!-- Незакрытый комментарий\n- Скрытый пункт."]:
+            with self.subTest(notes=notes), self.assertRaisesRegex(ValueError, "Empty CHANGELOG"):
+                release.release_notes(f"## 1.2.3\n{notes}\n", "v1.2.3")
+        for marker in ["-", "*", "+", "1.", "1)"]:
+            notes = f"### Исправлено\n<!-- TODO -->\n{marker} Исправлен шрифт."
+            self.assertEqual(release.release_notes(f"## 1.2.3\n{notes}\n", "v1.2.3"), notes)
+
     def test_all_manifests_and_locks_must_match_the_tag(self):
         root = Path(__file__).parents[1]
         paths = ["Cargo.toml", "Cargo.lock", "ui/package.json", "ui/package-lock.json", "ui/src-tauri/Cargo.toml", "ui/src-tauri/tauri.conf.json"]

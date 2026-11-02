@@ -34,7 +34,8 @@ def release_notes(changelog, tag):
     index = matches[0]
     end = headings[index + 1].start() if index + 1 < len(headings) else len(changelog)
     notes = changelog[headings[index].end():end].strip()
-    if not notes:
+    visible = re.sub(r"<!--.*?(?:-->|$)", "", notes, flags=re.DOTALL)
+    if not re.search(r"^[ \t]*(?:[-+*]|\d+[.)])[ \t]+\S", visible, re.MULTILINE):
         raise ValueError(f"Empty CHANGELOG section for {version}")
     return notes
 
