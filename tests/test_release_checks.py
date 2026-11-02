@@ -56,6 +56,18 @@ class ReleaseChecks(unittest.TestCase):
             notes = f"### Исправлено\n<!-- TODO -->\n{marker} Исправлен шрифт."
             self.assertEqual(release.release_notes(f"## 1.2.3\n{notes}\n", "v1.2.3"), notes)
 
+    def test_notes_ignore_fenced_and_indented_code_examples(self):
+        examples = ["```diff\n- old\n+ new\n```", "~~~diff\n- old\n+ new\n~~~~",
+                    "   ```diff\n- old\n+ new\n   ```", "    - old\n    + new",
+                    "\t- old\n\t+ new", " ````diff\n```\n- still code\n````",
+                    "```diff\n- unclosed code"]
+        for example in examples:
+            with self.subTest(example=example), self.assertRaisesRegex(ValueError, "Empty CHANGELOG"):
+                release.release_notes(f"## 1.2.3\n{example}\n", "v1.2.3")
+        for example in examples[:-1]:
+            notes = f"{example}\n\n- Исправлен шрифт."
+            self.assertEqual(release.release_notes(f"## 1.2.3\n{notes}\n", "v1.2.3"), notes)
+
     def test_all_manifests_and_locks_must_match_the_tag(self):
         root = Path(__file__).parents[1]
         paths = ["Cargo.toml", "Cargo.lock", "ui/package.json", "ui/package-lock.json", "ui/src-tauri/Cargo.toml", "ui/src-tauri/tauri.conf.json"]

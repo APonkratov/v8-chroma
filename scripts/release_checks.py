@@ -33,9 +33,22 @@ def release_notes(changelog, tag):
         raise ValueError(f"Expected exactly one CHANGELOG section for {version}")
     index = matches[0]
     end = headings[index + 1].start() if index + 1 < len(headings) else len(changelog)
-    notes = changelog[headings[index].end():end].strip()
+    notes = changelog[headings[index].end():end].strip("\r\n")
     visible = re.sub(r"<!--.*?(?:-->|$)", "", notes, flags=re.DOTALL)
-    if not re.search(r"^[ \t]*(?:[-+*]|\d+[.)])[ \t]+\S", visible, re.MULTILINE):
+    fence = None
+    for line in visible.splitlines():
+        if fence:
+            if re.fullmatch(r" {0,3}" + re.escape(fence[0]) + "{" + str(len(fence)) + r",}[ \t]*", line):
+                fence = None
+            continue
+        opening = re.match(r" {0,3}(`{3,}|~{3,})(.*)", line)
+        if opening and (opening[1][0] != "`" or "`" not in opening[2]):
+            fence = opening[1]
+            continue
+        # Four columns of indentation start a code block, not a change list.
+        if re.match(r" {0,3}(?:[-+*]|\d+[.)])[ \t]+\S", line.expandtabs(4)):
+            break
+    else:
         raise ValueError(f"Empty CHANGELOG section for {version}")
     return notes
 
