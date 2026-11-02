@@ -34,6 +34,55 @@ def fixture(name, delayed=False):
 
 
 class ReleaseChecks(unittest.TestCase):
+    def test_notes_select_exact_stable_or_rc_section_and_preserve_subheadings(self):
+        changelog = "# Изменения\n\n## 1.2.30 — дата\n- Другая версия.\n\n## 1.2.3-rc.1 — дата\n- RC.\n\n## 1.2.3 — дата\n### Исправлено\n- Шрифт.\n\n## 1.2.2 — дата\n- Старое.\n"
+        self.assertEqual(release.release_notes(changelog, "v1.2.3"), "### Исправлено\n- Шрифт.")
+        self.assertEqual(release.release_notes(changelog, "v1.2.3-rc.1"), "- RC.")
+        self.assertEqual(release.release_notes(changelog.replace("\n", "\r\n"), "v1.2.2"), "- Старое.")
+
+    def test_notes_reject_missing_empty_or_duplicate_version(self):
+        for changelog in ["## 1.2.30\n- Другая версия.\n", "## 1.2.3\n\n## 1.2.2\n- Старое.\n",
+                          "## 1.2.3\n- Один.\n## 1.2.3 — дата\n- Два.\n"]:
+            with self.assertRaises(ValueError):
+                release.release_notes(changelog, "v1.2.3")
+
+    def test_notes_require_a_visible_nonempty_change_item(self):
+        for notes in ["### Исправлено", "### Добавлено\n\n### Исправлено\n<!-- TODO -->",
+                      "<!-- - Скрытый пункт. -->", "- <!-- TODO -->", "- \n* \n1. ",
+                      "<!-- Незакрытый комментарий\n- Скрытый пункт."]:
+            with self.subTest(notes=notes), self.assertRaisesRegex(ValueError, "Empty CHANGELOG"):
+                release.release_notes(f"## 1.2.3\n{notes}\n", "v1.2.3")
+        for marker in ["-", "*", "+", "1.", "1)"]:
+            notes = f"### Исправлено\n<!-- TODO -->\n{marker} Исправлен шрифт."
+            self.assertEqual(release.release_notes(f"## 1.2.3\n{notes}\n", "v1.2.3"), notes)
+
+    def test_notes_ignore_fenced_and_indented_code_examples(self):
+        examples = ["```diff\n- old\n+ new\n```", "~~~diff\n- old\n+ new\n~~~~",
+                    "   ```diff\n- old\n+ new\n   ```", "    - old\n    + new",
+                    "\t- old\n\t+ new", " ````diff\n```\n- still code\n````",
+                    "```diff\n- unclosed code"]
+        for example in examples:
+            with self.subTest(example=example), self.assertRaisesRegex(ValueError, "Empty CHANGELOG"):
+                release.release_notes(f"## 1.2.3\n{example}\n", "v1.2.3")
+        for example in examples[:-1]:
+            notes = f"{example}\n\n- Исправлен шрифт."
+            self.assertEqual(release.release_notes(f"## 1.2.3\n{notes}\n", "v1.2.3"), notes)
+
+    def test_notes_ignore_example_headings_and_preserve_original_offsets(self):
+        notes = "<!--\n## 1.2.3\n```\n-->\n```md\n## 1.2.3\n## 9.9.9\nconst marker = '<!--';\n```\n    <!--\n    ## 1.2.3\n- Исправлен шрифт."
+        for newline in ["\n", "\r\n"]:
+            changelog = f"## 1.2.3 — дата\n{notes}\n\n## 1.2.2\n- Старое.\n".replace("\n", newline)
+            self.assertEqual(release.release_notes(changelog, "v1.2.3"), notes.replace("\n", newline))
+        for hidden in ["<!--\n## 1.2.3\n- Скрыто.\n-->", "```md\n## 1.2.3\n- Пример.\n```"]:
+            with self.assertRaisesRegex(ValueError, "exactly one"):
+                release.release_notes(hidden, "v1.2.3")
+
+    def test_inline_code_and_escaped_comment_markers_remain_visible(self):
+        for notes in ["- `<!--`", "- \\<!-- Исправлен шрифт.",
+                      "``const marker = '<!--';``\n- Исправлен шрифт.",
+                      "`многострочный\n## 1.2.3\n<!--`\n- Исправлен шрифт."]:
+            self.assertEqual(release.release_notes(f"## 1.2.3\n{notes}\n", "v1.2.3"), notes)
+
     def test_all_manifests_and_locks_must_match_the_tag(self):
         root = Path(__file__).parents[1]
         paths = ["Cargo.toml", "Cargo.lock", "ui/package.json", "ui/package-lock.json", "ui/src-tauri/Cargo.toml", "ui/src-tauri/tauri.conf.json"]
