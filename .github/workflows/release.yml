@@ -32,6 +32,9 @@ jobs:
         # Git Bash prepends its Unix link.exe ahead of the MSVC linker.
         shell: pwsh
         run: python scripts/build.py release --tag "$env:RELEASE_TAG"
+      - name: Prepare release notes from CHANGELOG
+        shell: bash
+        run: python scripts/release_checks.py --tag "$RELEASE_TAG" --notes-out dist/release/release-notes.md
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: release-windows-x64
@@ -68,23 +71,7 @@ jobs:
           else
             flags+=(--latest)
           fi
-          cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
-          Темы оформления конфигуратора 1С для Windows x64.
-
-          - `v8-chroma.exe` — интерфейс, трей и общее применение темы, значков и шрифтов интерфейса и редактора.
-          - `v8-chroma-cli.exe` — отдельный CLI; скачивать оба EXE необязательно.
-          - ZIP и соседние DLL для работы не нужны. Для GUI требуется установленный WebView2 Runtime.
-          - Доступны установленные шрифты, размер редактора и программные лигатуры поддерживающих их семейств.
-          - Шрифт интерфейса по умолчанию — Segoe UI Variable Small; доступны другие установленные семейства и возврат «Как в 1С».
-          - Меню, дерево и панели обновляются без перезапуска. Проверены 8.3.26.1656, 8.3.27.2325, 8.5.1.1529 и 8.5.4.1878 x64.
-          - Настройки мигрируют с резервной копией. При медленном запуске Конфигуратора применение шрифта можно повторить после открытия главного окна.
-          - Совместимость определяется API платформы; проверенные версии и ограничения описаны в README.
-          - При обновлении движка уже открытые Конфигураторы нужно штатно перезапустить.
-
-          Сверьте SHA-256 с `SHA256SUMS.txt`. При дальнейшей передаче приложения сохраняйте
-          `LICENSE` и `THIRD-PARTY-NOTICES.txt`. Подробнее об установке и ограничениях — в README.
-          NOTES
           gh release create "$RELEASE_TAG" \
             v8-chroma.exe v8-chroma-cli.exe LICENSE THIRD-PARTY-NOTICES.txt SHA256SUMS.txt \
-            --verify-tag --title "v8-chroma ${RELEASE_TAG#v}" --generate-notes \
-            --notes-file "$RUNNER_TEMP/release-notes.md" "${flags[@]}"
+            --verify-tag --title "v8-chroma ${RELEASE_TAG#v}" \
+            --notes-file release-notes.md "${flags[@]}"

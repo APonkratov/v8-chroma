@@ -34,6 +34,18 @@ def fixture(name, delayed=False):
 
 
 class ReleaseChecks(unittest.TestCase):
+    def test_notes_select_exact_stable_or_rc_section_and_preserve_subheadings(self):
+        changelog = "# Изменения\n\n## 1.2.30 — дата\n- Другая версия.\n\n## 1.2.3-rc.1 — дата\n- RC.\n\n## 1.2.3 — дата\n### Исправлено\n- Шрифт.\n\n## 1.2.2 — дата\n- Старое.\n"
+        self.assertEqual(release.release_notes(changelog, "v1.2.3"), "### Исправлено\n- Шрифт.")
+        self.assertEqual(release.release_notes(changelog, "v1.2.3-rc.1"), "- RC.")
+        self.assertEqual(release.release_notes(changelog.replace("\n", "\r\n"), "v1.2.2"), "- Старое.")
+
+    def test_notes_reject_missing_empty_or_duplicate_version(self):
+        for changelog in ["## 1.2.30\n- Другая версия.\n", "## 1.2.3\n\n## 1.2.2\n- Старое.\n",
+                          "## 1.2.3\n- Один.\n## 1.2.3 — дата\n- Два.\n"]:
+            with self.assertRaises(ValueError):
+                release.release_notes(changelog, "v1.2.3")
+
     def test_all_manifests_and_locks_must_match_the_tag(self):
         root = Path(__file__).parents[1]
         paths = ["Cargo.toml", "Cargo.lock", "ui/package.json", "ui/package-lock.json", "ui/src-tauri/Cargo.toml", "ui/src-tauri/tauri.conf.json"]

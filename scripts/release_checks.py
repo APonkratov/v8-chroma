@@ -24,6 +24,21 @@ def release_version(tag):
     return match[1]
 
 
+def release_notes(changelog, tag):
+    """Extract only the exact tagged version; missing or ambiguous notes stop publication."""
+    version = release_version(tag)
+    headings = list(re.finditer(r"^##[ \t]+(\S+)[^\n]*", changelog, re.MULTILINE))
+    matches = [index for index, heading in enumerate(headings) if heading[1] == version]
+    if len(matches) != 1:
+        raise ValueError(f"Expected exactly one CHANGELOG section for {version}")
+    index = matches[0]
+    end = headings[index + 1].start() if index + 1 < len(headings) else len(changelog)
+    notes = changelog[headings[index].end():end].strip()
+    if not notes:
+        raise ValueError(f"Empty CHANGELOG section for {version}")
+    return notes
+
+
 def versions(root=ROOT, tag=None):
     cargo = tomllib.loads((root / "Cargo.toml").read_text(encoding="utf-8"))
     app = tomllib.loads((root / "ui/src-tauri/Cargo.toml").read_text(encoding="utf-8"))
@@ -114,9 +129,17 @@ def verify_binary(path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tag")
+    parser.add_argument("--notes-out", type=Path, help="Write the tagged CHANGELOG section as release notes")
     parser.add_argument("--binary", type=Path, action="append", default=[])
     args = parser.parse_args()
+    if args.notes_out and not args.tag:
+        parser.error("--notes-out requires --tag")
     print(f"Version gate PASS: {versions(tag=args.tag)}")
+    if args.tag:
+        notes = release_notes((ROOT / "CHANGELOG.md").read_text(encoding="utf-8"), args.tag)
+        if args.notes_out:
+            args.notes_out.parent.mkdir(parents=True, exist_ok=True)
+            args.notes_out.write_text(notes + "\n", encoding="utf-8", newline="\n")
     for path in args.binary:
         print(f"PE gate PASS: {path.name}: {', '.join(verify_binary(path))}")
 
