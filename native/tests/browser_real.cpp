@@ -2,6 +2,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "browser_lifetime_fixture.h"
+
+extern "C" __declspec(dllexport) BOOL browser_lifetime_probe(BOOL guarded) {
+    return browser_fixture::probe(guarded!=FALSE,DestroyWindow);
+}
 
 struct Glyph { unsigned long index; double x,y; };
 struct Extents { double xb,yb,width,height,xa,ya; };

@@ -69,6 +69,7 @@ def check(toolchain, target, preset, cairo):
     if sys.platform != "win32" or target not in ("x86_64-pc-windows-msvc", "x86_64-pc-windows-gnu"):
         raise ValueError("The full drawing backend currently requires Windows x64. Use 'core' for portable checks.")
     native(preset)
+    run(ROOT / "tests/fixtures/browser_lifetime_test.exe")
     run(ROOT / "tests/fixtures/icon_theme_test.exe")
     run(ROOT / "tests/fixtures/font_shaping.exe", "Consolas")
     run(ROOT / "tests/fixtures/ui_font_policy_test.exe")
