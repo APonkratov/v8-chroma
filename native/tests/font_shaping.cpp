@@ -53,7 +53,9 @@ static Result shape(HDC dc,const wchar_t* text,int feature,bool merge=false,bool
     SCRIPT_ITEM items[256]{}; OPENTYPE_TAG tags[256]{}; int itemCount=0;
     Result result;
     SCRIPT_CONTROL control{}; control.fMergeNeutralItems=merge?1:0;
-    result.status=ScriptItemizeOpenType(text,count,255,merge?&control:nullptr,nullptr,items,tags,&itemCount);
+    result.status=feature<0
+        ?ScriptItemize(text,count,255,merge?&control:nullptr,nullptr,items,&itemCount)
+        :ScriptItemizeOpenType(text,count,255,merge?&control:nullptr,nullptr,items,tags,&itemCount);
     if (FAILED(result.status)) return result;
     if (!itemCount) { result.status=E_FAIL; return result; }
     if (operators) itemizeOperators(text,count,255,nullptr,nullptr,items,&itemCount,ScriptItemize);
@@ -68,6 +70,31 @@ static Result shape(HDC dc,const wchar_t* text,int feature,bool merge=false,bool
         result.width+=run.width;
     }
     return result;
+}
+static bool controlItemsPreserved(const wchar_t* text,bool bidi) {
+    int count=static_cast<int>(wcslen(text)),originalCount=0;
+    SCRIPT_ITEM original[256]{},revised[256]{};
+    SCRIPT_CONTROL control{}; SCRIPT_STATE state{};
+    const SCRIPT_CONTROL* inputControl=bidi?&control:nullptr;
+    const SCRIPT_STATE* inputState=bidi?&state:nullptr;
+    if (FAILED(ScriptItemize(text,count,255,inputControl,inputState,original,&originalCount))) return false;
+    memcpy(revised,original,sizeof(original));
+    int revisedCount=originalCount;
+    itemizeOperators(text,count,255,inputControl,inputState,revised,&revisedCount,ScriptItemize);
+    const SCRIPT_PROPERTIES** properties=nullptr; int propertyCount=0;
+    if (FAILED(ScriptGetProperties(&properties,&propertyCount))) return false;
+    unsigned controls=0;
+    for (int i=0;i<originalCount;++i) {
+        if (original[i].a.eScript>=propertyCount) return false;
+        if (!properties[original[i].a.eScript]->fControl) continue;
+        ++controls;
+        bool preserved=false;
+        for (int j=0;j<revisedCount;++j)
+            if (original[i].iCharPos==revised[j].iCharPos && original[i+1].iCharPos==revised[j+1].iCharPos &&
+                !memcmp(&original[i].a,&revised[j].a,sizeof(SCRIPT_ANALYSIS))) preserved=true;
+        if (!preserved) return false;
+    }
+    return controls>0 && revised[revisedCount].iCharPos==count;
 }
 int wmain(int argc,wchar_t** argv) {
     const wchar_t* family=argc>1?argv[1]:L"Consolas";
@@ -96,7 +123,7 @@ int wmain(int argc,wchar_t** argv) {
         for (WORD glyph:legacy.glyphs) if (!glyph) success=false;
         ok &= success && sameWidth && SUCCEEDED(merged.status) && SUCCEEDED(mergedOff.status)
             && merged.width==legacy.width && SUCCEEDED(isolated.status) && isolated.width==legacy.width
-            && isolated.carets==legacy.carets;
+            && isolated.carets==legacy.carets && isolated.glyphs==merged.glyphs;
         // Print operator labels only; the Cyrillic coverage case is identified by length.
         printf("sample=%s chars=%zu runs=%d glyphs=%zu calt_changes=%u legacy_matches_on=%u inhibit_changes=%u width=%d stable_width=%u success=%u merged_runs=%d merged_changes=%u merged_width=%d\n",
             labels[index++],wcslen(sample),legacy.runs,legacy.glyphs.size(),changed?1:0,matches?1:0,
@@ -113,6 +140,13 @@ int wmain(int argc,wchar_t** argv) {
         ok &= stable;
         printf("mixed chars=%zu original_runs=%d operator_runs=%d substituted=%u width=%d stable_geometry=%u same_fallback=%u\n",
             wcslen(sample),original.runs,isolated.runs,original.glyphs!=isolated.glyphs,isolated.width,stable,sameFallback);
+    }
+    const wchar_t* tabbed[]={L"\t\tЕсли А <> Б Тогда",L"Если А <> Б Тогда\t\t",
+        L"Если А\t\t<=\t\tБ Тогда",L"\t\t<=\t\t",L"<=\t\t>=",L"\t\tТекст"};
+    for (auto sample:tabbed) for (bool bidi:{false,true}) {
+        bool preserved=controlItemsPreserved(sample,bidi);
+        ok &= preserved;
+        printf("control items chars=%zu bidi=%u preserved=%u\n",wcslen(sample),bidi,preserved);
     }
     printf("Uniscribe: %s; original calt substitutions=%u; operator-isolated substitutions=%u\n",
         ok?"PASS":"FAIL",substitutions,operatorSubstitutions);

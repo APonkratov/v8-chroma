@@ -18,15 +18,17 @@ static bool itemizeOperators(const WCHAR* text,int count,int capacity,const SCRI
         std::vector<SCRIPT_ITEM> revised;
         revised.reserve(static_cast<size_t>(capacity<count+1?capacity:count+1));
         int source=0,cursor=0; bool changed=false;
-        auto append=[&](int position,SCRIPT_ANALYSIS analysis) {
-            if (!revised.empty() && !memcmp(&revised.back().a,&analysis,sizeof(analysis))) return true;
+        auto append=[&](int position,SCRIPT_ANALYSIS analysis,bool preserveBoundary=false) {
+            if (!preserveBoundary && !revised.empty() && !memcmp(&revised.back().a,&analysis,sizeof(analysis))) return true;
             if (static_cast<int>(revised.size())>=capacity-1) return false;
             revised.push_back({position,analysis}); return true;
         };
         auto copy=[&](int end) {
             while (cursor<end) {
                 while (source+1<*itemCount && items[source+1].iCharPos<=cursor) ++source;
-                if (!append(cursor,items[source].a)) return false;
+                // Equal analyses do not make native item boundaries redundant:
+                // Uniscribe returns each Tab as a separate control item.
+                if (!append(cursor,items[source].a,cursor==items[source].iCharPos)) return false;
                 int next=items[source+1].iCharPos;
                 if (next<=cursor) return false;
                 cursor=next<end?next:end;
