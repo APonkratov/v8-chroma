@@ -12,7 +12,7 @@ static bool programmingOperator(WCHAR ch) {
 // sequence in its own context; all glyphs, clusters and advances remain native.
 static bool itemizeOperators(const WCHAR* text,int count,int capacity,const SCRIPT_CONTROL* control,
     const SCRIPT_STATE* state,SCRIPT_ITEM* items,int* itemCount,decltype(&ScriptItemize) native) {
-    if (!text || !items || !itemCount || count<2 || *itemCount<1 || *itemCount>=capacity ||
+    if (!text || !items || !itemCount || count<2 || *itemCount<1 || *itemCount>capacity ||
         (state && (state->uBidiLevel&1))) return false;
     try {
         std::vector<SCRIPT_ITEM> revised;
@@ -20,7 +20,8 @@ static bool itemizeOperators(const WCHAR* text,int count,int capacity,const SCRI
         int source=0,cursor=0; bool changed=false;
         auto append=[&](int position,SCRIPT_ANALYSIS analysis,bool preserveBoundary=false) {
             if (!preserveBoundary && !revised.empty() && !memcmp(&revised.back().a,&analysis,sizeof(analysis))) return true;
-            if (static_cast<int>(revised.size())>=capacity-1) return false;
+            // ScriptItemize's buffer has capacity real items plus a terminal item.
+            if (static_cast<int>(revised.size())>=capacity) return false;
             revised.push_back({position,analysis}); return true;
         };
         auto copy=[&](int end) {
@@ -48,7 +49,7 @@ static bool itemizeOperators(const WCHAR* text,int count,int capacity,const SCRI
                 if (items[i].a.fRTL || items[i].a.fLayoutRTL || items[i].a.s.uBidiLevel) leftToRight=false;
             SCRIPT_CONTROL merged=control?*control:SCRIPT_CONTROL{};
             merged.fMergeNeutralItems=1;
-            SCRIPT_ITEM isolated[8]{}; int runs=0;
+            SCRIPT_ITEM isolated[9]{}; int runs=0;
             if (leftToRight && SUCCEEDED(native(text+begin,end-begin,8,&merged,state,isolated,&runs)) &&
                 runs==1 && !isolated[0].a.fRTL && !isolated[0].a.s.uBidiLevel) {
                 if (!append(begin,isolated[0].a)) return false;
@@ -63,4 +64,17 @@ static bool itemizeOperators(const WCHAR* text,int count,int capacity,const SCRI
         *itemCount=static_cast<int>(revised.size())-1;
         return true;
     } catch (...) { return false; } // Keep the complete original result on allocation failure.
+}
+
+// Shared by the import hook and shaping tests; retain the native API result
+// and last error even if the optional operator rewrite cannot be applied.
+static HRESULT itemizeEditorText(const WCHAR* text,int count,int capacity,const SCRIPT_CONTROL* control,
+    const SCRIPT_STATE* state,SCRIPT_ITEM* items,int* itemCount,decltype(&ScriptItemize) native,
+    bool enabled,bool& changed) {
+    HRESULT status=native(text,count,capacity,control,state,items,itemCount);
+    DWORD error=GetLastError();
+    changed=enabled && SUCCEEDED(status) &&
+        itemizeOperators(text,count,capacity,control,state,items,itemCount,native);
+    SetLastError(error);
+    return status;
 }
