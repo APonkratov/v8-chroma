@@ -3,6 +3,12 @@
   "cmakeMinimumRequired": {"major": 3, "minor": 25, "patch": 0},
   "configurePresets": [
     {
+      "name": "linux-gcc", "inherits": "base",
+      "displayName": "Linux x64 / GCC (experimental Cairo backend)",
+      "cacheVariables": {"CMAKE_CXX_COMPILER": "g++"},
+      "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Linux"}
+    },
+    {
       "name": "base", "hidden": true,
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/../build/native/${presetName}",
@@ -27,6 +33,7 @@
     }
   ],
   "buildPresets": [
+    {"name": "linux-gcc", "configurePreset": "linux-gcc"},
     {"name": "windows-msvc", "configurePreset": "windows-msvc"},
     {"name": "windows-mingw", "configurePreset": "windows-mingw"},
     {"name": "windows-zig", "configurePreset": "windows-zig"}

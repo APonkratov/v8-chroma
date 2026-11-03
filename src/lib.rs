@@ -1,6 +1,8 @@
 /// Stable name for per-user storage and the desktop autostart entry.
 pub const APP_NAME: &str = "v8-chroma";
 pub mod fonts;
+#[cfg(all(target_os = "linux", target_arch = "x86_64", feature = "linux-engine"))]
+pub mod linux;
 pub mod ui_fonts;
 
 #[cfg(all(

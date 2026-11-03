@@ -47,7 +47,8 @@ def npm(*args):
 def native(preset):
     run("cmake", "--preset", preset, cwd=ROOT / "native")
     run("cmake", "--build", "--preset", preset, "--parallel", cwd=ROOT / "native")
-    run(sys.executable, "scripts/build_icon_assets.py", "--check", "--output", ROOT / "build/native" / preset / "generated/icon_assets.h")
+    if preset != "linux-gcc":
+        run(sys.executable, "scripts/build_icon_assets.py", "--check", "--output", ROOT / "build/native" / preset / "generated/icon_assets.h")
     run("cmake", "--install", ROOT / "build/native" / preset, "--prefix", ROOT, "--config", "Release")
 
 
@@ -63,6 +64,34 @@ def core(toolchain, target):
     flags = ["-p", "v8-chroma-core", "--lib", "--no-default-features", "--target", target, "--locked"]
     cargo(toolchain, "test", *flags)
     cargo(toolchain, "clippy", *flags, "--", "-D", "warnings")
+
+
+def linux(toolchain, target, cairo):
+    if sys.platform != "linux" or target != "x86_64-unknown-linux-gnu":
+        raise ValueError("The experimental Linux backend requires Linux x64/glibc")
+    native("linux-gcc")
+    directory = ROOT / "build/native/linux-gcc"
+    run("ctest", "--test-dir", directory, "--output-on-failure")
+    if cairo:
+        run(sys.executable, "native/linux/test_engine.py", "--engine", directory / "linux/libv8-chroma-linux.so",
+            "--host", directory / "linux/1cv8", "--cairo", cairo, "--goldens", ROOT / "tests/golden")
+    basic_checks()
+    cargo(toolchain, "fmt", "--all", "--check")
+    flags = ["-p", "v8-chroma-core", "--no-default-features", "--features", "linux-engine", "--target", target, "--locked"]
+    cargo(toolchain, "test", *flags)
+    cargo(toolchain, "clippy", *flags, "--all-targets", "--", "-D", "warnings")
+    cargo(toolchain, "build", *flags, "--bin", "v8-chroma-linux")
+    destination = ROOT / "dist/linux-preview"
+    destination.mkdir(parents=True, exist_ok=True)
+    build_root = Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
+    if not build_root.is_absolute():
+        build_root = ROOT / build_root
+    run(sys.executable, "native/linux/test_cli.py", "--cli", build_root / target / "debug/v8-chroma-linux",
+        "--engine", directory / "linux/libv8-chroma-linux.so", "--host", directory / "linux/1cv8",
+        "--cairo", directory / "linux/libcairo-v8.so", "--binder", directory / "linux/core83.so",
+        "--injector", directory / "linux/v8-chroma-injector", "--graphics", directory / "linux/grphcs.so")
+    shutil.copy2(build_root / target / "debug/v8-chroma-linux", destination)
+    shutil.copy2(directory / "linux/libv8-chroma-linux.so", destination)
 
 
 def check(toolchain, target, preset, cairo):
@@ -95,6 +124,21 @@ def check(toolchain, target, preset, cairo):
         for executable in ("raster_test.exe", "editor_selection_test.exe"):
             run(ROOT / "native/bin/demo" / executable, cairo)
         run(sys.executable, "native/tests/run_real_cairo.py", "--cairo", cairo)
+
+
+def linux_desktop(toolchain, target, cairo):
+    linux(toolchain, target, cairo)
+    npm("ci", "--no-audit", "--no-fund")
+    npm("run", "build")
+    flags = ["-p", "v8-chroma-app", "--target", target, "--features", "custom-protocol", "--locked"]
+    cargo(toolchain, "test", *flags)
+    cargo(toolchain, "clippy", *flags, "--all-targets", "--", "-D", "warnings")
+    cargo(toolchain, "build", *flags)
+    build_root = Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
+    if not build_root.is_absolute():
+        build_root = ROOT / build_root
+    shutil.copy2(build_root / target / "debug/v8-chroma", ROOT / "dist/linux-preview/v8-chroma")
+    shutil.copy2(ROOT / "ui/src-tauri/icons/icon.png", ROOT / "dist/linux-preview/icon.png")
 
 
 def release_guard(tag, env):
@@ -144,7 +188,7 @@ def release(tag, toolchain):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("native", "check", "core", "release"))
+    parser.add_argument("command", choices=("native", "check", "core", "linux", "linux-desktop", "release"))
     parser.add_argument("--toolchain", default=TOOLCHAIN)
     parser.add_argument("--target", default=host_target())
     parser.add_argument("--native-preset", default="windows-msvc")
@@ -155,6 +199,10 @@ def main():
         native(args.native_preset)
     elif args.command == "core":
         core(args.toolchain, args.target)
+    elif args.command == "linux":
+        linux(args.toolchain, args.target, args.cairo)
+    elif args.command == "linux-desktop":
+        linux_desktop(args.toolchain, args.target, args.cairo)
     elif args.command == "check":
         check(args.toolchain, args.target, args.native_preset, args.cairo)
     elif args.command == "release":

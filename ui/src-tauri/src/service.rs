@@ -1,3 +1,5 @@
+#[cfg(target_os = "linux")]
+use crate::linux_backend::{fonts, manager, ui_fonts};
 use anyhow::{Result, ensure};
 use serde::Serialize;
 use std::{
@@ -9,13 +11,23 @@ use std::{
     },
     time::{Duration, Instant},
 };
+#[cfg(windows)]
+use v8_chroma_core::{fonts, manager, ui_fonts};
 use v8_chroma_core::{
-    fonts, manager,
+    process::Identity,
     settings::{Loaded, Settings, SettingsPatch, Store, WindowPatch},
-    ui_fonts,
     watch::Controller,
-    win::Identity,
 };
+
+fn applied_status(applied: &manager::Applied) -> &'static str {
+    #[cfg(target_os = "linux")]
+    if applied.pending {
+        return "pending";
+    }
+    #[cfg(not(target_os = "linux"))]
+    let _ = applied;
+    "applied"
+}
 
 #[derive(Clone, Serialize)]
 pub struct ProcessRow {
@@ -209,10 +221,18 @@ impl Service {
                                 {
                                     match manager::last_applied(identity) {
                                         Ok(Some(applied)) => {
+                                            #[cfg(target_os = "linux")]
+                                            {
+                                                row.status = applied_status(&applied).into();
+                                            }
+                                            #[cfg(windows)]
+                                            {
+                                                // Windows returns LastApplied here, not Applied.
+                                                row.status = "applied".into();
+                                            }
                                             row.theme = Some(applied.theme);
                                             row.icons = Some(applied.icons);
                                             row.icon_warning = applied.icon_warning;
-                                            row.status = "applied".into();
                                         }
                                         Err(error) => {
                                             row.status = "error".into();
@@ -329,12 +349,10 @@ impl Service {
                     || patch.ui_font.is_some()),
             "Укажите тему, значки или шрифт"
         );
-        ensure!(
-            !self.shared.busy.load(Ordering::Acquire),
-            "Дождитесь завершения текущего применения"
-        );
         // The watcher applies saved choices according to auto_apply. Only the
         // explicit Apply command is allowed to bypass that policy.
+        // Saving during a pass is safe: its Wake makes the single worker load
+        // the latest preferences after finishing the current appearance.
         self.save(patch)
     }
     pub fn reset(&self) -> Result<Loaded> {
@@ -461,7 +479,11 @@ impl Service {
             command_line: None,
             eligible: true,
             status: if result.is_ok() && font_result.is_ok() && ui_font_result.is_ok() {
-                "applied".into()
+                result
+                    .as_ref()
+                    .map(applied_status)
+                    .unwrap_or("error")
+                    .into()
             } else {
                 "error".into()
             },
@@ -648,6 +670,41 @@ mod tests {
         }
     }
     #[test]
+    fn appearance_saved_during_apply_is_used_on_the_next_watcher_pass() {
+        let (_temp, service, rx) = idle_service();
+        let loaded = service
+            .save(SettingsPatch {
+                auto_apply: Some(true),
+                ..Default::default()
+            })
+            .unwrap();
+        assert!(matches!(rx.try_recv().unwrap(), Request::Wake));
+        let identities = [Identity {
+            pid: 123,
+            created_time: 456,
+            exe: "C:/Platform/1cv8.exe".into(),
+        }];
+        let mut controller = Controller::default();
+        assert_eq!(controller.plan(&identities, &loaded.settings), identities);
+        service.shared.busy.store(true, Ordering::Release);
+        for theme in ["github-light-default", "monokai"] {
+            service
+                .set_appearance(SettingsPatch {
+                    selected_theme: Some(theme.into()),
+                    ..Default::default()
+                })
+                .unwrap();
+            assert!(service.snapshot().busy);
+            assert!(matches!(rx.try_recv().unwrap(), Request::Wake));
+            assert!(rx.try_recv().is_err());
+        }
+        service.shared.busy.store(false, Ordering::Release);
+        let settings = service.store.load().unwrap().settings;
+        assert_eq!(settings.selected_theme, "monokai");
+        assert_eq!(controller.plan(&identities, &settings), identities);
+        assert!(controller.plan(&identities, &settings).is_empty());
+    }
+    #[test]
     fn rejected_appearance_changes_do_not_save_or_dispatch() {
         let (_temp, service, rx) = idle_service();
         let before = std::fs::read(service.store.path()).unwrap();
@@ -659,16 +716,6 @@ mod tests {
                 })
                 .is_err()
         );
-        service.shared.busy.store(true, Ordering::Release);
-        assert!(
-            service
-                .set_appearance(SettingsPatch {
-                    custom_icons: Some(true),
-                    ..Default::default()
-                })
-                .is_err()
-        );
-        service.shared.busy.store(false, Ordering::Release);
         assert!(
             service
                 .set_appearance(SettingsPatch {
