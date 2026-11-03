@@ -1,8 +1,14 @@
 cmake_minimum_required(VERSION 3.25)
 project(v8_chroma_native LANGUAGES CXX)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+    enable_testing()
+    add_subdirectory(linux)
+    return()
+endif()
+
 if(NOT WIN32 OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message(FATAL_ERROR "The drawing backend currently supports Windows x64 only. Portable Rust core checks do not require this backend.")
+    message(FATAL_ERROR "Drawing backends support Windows x64 and experimental Linux x64. Portable Rust core checks do not require a backend.")
 endif()
 if(MSVC AND NOT CMAKE_CXX_COMPILER_ARCHITECTURE_ID STREQUAL "x64")
     message(FATAL_ERROR "The Windows drawing backend has not been ported to ARM64.")

@@ -9,6 +9,41 @@ concurrency:
   group: checks-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 jobs:
+  linux-backend:
+    name: Linux x64 / native, desktop and Cairo
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          target: x86_64-unknown-linux-gnu
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.13.0
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - name: Native fixture dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake ninja-build g++ pkg-config libcairo2-dev libfontconfig1-dev fontconfig libharfbuzz0b fonts-dejavu-core fonts-firacode libx11-6 libxext6 libxrender1 libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf webkit2gtk-driver xvfb xauth
+          python -m pip install -r scripts/requirements-ci.txt
+      - name: Linux live attachment, desktop, palette isolation and Rust CLI
+        env:
+          CARGO_PROFILE_DEV_DEBUG: '0'
+          CARGO_BUILD_JOBS: '2'
+        run: python scripts/build.py linux-desktop
+      - name: Desktop manual and automatic application to owned processes
+        run: dbus-run-session -- xvfb-run -a python native/linux/test_desktop.py --app dist/linux-preview/v8-chroma --fixtures build/native/linux-gcc/linux
+      - name: Desktop test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: linux-desktop-diagnostics
+          path: build/linux-desktop-test/
+          if-no-files-found: ignore
   portable-core:
     name: Core / ${{ matrix.target }}
     strategy:

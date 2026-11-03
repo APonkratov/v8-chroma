@@ -13,15 +13,20 @@ custom-protocol = ["tauri/custom-protocol"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-v8-chroma-core = { path = "../.." }
 anyhow = "1"
 dunce = "1"
-windows-sys = { version = "0.61", features = ["Win32_System_Com", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-single-instance = "2"
 tauri-plugin-autostart = "2"
+
+[target.'cfg(windows)'.dependencies]
+v8-chroma-core = { path = "../.." }
+windows-sys = { version = "0.61", features = ["Win32_System_Com", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"] }
+
+[target.'cfg(all(target_os = "linux", target_arch = "x86_64"))'.dependencies]
+v8-chroma-core = { path = "../..", default-features = false, features = ["linux-engine"] }
 
 [dev-dependencies]
 tempfile = "3"

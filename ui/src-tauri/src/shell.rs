@@ -1,4 +1,7 @@
-use std::{os::windows::ffi::OsStrExt, path::PathBuf};
+#[cfg(windows)]
+use std::os::windows::ffi::OsStrExt;
+use std::path::PathBuf;
+#[cfg(windows)]
 use windows_sys::Win32::{
     System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize},
     UI::{Shell::ShellExecuteW, WindowsAndMessaging::SW_SHOWNORMAL},
@@ -7,6 +10,7 @@ use windows_sys::Win32::{
 /// Open through the user's Windows shell, with a visible window and native error
 /// handling. Spawning explorer.exe only confirms process creation; it does not
 /// report whether the shell accepted the folder-open request.
+#[cfg(windows)]
 pub fn open_folder(folder: PathBuf) -> Result<(), String> {
     if !folder.is_dir() {
         return Err(format!("Каталог настроек недоступен: {}", folder.display()));
@@ -51,6 +55,78 @@ pub fn open_folder(folder: PathBuf) -> Result<(), String> {
     })
     .join()
     .map_err(|_| "Не удалось завершить открытие каталога настроек".to_owned())?
+}
+
+pub fn is_wsl() -> bool {
+    cfg!(target_os = "linux")
+        && (std::env::var_os("WSL_DISTRO_NAME").is_some()
+            || std::fs::read_to_string("/proc/sys/kernel/osrelease")
+                .is_ok_and(|value| value.to_lowercase().contains("microsoft")))
+}
+pub fn tray_available() -> bool {
+    #[cfg(windows)]
+    {
+        true
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("gdbus")
+            .args([
+                "call",
+                "--session",
+                "--dest",
+                "org.kde.StatusNotifierWatcher",
+                "--object-path",
+                "/StatusNotifierWatcher",
+                "--method",
+                "org.freedesktop.DBus.Properties.Get",
+                "org.kde.StatusNotifierWatcher",
+                "IsStatusNotifierHostRegistered",
+            ])
+            .output()
+            .is_ok_and(|result| {
+                result.status.success() && String::from_utf8_lossy(&result.stdout).contains("true")
+            })
+    }
+}
+#[cfg(target_os = "linux")]
+pub fn open_folder(folder: PathBuf) -> Result<(), String> {
+    use std::process::{Command, Stdio};
+    if !folder.is_dir() {
+        return Err(format!("Каталог настроек недоступен: {}", folder.display()));
+    }
+    let folder = std::fs::canonicalize(folder).map_err(|error| error.to_string())?;
+    if is_wsl() {
+        let path = Command::new("wslpath")
+            .arg("-w")
+            .arg(&folder)
+            .output()
+            .map_err(|error| error.to_string())?;
+        if !path.status.success() {
+            return Err("Не удалось получить путь каталога для Проводника".into());
+        }
+        let path = std::str::from_utf8(&path.stdout)
+            .map_err(|error| error.to_string())?
+            .trim_end();
+        Command::new("explorer.exe")
+            .arg(path)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .map(|_| ())
+            .map_err(|error| format!("Не удалось открыть Проводник: {error}"))
+    } else {
+        let status = Command::new("xdg-open")
+            .arg(folder)
+            .status()
+            .map_err(|error| error.to_string())?;
+        if status.success() {
+            Ok(())
+        } else {
+            Err("Не удалось открыть каталог в файловом менеджере".into())
+        }
+    }
 }
 
 #[cfg(test)]
