@@ -47,9 +47,10 @@ static HRESULT WINAPI itemize(const WCHAR* text,int count,int capacity,const SCR
     const SCRIPT_STATE* state,SCRIPT_ITEM* items,int* itemCount) {
     bool active;
     AcquireSRWLockShared(&lock); active=enabled; ReleaseSRWLockShared(&lock);
-    HRESULT status=realItemize(text,count,capacity,control,state,items,itemCount);
+    bool changed=false;
+    HRESULT status=itemizeEditorText(text,count,capacity,control,state,items,itemCount,realItemize,active,changed);
     DWORD error=GetLastError();
-    if (active && SUCCEEDED(status) && itemizeOperators(text,count,capacity,control,state,items,itemCount,realItemize)) {
+    if (changed) {
         AcquireSRWLockExclusive(&lock); ++ligatureItemizations; ReleaseSRWLockExclusive(&lock);
     }
     SetLastError(error); return status;
