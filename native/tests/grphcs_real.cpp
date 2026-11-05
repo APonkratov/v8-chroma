@@ -213,19 +213,25 @@ extern "C" __declspec(dllexport) BOOL chrome_probe(const ProbeConfig* cfg) {
     auto freeGlyphs=load<void(*)(Glyph*)>(m,"cairo_glyph_free");
     family(ctx,"Arial",0,0); fontSize(ctx,14.);
     auto source=load<void*(*)(void*)>(m,"cairo_get_source");
-    for(unsigned area=0;area<2;++area) {
-        DWORD c=area?0xFFFFF7:0xD3D9EF;
+    // Properties pane: inactive tab fill is RGB EFEFEF. Include it and the
+    // existing panel fill with black RGBA captions; check fill and glyph ink.
+    for(DWORD c:{0xD3D9EFu,0xFFFFF7u,0xEFEFEFu,0xFCFAEBu}) {
         cairo_set_source_rgb(ctx,((c>>16)&255)/255.,((c>>8)&255)/255.,(c&255)/255.);
         cairo_paint(ctx);
         cairo_set_source_rgba(ctx,0.,0.,0.,1.); Glyph* glyphs=nullptr; int count=0;
         ok &= textGlyphs(getFont(ctx),3,18,"WWWW",4,&glyphs,&count,nullptr,nullptr,nullptr)==0;
         auto glyphSource=source(ctx);
         cairo_show_glyphs(ctx,glyphs,count); freeGlyphs(glyphs); flush(surface);
+        DWORD fill=cfg->mode?(c==0xD3D9EF?cfg->colors.selectionBackground:cfg->colors.rasterBackground):c;
+        ok &= ((uint32_t*)bytes(surface))[79]==(0xFF000000|fill);
         unsigned found=0; DWORD ink=cfg->mode?cfg->colors.glyphForeground:0;
         for(int y=0;y<24;++y) for(int x=0;x<70;++x)
             if(((uint32_t*)bytes(surface))[y*80+x]==(0xFF000000|ink)) ++found;
         ok &= found>4 && source(ctx)==glyphSource;
     }
+    // The observed inactive tab brush is RGB only; retain unknown RGBA colors.
+    cairo_set_source_rgba(ctx,239./255.,239./255.,239./255.,1.); cairo_paint(ctx); flush(surface);
+    ok &= ((uint32_t*)bytes(surface))[0]==0xFFEFEFEF;
     // Other API forms and unknown colors must not inherit an RGB-only match.
     cairo_set_source_rgba(ctx,211./255.,217./255.,239./255.,1.); cairo_paint(ctx); flush(surface);
     ok &= ((uint32_t*)bytes(surface))[0]==0xFFD3D9EF;
@@ -270,7 +276,7 @@ extern "C" __declspec(dllexport) BOOL chrome_probe(const ProbeConfig* cfg) {
         DWORD actual=((DWORD)(r*255+.5)<<16)|((DWORD)(g*255+.5)<<8)|(DWORD)(b*255+.5);
         ok &= actual==(cfg->mode?(i<4?cfg->colors.rasterBackground:cfg->colors.border):c);
     }
-    printf("%s chrome: %s; form headers/tabs, RGBA caption, cached caption ink, logon states, tab gradients\n",cfg->themeId,ok?"PASS":"FAIL");
+    printf("%s chrome: %s; form headers/tabs, Properties tabs/captions, RGBA caption, cached caption ink, logon states, tab gradients\n",cfg->themeId,ok?"PASS":"FAIL");
     destroyPattern(gradient); destroyContext(ctx); destroySurface(surface);
     return ok;
 }

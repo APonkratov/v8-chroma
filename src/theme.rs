@@ -547,7 +547,7 @@ mod tests {
             )
             .unwrap();
             assert_eq!(cfg.bytes().len(), 4760);
-            assert_eq!(cfg.map_count, if *id == "diagnostic" { 0 } else { 235 });
+            assert_eq!(cfg.map_count, if *id == "diagnostic" { 0 } else { 236 });
         }
     }
     #[test]
