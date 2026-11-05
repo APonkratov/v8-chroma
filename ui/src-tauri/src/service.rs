@@ -52,6 +52,7 @@ enum Request {
 }
 struct Shared {
     snapshot: Mutex<Snapshot>,
+    on_auto_apply: Box<dyn Fn(Option<bool>) + Send + Sync>,
     busy: AtomicBool,
     stop: AtomicBool,
     finished: AtomicBool,
@@ -63,13 +64,19 @@ pub struct Service {
     tx: Sender<Request>,
 }
 impl Service {
-    pub fn start(store: Store, on_exit: impl FnOnce() + Send + 'static) -> Self {
+    pub fn start(
+        store: Store,
+        on_auto_apply: impl Fn(Option<bool>) + Send + Sync + 'static,
+        on_exit: impl FnOnce() + Send + 'static,
+    ) -> Self {
         let loaded = store.ensure_initialized();
         let (settings, error) = match loaded {
             Ok(value) => (Some(value), None),
             Err(error) => (None, Some(format!("{error:#}"))),
         };
+        on_auto_apply(settings.as_ref().map(|loaded| loaded.settings.auto_apply));
         let shared = Arc::new(Shared {
+            on_auto_apply: Box::new(on_auto_apply),
             snapshot: Mutex::new(Snapshot {
                 settings,
                 processes: vec![],
@@ -287,13 +294,23 @@ impl Service {
         service
     }
     fn edit(&self, update: impl FnOnce(&mut Snapshot)) {
-        update(
-            &mut self
-                .shared
-                .snapshot
-                .lock()
-                .unwrap_or_else(|e| e.into_inner()),
-        );
+        let mut state = self
+            .shared
+            .snapshot
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        let previous = state
+            .settings
+            .as_ref()
+            .map(|loaded| loaded.settings.auto_apply);
+        update(&mut state);
+        let current = state
+            .settings
+            .as_ref()
+            .map(|loaded| loaded.settings.auto_apply);
+        if previous != current {
+            (self.shared.on_auto_apply)(current);
+        }
     }
     pub fn snapshot(&self) -> Snapshot {
         let mut state = self
@@ -516,6 +533,7 @@ mod tests {
             store,
             tx,
             shared: Arc::new(Shared {
+                on_auto_apply: Box::new(|_| {}),
                 snapshot: Mutex::new(Snapshot {
                     settings: Some(loaded),
                     processes: vec![],
@@ -530,6 +548,49 @@ mod tests {
             }),
         };
         (temp, service, rx)
+    }
+    #[test]
+    fn auto_apply_listener_tracks_saved_reset_and_unavailable_settings() {
+        let (_temp, mut service, _requests) = idle_service();
+        let (tx, rx) = mpsc::channel();
+        Arc::get_mut(&mut service.shared).unwrap().on_auto_apply = Box::new(move |value| {
+            tx.send(value).unwrap();
+        });
+        for enabled in [true, false] {
+            service
+                .save(SettingsPatch {
+                    auto_apply: Some(enabled),
+                    ..Default::default()
+                })
+                .unwrap();
+            assert_eq!(rx.try_recv().unwrap(), Some(enabled));
+        }
+        service.reset().unwrap();
+        assert_eq!(rx.try_recv().unwrap(), Some(true));
+
+        // Unrelated changes and failed saves must not flip the menu indicator.
+        service
+            .save(SettingsPatch {
+                selected_theme: Some("night-owl".into()),
+                ..Default::default()
+            })
+            .unwrap();
+        assert!(
+            service
+                .save(SettingsPatch {
+                    auto_apply: Some(false),
+                    selected_theme: Some("unknown".into()),
+                    ..Default::default()
+                })
+                .is_err()
+        );
+        assert!(rx.try_recv().is_err());
+
+        service.edit(|s| s.settings = None);
+        assert_eq!(rx.try_recv().unwrap(), None);
+        let loaded = service.store.load().unwrap();
+        service.edit(|s| s.settings = Some(loaded));
+        assert_eq!(rx.try_recv().unwrap(), Some(true));
     }
     #[test]
     fn appearance_changes_with_auto_off_only_save_and_refresh_preview() {
@@ -789,9 +850,13 @@ mod tests {
             })
             .unwrap();
         let (tx, rx) = mpsc::channel();
-        let service = Service::start(store.clone(), move || {
-            let _ = tx.send(());
-        });
+        let service = Service::start(
+            store.clone(),
+            |_| {},
+            move || {
+                let _ = tx.send(());
+            },
+        );
         service
             .save(SettingsPatch {
                 selected_theme: Some("night-owl".into()),
@@ -827,9 +892,13 @@ mod tests {
         let future = br#"{"schema_version":999}"#;
         std::fs::write(store.path(), future).unwrap();
         let (tx, rx) = mpsc::channel();
-        let service = Service::start(store.clone(), move || {
-            let _ = tx.send(());
-        });
+        let service = Service::start(
+            store.clone(),
+            |_| {},
+            move || {
+                let _ = tx.send(());
+            },
+        );
         assert!(service.snapshot().settings.is_none());
         assert!(service.snapshot().error.is_some());
         service.quit();
