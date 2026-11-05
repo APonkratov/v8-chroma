@@ -10,7 +10,7 @@ use service::{Service, Snapshot};
 use std::path::PathBuf;
 use tauri::{
     Manager, State,
-    menu::{Menu, MenuItem},
+    menu::{IconMenuItem, Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
 use tauri_plugin_autostart::ManagerExt;
@@ -144,6 +144,30 @@ fn show(app: &tauri::AppHandle) {
     }
 }
 
+fn auto_apply_icon(enabled: bool) -> tauri::image::Image<'static> {
+    const SIDE: u32 = 16;
+    let color = if enabled {
+        [34, 197, 94]
+    } else {
+        [138, 138, 138]
+    };
+    let mut rgba = Vec::with_capacity((SIDE * SIDE * 4) as usize);
+    for y in 0..SIDE {
+        for x in 0..SIDE {
+            let dx = x as f32 + 0.5 - SIDE as f32 / 2.0;
+            let dy = y as f32 + 0.5 - SIDE as f32 / 2.0;
+            let alpha = ((5.0 - (dx * dx + dy * dy).sqrt()).clamp(0.0, 1.0) * 255.0).round() as u8;
+            rgba.extend_from_slice(&[color[0], color[1], color[2], alpha]);
+        }
+    }
+    tauri::image::Image::new_owned(rgba, SIDE, SIDE)
+}
+
+fn sync_auto_apply(item: &IconMenuItem<tauri::Wry>, auto_apply: Option<bool>) -> tauri::Result<()> {
+    item.set_icon(Some(auto_apply_icon(auto_apply.unwrap_or(false))))?;
+    item.set_enabled(auto_apply.is_some())
+}
+
 fn run() -> anyhow::Result<()> {
     let mut directory: Option<PathBuf> = None;
     let mut background = false;
@@ -191,22 +215,38 @@ fn run() -> anyhow::Result<()> {
         .setup(move |app| {
             let handle = app.handle().clone();
             let on_exit = handle.clone();
-            let service = Service::start(store, move || on_exit.exit(0));
+            let open = MenuItem::with_id(app, "open", "Открыть", true, None::<&str>)?;
+            let toggle = IconMenuItem::with_id(
+                app,
+                "toggle",
+                "Автоприменение",
+                false,
+                Some(auto_apply_icon(false)),
+                None::<&str>,
+            )?;
+            let toggle_sync = toggle.clone();
+            let service = Service::start(
+                store,
+                move |auto_apply| {
+                    let toggle = toggle_sync.clone();
+                    // Queue the menu update without blocking the settings lock.
+                    if let Err(error) = handle.run_on_main_thread(move || {
+                        if let Err(error) = sync_auto_apply(&toggle, auto_apply) {
+                            eprintln!("{error:#}");
+                        }
+                    }) {
+                        eprintln!("{error:#}");
+                    }
+                },
+                move || on_exit.exit(0),
+            );
             let saved = service
                 .snapshot()
                 .settings
                 .map(|l| l.settings.window)
                 .unwrap_or_default();
             app.manage(service);
-            let open = MenuItem::with_id(app, "open", "Открыть v8-chroma", true, None::<&str>)?;
-            let toggle = MenuItem::with_id(
-                app,
-                "toggle",
-                "Включить / выключить авто-применение",
-                true,
-                None::<&str>,
-            )?;
-            let exit = MenuItem::with_id(app, "quit", "Завершить приложение", true, None::<&str>)?;
+            let exit = MenuItem::with_id(app, "quit", "Завершить", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&open, &toggle, &exit])?;
             TrayIconBuilder::new()
                 .icon(tauri::image::Image::new_owned(
@@ -217,19 +257,29 @@ fn run() -> anyhow::Result<()> {
                 .tooltip("v8-chroma")
                 .menu(&menu)
                 .show_menu_on_left_click(false)
-                .on_menu_event(|app, event| match event.id().as_ref() {
+                .on_menu_event(move |app, event| match event.id().as_ref() {
                     "open" => show(app),
                     "quit" => app.state::<Service>().quit(),
                     "toggle" => {
                         let service = app.state::<Service>().inner().clone();
+                        let toggle = toggle.clone();
                         std::thread::spawn(move || {
-                            if let Ok(loaded) = service.store.load()
-                                && let Err(error) = service.save(SettingsPatch {
+                            let result = service.store.load().and_then(|loaded| {
+                                service.save(SettingsPatch {
                                     auto_apply: Some(!loaded.settings.auto_apply),
                                     ..Default::default()
                                 })
-                            {
+                            });
+                            if let Err(error) = result {
                                 eprintln!("{error:#}");
+                                let auto_apply = service
+                                    .store
+                                    .load()
+                                    .ok()
+                                    .map(|loaded| loaded.settings.auto_apply);
+                                if let Err(error) = sync_auto_apply(&toggle, auto_apply) {
+                                    eprintln!("{error:#}");
+                                }
                             }
                         });
                     }
