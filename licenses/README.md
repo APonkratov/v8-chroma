@@ -5,7 +5,8 @@
 
 ## Состав
 
-- Палитры EDT Themes: исходные данные, лицензии и уведомления в `assets/palettes/`.
+- Палитры [EDT Themes](https://github.com/litonchik/ones_edt_themes) от litonchik
+  (MIT): исходные данные, лицензии и уведомления в `assets/palettes/`.
   Для отдельно добавленных светлых тем там же указаны исходники VS Code и Primer.
 - Лицензии Rust/npm-зависимостей, включаемых в уведомления приложения.
 - Уведомления стандартной библиотеки Rust, native runtime и WebView2 SDK.

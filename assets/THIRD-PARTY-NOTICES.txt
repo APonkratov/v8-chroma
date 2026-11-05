@@ -1,5 +1,6 @@
 Palette input: edt-themes-0.1.15.zip supplied by the user.
 Plugin: ru.litonchik.edt.themes_0.1.15.202610181940.jar
+EDT Themes source repository: https://github.com/litonchik/ones_edt_themes
 EDT Themes copyright (c) 2026 litonchik, MIT.
 
 Dracula palette adaptation for 1C:EDT

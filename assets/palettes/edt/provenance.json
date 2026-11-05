@@ -1,4 +1,5 @@
 {
+  "repository": "https://github.com/litonchik/ones_edt_themes",
   "archive": "edt-themes-0.1.15.zip",
   "archive_sha256": "1ffdbecc9c7f5a7acb3742893645fb6efa51fd7b1dc7a9dffe55ab361b221fc4",
   "jar_member": "plugins/ru.litonchik.edt.themes_0.1.15.202610181940.jar",
