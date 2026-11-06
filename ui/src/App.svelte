@@ -9,7 +9,8 @@
   type UiFontSettings = {enabled:boolean;family:string};
   type Preferences = {editor_font:FontSettings;ui_font:UiFontSettings;selected_theme:string;auto_apply:boolean;custom_icons:boolean;window:{width:number;height:number;maximized:boolean}};
   type ProcessRow = {pid:number;created_time:string|null;title:string;exe:string|null;command_line:string|null;eligible:boolean;status:string;theme:string|null;detail:string|null;icons:string|null;icon_warning:string|null;font:string|null;font_warning:string|null;ui_font:string|null;ui_font_warning:string|null};
-  type AppState = {settings:{path:string;settings:Preferences;warning:string|null}|null;processes:ProcessRow[];error:string|null;busy:boolean;stopping:boolean;version:string;autostart_enabled:boolean|null;autostart_error:string|null;custom_profile:boolean};
+  type UpdateState = {preferences:{auto_check:boolean;include_rc:boolean};checking:boolean;installing:boolean;available:{version:string;notes:string;url:string}|null;error:string|null;last_checked:number|null;downloaded:number;total:number};
+  type AppState = {settings:{path:string;settings:Preferences;warning:string|null}|null;processes:ProcessRow[];error:string|null;busy:boolean;stopping:boolean;version:string;autostart_enabled:boolean|null;autostart_error:string|null;custom_profile:boolean;updates:UpdateState};
   let appState = $state<AppState|null>(null);
   let themes = $state<Theme[]>([]);
   let fonts = $state<string[]>([]);
@@ -20,6 +21,18 @@
   let error = $state('');
   let notice = $state('');
   let serial = 0;
+  const updates = $derived(appState?.updates);
+  const updateBusy = $derived(!!updates?.checking || !!updates?.installing || !!appState?.stopping);
+  function configureUpdates(patch:{auto_check?:boolean;include_rc?:boolean}) {
+    return perform(()=>invoke('configure_updates',{autoCheck:patch.auto_check??updates?.preferences.auto_check??true,includeRc:patch.include_rc??updates?.preferences.include_rc??false}));
+  }
+  function updateStatus() {
+    if(updates?.installing)return updates.total?`Скачиваем обновление: ${Math.floor(updates.downloaded/updates.total*100)}%`:'Проверяем подпись обновления…';
+    if(updates?.checking)return 'Проверяем GitHub Releases…';
+    if(updates?.available)return `Доступна версия ${updates.available.version}`;
+    if(updates?.last_checked && !updates.error)return 'Установлена актуальная версия';
+    return updates?.preferences.auto_check?'Проверка при запуске и каждые 6 часов':'Автоматическая проверка выключена';
+  }
   const standard:Theme={id:'standard',name:'Стандартная',dark:false,colors:{'editor.background':'#fff','text':'#242424','panel':'#f5f2dd','border':'#d0ccba','selection.background':'#536ac2','selection.text':'#fff','comment':'#008000','keyword':'#ff0000','string':'#000','directive':'#963200','accent':'#0000ff','hover':'#fffad9'},editor:{keyword:'#FF0000',punctuation:'#FF0000',identifier:'#0000FF',builtin:'#0000FF',string:'#000000',number:'#000000',comment:'#008000',directive:'#963200'}};
   const catalog = $derived([standard, ...themes]);
   const selectedId = $derived(appState?.settings?.settings.selected_theme ?? 'dracula');
@@ -56,7 +69,7 @@
     const reportError=(e:unknown)=>{if(!disposed)error=String(e);};
     invoke<Theme[]>('get_themes').then(catalog=>{if(!disposed)themes=catalog;}).catch(reportError);
     invoke<string[]>('get_fonts').then(installed=>{if(!disposed)fonts=installed;}).catch(reportError);
-    refresh().catch(reportError);
+    refresh().then(()=>invoke('confirm_update_startup')).catch(reportError);
     const timer=setInterval(()=>{if(!disposed)refresh().catch(reportError);},1000);
     return()=>{disposed=true;clearInterval(timer);};
   });
@@ -76,6 +89,14 @@
     </div>
   </aside>
   <main>
+    {#if updates?.available || updates?.installing}
+      <section class="update-banner" aria-label="Обновление приложения" aria-live="polite">
+        <div><strong>{updateStatus()}</strong><p>Настройки сохранятся. После обновления движка открытые конфигураторы потребуется штатно перезапустить.</p>
+        {#if updates?.available?.notes}<details><summary>Что нового</summary><p class="release-notes">{updates.available.notes}</p></details>{/if}
+        {#if updates?.error}<p class="setting-warning" role="alert">{updates.error}</p>{/if}</div>
+        <button class="primary" disabled={saving || updateBusy} onclick={()=>perform(()=>invoke('install_update'))}>{updates?.installing?'Обновляем…':'Обновить и перезапустить'}</button>
+      </section>
+    {/if}
     {#if error || appState?.error || appState?.settings?.warning}
       <div class="alert" role="alert"><TriangleAlert size={18}/><div>{error || appState?.error || appState?.settings?.warning}</div></div>
     {/if}
@@ -117,6 +138,12 @@
       {/if}
     {:else}
       <header class="page-header"><h1>Настройки</h1></header>
+      <section class="settings-group"><h2>Обновления</h2>
+        <div class="setting-row"><div><strong>Проверять автоматически</strong><p>При запуске и каждые 6 часов. Установка — по кнопке.</p></div><button class="switch" class:checked={updates?.preferences.auto_check??true} role="switch" aria-checked={updates?.preferences.auto_check??true} aria-label="Автоматическая проверка обновлений" disabled={saving || updateBusy} onclick={()=>configureUpdates({auto_check:!updates?.preferences.auto_check})}><i></i></button></div>
+        <div class="setting-row"><div><strong>Предварительные версии</strong><p>Предлагать также тестовые релизы RC.</p></div><button class="switch" class:checked={updates?.preferences.include_rc??false} role="switch" aria-checked={updates?.preferences.include_rc??false} aria-label="Предлагать предварительные версии" disabled={saving || updateBusy} onclick={()=>configureUpdates({include_rc:!updates?.preferences.include_rc})}><i></i></button></div>
+        <div class="setting-row"><div><strong>{updateStatus()}</strong>{#if updates?.last_checked}<p>Последняя проверка: {new Date(updates.last_checked*1000).toLocaleString('ru-RU')}</p>{/if}</div><button class="secondary" disabled={saving || updateBusy} onclick={()=>perform(()=>invoke('check_updates'))}><RefreshCw size={15} class={updates?.checking?'spin':''}/>Проверить сейчас</button></div>
+        {#if updates?.error}<p class="setting-warning" role="alert">{updates.error}</p>{/if}
+      </section>
       <section class="settings-group"><h2>Работа приложения</h2><div class="setting-row"><div><strong>Автоматическое применение</strong><p>Применять выбранную тему, значки и шрифты к открытым и новым конфигураторам. Если выключено, используйте «Применить оформление» на вкладке «Темы».</p></div><button class="switch" class:checked={auto} role="switch" aria-checked={auto} aria-label="Автоматическое применение оформления" disabled={disabled} onclick={toggleAuto}><i></i></button></div><div class="setting-row"><div><strong>Запускать при входе в Windows</strong><p>{appState?.custom_profile?'Для отдельного профиля автозапуск недоступен.':'В фоне, со значком в системном трее.'}</p></div><button class="switch" class:checked={appState?.autostart_enabled===true} role="switch" aria-checked={appState?.autostart_enabled===true} aria-label="Запускать при входе в Windows" disabled={saving || appState?.custom_profile || appState?.autostart_enabled==null} onclick={()=>perform(()=>invoke('set_autostart',{enabled:!appState?.autostart_enabled}),'Настройка автозапуска сохранена')}><i></i></button></div>{#if appState?.autostart_error}<p class="setting-warning">{appState.autostart_error}</p>{/if}</section>
       <section class="settings-group"><h2>Ваши настройки</h2><div class="settings-path"><span>Расположение файла</span><code>{appState?.settings?.path??'Файл настроек недоступен'}</code><button class="secondary" onclick={()=>perform(()=>invoke('open_settings_folder'))}><FolderOpen size={15}/>Открыть папку</button></div><div class="setting-row"><div><strong>Вернуть настройки по умолчанию</strong><p>Dracula, Segoe UI Variable Small и включённое авто-применение. Предыдущая копия сохраняется.</p></div><button class="secondary" disabled={saving} onclick={()=>perform(()=>invoke('reset_settings'),'Настройки восстановлены')}>Сбросить</button></div></section>
       <div class="quit-row"><p>Крестик сворачивает приложение в трей. Для полного выхода используйте кнопку; конфигураторы останутся открытыми.</p><button class="quit-button" disabled={appState?.stopping} onclick={()=>perform(()=>invoke('quit_app'))}><Power size={15}/>{appState?.stopping?'Завершаем…':'Завершить приложение'}</button></div>
