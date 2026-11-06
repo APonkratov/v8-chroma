@@ -190,7 +190,7 @@ def main():
     parser.add_argument("--tag")
     args = parser.parse_args()
     configure_windows_tools(args.native_preset == "windows-msvc" if args.command == "native"
-                            else args.command == "release" or args.target.endswith("-msvc"))
+                            else args.command == "release" or args.target == "x86_64-pc-windows-msvc")
     if args.command == "native":
         native(args.native_preset)
     elif args.command == "core":
