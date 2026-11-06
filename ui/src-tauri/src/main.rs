@@ -2,18 +2,19 @@
     any(not(debug_assertions), feature = "custom-protocol"),
     windows_subsystem = "windows"
 )]
+mod app_tray;
 mod service;
 mod shell;
+mod update_install;
+mod update_release;
+mod updates;
 #[cfg(all(not(debug_assertions), not(feature = "custom-protocol")))]
 compile_error!("Release desktop builds require --features custom-protocol (embedded frontend)");
 use service::{Service, Snapshot};
 use std::path::PathBuf;
-use tauri::{
-    Manager, State,
-    menu::{IconMenuItem, Menu, MenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-};
+use tauri::{Manager, State};
 use tauri_plugin_autostart::ManagerExt;
+use updates::Updater;
 use v8_chroma_core::{
     settings::{SettingsPatch, Store, WindowPatch},
     theme,
@@ -26,15 +27,30 @@ struct UiState {
     autostart_enabled: Option<bool>,
     autostart_error: Option<String>,
     custom_profile: bool,
+    updates: updates::Snapshot,
 }
 struct Profile {
     custom: bool,
+}
+struct UpdateStartup(std::sync::Mutex<Option<PathBuf>>);
+#[tauri::command]
+async fn confirm_update_startup(startup: State<'_, UpdateStartup>) -> Result<(), String> {
+    let stage = startup.0.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    if let Some(stage) = stage {
+        tauri::async_runtime::spawn_blocking(move || update_install::acknowledge(&stage))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| format!("{e:#}"))?;
+        startup.0.lock().unwrap_or_else(|e| e.into_inner()).take();
+    }
+    Ok(())
 }
 #[tauri::command]
 fn get_state(
     app: tauri::AppHandle,
     service: State<'_, Service>,
     profile: State<'_, Profile>,
+    updater: State<'_, Updater>,
 ) -> UiState {
     let autostart = app.autolaunch().is_enabled();
     UiState {
@@ -42,7 +58,29 @@ fn get_state(
         autostart_enabled: autostart.as_ref().ok().copied(),
         autostart_error: autostart.err().map(|e| e.to_string()),
         custom_profile: profile.custom,
+        updates: updater.snapshot(),
     }
+}
+#[tauri::command]
+fn check_updates(updater: State<'_, Updater>) -> Result<(), String> {
+    updater.check().map_err(|e| format!("{e:#}"))
+}
+#[tauri::command]
+fn install_update(updater: State<'_, Updater>, service: State<'_, Service>) -> Result<(), String> {
+    if service.snapshot().stopping {
+        return Err("Приложение завершается".into());
+    }
+    updater.request_install().map_err(|e| format!("{e:#}"))
+}
+#[tauri::command]
+fn configure_updates(
+    updater: State<'_, Updater>,
+    auto_check: bool,
+    include_rc: bool,
+) -> Result<(), String> {
+    updater
+        .configure(auto_check, include_rc)
+        .map_err(|e| format!("{e:#}"))
 }
 #[tauri::command]
 fn get_themes() -> Result<Vec<theme::Preview>, String> {
@@ -144,33 +182,10 @@ fn show(app: &tauri::AppHandle) {
     }
 }
 
-fn auto_apply_icon(enabled: bool) -> tauri::image::Image<'static> {
-    const SIDE: u32 = 16;
-    let color = if enabled {
-        [34, 197, 94]
-    } else {
-        [138, 138, 138]
-    };
-    let mut rgba = Vec::with_capacity((SIDE * SIDE * 4) as usize);
-    for y in 0..SIDE {
-        for x in 0..SIDE {
-            let dx = x as f32 + 0.5 - SIDE as f32 / 2.0;
-            let dy = y as f32 + 0.5 - SIDE as f32 / 2.0;
-            let alpha = ((5.0 - (dx * dx + dy * dy).sqrt()).clamp(0.0, 1.0) * 255.0).round() as u8;
-            rgba.extend_from_slice(&[color[0], color[1], color[2], alpha]);
-        }
-    }
-    tauri::image::Image::new_owned(rgba, SIDE, SIDE)
-}
-
-fn sync_auto_apply(item: &IconMenuItem<tauri::Wry>, auto_apply: Option<bool>) -> tauri::Result<()> {
-    item.set_icon(Some(auto_apply_icon(auto_apply.unwrap_or(false))))?;
-    item.set_enabled(auto_apply.is_some())
-}
-
 fn run() -> anyhow::Result<()> {
     let mut directory: Option<PathBuf> = None;
     let mut background = false;
+    let mut update_ready: Option<PathBuf> = None;
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -182,6 +197,13 @@ fn run() -> anyhow::Result<()> {
                 )
             }
             "--background" => background = true,
+            "--update-ready" => {
+                update_ready = Some(
+                    args.next()
+                        .ok_or_else(|| anyhow::anyhow!("Нет каталога обновления"))?
+                        .into(),
+                )
+            }
             _ => anyhow::bail!("Неизвестный параметр: {arg}"),
         }
     }
@@ -199,6 +221,7 @@ fn run() -> anyhow::Result<()> {
                 .build(),
         )
         .manage(Profile { custom })
+        .manage(UpdateStartup(std::sync::Mutex::new(update_ready)))
         .invoke_handler(tauri::generate_handler![
             get_state,
             get_themes,
@@ -210,94 +233,52 @@ fn run() -> anyhow::Result<()> {
             refresh_processes,
             quit_app,
             set_autostart,
-            open_settings_folder
+            open_settings_folder,
+            check_updates,
+            install_update,
+            configure_updates,
+            confirm_update_startup
         ])
         .setup(move |app| {
             let handle = app.handle().clone();
             let on_exit = handle.clone();
-            let open = MenuItem::with_id(app, "open", "Открыть", true, None::<&str>)?;
-            let toggle = IconMenuItem::with_id(
-                app,
-                "toggle",
-                "Автоприменение",
-                false,
-                Some(auto_apply_icon(false)),
-                None::<&str>,
-            )?;
-            let toggle_sync = toggle.clone();
+            app_tray::setup(app.handle())?;
+            let update_path = store.path().with_file_name("updates.json");
             let service = Service::start(
                 store,
                 move |auto_apply| {
-                    let toggle = toggle_sync.clone();
-                    // Queue the menu update without blocking the settings lock.
-                    if let Err(error) = handle.run_on_main_thread(move || {
-                        if let Err(error) = sync_auto_apply(&toggle, auto_apply) {
-                            eprintln!("{error:#}");
-                        }
-                    }) {
+                    // Keep UI work outside the settings lock.
+                    if let Err(error) =
+                        handle.run_on_main_thread(move || app_tray::sync_auto_apply(auto_apply))
+                    {
                         eprintln!("{error:#}");
                     }
                 },
                 move || on_exit.exit(0),
             );
-            let saved = service
-                .snapshot()
+            let snapshot = service.snapshot();
+            app_tray::sync_auto_apply(snapshot.settings.as_ref().map(|l| l.settings.auto_apply));
+            let saved = snapshot
                 .settings
                 .map(|l| l.settings.window)
                 .unwrap_or_default();
-            app.manage(service);
-            let exit = MenuItem::with_id(app, "quit", "Завершить", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&open, &toggle, &exit])?;
-            TrayIconBuilder::new()
-                .icon(tauri::image::Image::new_owned(
-                    include_bytes!("../icons/tray.rgba").to_vec(),
-                    32,
-                    32,
-                ))
-                .tooltip("v8-chroma")
-                .menu(&menu)
-                .show_menu_on_left_click(false)
-                .on_menu_event(move |app, event| match event.id().as_ref() {
-                    "open" => show(app),
-                    "quit" => app.state::<Service>().quit(),
-                    "toggle" => {
-                        let service = app.state::<Service>().inner().clone();
-                        let toggle = toggle.clone();
-                        std::thread::spawn(move || {
-                            let result = service.store.load().and_then(|loaded| {
-                                service.save(SettingsPatch {
-                                    auto_apply: Some(!loaded.settings.auto_apply),
-                                    ..Default::default()
-                                })
+            let handle = app.handle().clone();
+            let updater =
+                Updater::start(update_path, service.clone(), move |version, show_notice| {
+                    let app = handle.clone();
+                    let _ = handle.run_on_main_thread(move || {
+                        app_tray::sync_update(version.as_deref());
+                        if show_notice && let Some(version) = version {
+                            let updater = app.state::<Updater>().inner().clone();
+                            let shown_version = version.clone();
+                            app_tray::notify(&version, move || {
+                                updater.notification_shown(shown_version)
                             });
-                            if let Err(error) = result {
-                                eprintln!("{error:#}");
-                                let auto_apply = service
-                                    .store
-                                    .load()
-                                    .ok()
-                                    .map(|loaded| loaded.settings.auto_apply);
-                                if let Err(error) = sync_auto_apply(&toggle, auto_apply) {
-                                    eprintln!("{error:#}");
-                                }
-                            }
-                        });
-                    }
-                    _ => {}
-                })
-                .on_tray_icon_event(|tray, event| {
-                    if matches!(
-                        event,
-                        TrayIconEvent::Click {
-                            button: MouseButton::Left,
-                            button_state: MouseButtonState::Up,
-                            ..
                         }
-                    ) {
-                        show(tray.app_handle());
-                    }
-                })
-                .build(app)?;
+                    });
+                });
+            app.manage(service);
+            app.manage(updater);
             if let Some(window) = app.get_webview_window("main") {
                 let monitor = window.current_monitor()?.or(window.primary_monitor()?);
                 let (max_width, max_height) = monitor
@@ -362,6 +343,21 @@ fn run() -> anyhow::Result<()> {
     Ok(())
 }
 fn main() {
+    // This branch must precede the single-instance plugin and WebView creation.
+    if std::env::args_os().nth(1).as_deref() == Some(std::ffi::OsStr::new("--apply-update")) {
+        let stage = std::env::args_os().nth(2).map(PathBuf::from);
+        let result = stage
+            .as_deref()
+            .ok_or_else(|| anyhow::anyhow!("Нет каталога обновления"))
+            .and_then(update_install::apply);
+        if let Err(error) = result {
+            if let Some(stage) = stage {
+                update_install::record_error(&stage, &error);
+            }
+            std::process::exit(1);
+        }
+        return;
+    }
     if let Err(error) = run() {
         use std::os::windows::ffi::OsStrExt;
         let message: Vec<u16> =

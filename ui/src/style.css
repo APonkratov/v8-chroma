@@ -890,3 +890,10 @@ summary {
 }
 .appearance-apply {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;padding-top:17px;margin-top:18px;border-top:1px solid var(--line);}
 .process-font {display:block;color:var(--muted);margin-top:10px;}
+.update-banner {display:flex;align-items:center;gap:20px;justify-content:space-between;padding:18px 20px;margin-bottom:24px;border:1px solid var(--line);border-radius:14px;background:var(--surface);}
+.update-banner p {margin:7px 0 0;color:var(--muted);font-size:13px;line-height:1.5;}
+.update-banner button {flex-shrink:0;}
+.update-banner details {margin-top:10px;font-size:13px;}
+.update-banner summary {cursor:pointer;}
+.update-banner .release-notes {white-space:pre-wrap;max-height:220px;overflow:auto;}
+@media (max-width:900px) {.update-banner {align-items:flex-start;flex-direction:column;}}

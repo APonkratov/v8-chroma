@@ -58,6 +58,23 @@ jobs:
         with:
           name: release-windows-x64
           path: release
+      - name: Install Minisign
+        run: sudo apt-get update && sudo apt-get install --yes minisign
+      - name: Sign and verify checksums
+        working-directory: release
+        shell: bash
+        env:
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$MINISIGN_SECRET_KEY" || { echo 'Configure the MINISIGN_SECRET_KEY repository secret before releasing.' >&2; exit 1; }
+          sha256sum --check SHA256SUMS.txt
+          umask 077
+          signing_key=$(mktemp)
+          trap 'rm -f "$signing_key"' EXIT
+          printf '%s\n' "$MINISIGN_SECRET_KEY" > "$signing_key"
+          minisign -S -W -s "$signing_key" -m SHA256SUMS.txt -t "v8-chroma $RELEASE_TAG"
+          minisign -V -m SHA256SUMS.txt -p update-signing.pub
       - name: Publish executable files without a ZIP
         working-directory: release
         shell: bash
@@ -72,6 +89,7 @@ jobs:
             flags+=(--latest)
           fi
           gh release create "$RELEASE_TAG" \
-            v8-chroma.exe v8-chroma-cli.exe LICENSE THIRD-PARTY-NOTICES.txt SHA256SUMS.txt \
+            v8-chroma.exe v8-chroma-cli.exe LICENSE THIRD-PARTY-NOTICES.txt \
+            SHA256SUMS.txt SHA256SUMS.txt.minisig update-signing.pub \
             --verify-tag --title "v8-chroma ${RELEASE_TAG#v}" \
             --notes-file release-notes.md "${flags[@]}"

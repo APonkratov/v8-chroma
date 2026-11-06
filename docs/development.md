@@ -25,9 +25,14 @@ Rust 1.97.1 фиксируется в rust-toolchain.toml. Общие коман
 1.13.2; достаточно CMake 3.25+ для самостоятельного запуска presets.
 Cargo.lock и package-lock.json фиксируют зависимости приложения.
 
-Полная сборка Windows x64 требует MSVC и Windows SDK. Запускайте команды из
-x64 Developer Command Prompt/PowerShell. Нужные CMake/Ninja устанавливаются
+Полная сборка Windows x64 требует MSVC и Windows SDK. В Visual Studio Installer
+добавьте «Разработка классических приложений на C++» с MSVC v143 x64/x86 и Windows SDK.
+Готовый минимальный набор компонентов сохранён в [`.vsconfig`](../.vsconfig):
+его можно импортировать в Visual Studio Installer вместо ручного выбора.
+`scripts/build.py` находит MSVC через `vswhere` и загружает x64-окружение автоматически;
+команды можно запускать из обычного PowerShell. Нужные CMake/Ninja устанавливаются
 `python -m pip install -r scripts/requirements-ci.txt`.
+Скрипт находит установленные Python-пакеты CMake/Ninja без ручного изменения PATH.
 Для разработки допустим MinGW; Zig остаётся дополнительным CMake toolchain.
 См. [native/README](../native/README.md).
 

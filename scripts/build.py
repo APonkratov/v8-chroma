@@ -15,6 +15,44 @@ ROOT = Path(__file__).resolve().parents[1]
 TOOLCHAIN = tomllib.loads((ROOT / "rust-toolchain.toml").read_text(encoding="utf-8"))["toolchain"]["channel"]
 
 
+def configure_windows_tools(msvc):
+    """Allow the documented build commands to run in ordinary PowerShell/CMD."""
+    if os.name != "nt":
+        return
+    # Use the same pinned pip packages as CI, without depending on Scripts in PATH.
+    for name, attr in (("cmake", "CMAKE_BIN_DIR"), ("ninja", "BIN_DIR")):
+        try:
+            module = __import__(name)
+            os.environ["PATH"] = str(getattr(module, attr)) + os.pathsep + os.environ.get("PATH", "")
+        except ImportError:
+            pass
+    compiler, linker = shutil.which("cl.exe"), shutil.which("link.exe")
+    # Git ships another link.exe; finding an executable by that name is insufficient.
+    if not msvc or (compiler and linker and Path(compiler).parent == Path(linker).parent
+                    and os.environ.get("LIB") and os.environ.get("INCLUDE")):
+        return
+    vswhere = Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)")) / "Microsoft Visual Studio/Installer/vswhere.exe"
+    if not vswhere.is_file():
+        raise ValueError("Install Visual Studio 2022 C++ Build Tools with the Windows SDK (Desktop development with C++)")
+    installation = subprocess.check_output([str(vswhere), "-latest", "-version", "[17.0,18.0)", "-products", "*", "-requires",
+        "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property", "installationPath", "-utf8"], encoding="utf-8").strip()
+    if not installation:
+        raise ValueError("MSVC x64/x86 tools not installed. Add Desktop development with C++ and Windows SDK in Visual Studio Installer")
+    env = os.environ.copy()
+    env["V8_CHROMA_VSDEVCMD"] = str(Path(installation) / "Common7/Tools/VsDevCmd.bat")
+    with tempfile.TemporaryDirectory(prefix="v8-chroma-msvc-") as temporary:
+        batch = Path(temporary) / "environment.cmd"
+        batch.write_text('@call "%V8_CHROMA_VSDEVCMD%" -arch=x64 -host_arch=x64 >nul\n@if errorlevel 1 exit /b %errorlevel%\n@set\n', encoding="ascii")
+        command = f'"{os.environ.get("COMSPEC", "cmd.exe")}" /d /s /c ""{batch}""'
+        output = subprocess.check_output(command, env=env).decode("mbcs")
+    for line in output.splitlines():
+        key, separator, value = line.partition("=")
+        if key and separator:
+            os.environ[key] = value
+    if not shutil.which("cl.exe") or not shutil.which("link.exe"):
+        raise ValueError("Visual Studio could not initialize the MSVC x64 environment")
+
+
 def host_target():
     architectures = {"arm64": "aarch64", "aarch64": "aarch64", "amd64": "x86_64", "x86_64": "x86_64"}
     machine = platform.machine().lower()
@@ -123,7 +161,7 @@ def release(tag, toolchain):
     destination.mkdir(parents=True, exist_ok=True)
     if any(destination.iterdir()):
         raise ValueError("Release destination must be empty")
-    for source in [*binaries, ROOT / "LICENSE", ROOT / "build/licenses/THIRD-PARTY-NOTICES.txt"]:
+    for source in [*binaries, ROOT / "LICENSE", ROOT / "build/licenses/THIRD-PARTY-NOTICES.txt", ROOT / "ui/src-tauri/update-signing.pub"]:
         shutil.copy2(source, destination / source.name)
     with tempfile.TemporaryDirectory(prefix="v8-chroma smoke ", dir=os.environ.get("RUNNER_TEMP")) as temporary:
         directory = Path(temporary)
@@ -151,6 +189,8 @@ def main():
     parser.add_argument("--cairo", type=Path)
     parser.add_argument("--tag")
     args = parser.parse_args()
+    configure_windows_tools(args.native_preset == "windows-msvc" if args.command == "native"
+                            else args.command == "release" or args.target.endswith("-msvc"))
     if args.command == "native":
         native(args.native_preset)
     elif args.command == "core":
