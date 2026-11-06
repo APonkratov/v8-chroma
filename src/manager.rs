@@ -1,4 +1,5 @@
 use crate::{
+    engine_dll,
     storage::{Lock, atomic_write},
     theme,
     win::{self, Identity, Process, ProcessExited},
@@ -14,6 +15,49 @@ use std::{
 };
 
 const ENGINE_MISMATCH: &str = "Версия движка этого процесса отличается от менеджера. Штатно перезапустите этот конфигуратор для обновления DLL темы";
+const DLL_NAME: &str = "ThemeProbe.dll";
+const THEME_WAIT: Duration = Duration::from_secs(30);
+const THEME_MODULES: [&str; 3] = ["frame.dll", "grphcs.dll", "cairo.dll"];
+
+#[derive(Debug)]
+pub struct ThemeNotReady;
+impl std::fmt::Display for ThemeNotReady {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Модули темы ещё загружаются. Повторите применение после запуска Конфигуратора")
+    }
+}
+impl std::error::Error for ThemeNotReady {}
+
+#[derive(Default)]
+pub struct DiscoveryFailures {
+    consecutive: usize,
+}
+
+impl DiscoveryFailures {
+    pub fn recovered(&mut self) {
+        self.consecutive = 0;
+    }
+
+    pub fn should_report(&mut self, error: &anyhow::Error) -> bool {
+        const REPORT_AFTER: usize = 3;
+        let transient = match error.downcast_ref::<wmi::WMIError>() {
+            Some(wmi::WMIError::HResultError { hres }) => matches!(
+                *hres as u32,
+                0x80041015 // WBEM_E_TRANSPORT_FAILURE
+                    | 0x80041069 // WBEM_E_TIMED_OUT
+                    | 0x8001010A // RPC_E_SERVERCALL_RETRYLATER
+                    | 0x800706BA // HRESULT_FROM_WIN32(RPC_S_SERVER_UNAVAILABLE)
+            ),
+            _ => false,
+        };
+        self.consecutive = if transient {
+            (self.consecutive + 1).min(REPORT_AFTER)
+        } else {
+            REPORT_AFTER
+        };
+        self.consecutive == REPORT_AFTER
+    }
+}
 
 #[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
@@ -136,7 +180,7 @@ fn materialize(root: &Path) -> Result<PathBuf> {
     let directory = root.join("runtime").join(digest);
     fs::create_dir_all(&directory)?;
     let _lock = Lock::acquire(&directory.join("runtime.lock"))?;
-    let dll = directory.join("ThemeProbe.dll");
+    let dll = directory.join(DLL_NAME);
     if dll.exists() {
         ensure!(
             hash(&fs::read(&dll)?) == hash(theme::DLL),
@@ -284,6 +328,16 @@ pub fn attach_to_with_icons(
     theme_id: &str,
     custom_icons: bool,
 ) -> Result<Applied> {
+    attach_to_with_icons_wait(expected, theme_id, custom_icons, THEME_WAIT)
+}
+
+/// The wait covers module readiness only. A failed remote operation is never replayed here.
+pub fn attach_to_with_icons_wait(
+    expected: &Identity,
+    theme_id: &str,
+    custom_icons: bool,
+    wait: Duration,
+) -> Result<Applied> {
     theme::config(theme_id, Path::new("x"), Path::new("y"))?;
     ensure!(
         identity(expected.pid)? == *expected,
@@ -299,6 +353,7 @@ pub fn attach_to_with_icons(
         &directory,
         &materialize(&root)?,
         custom_icons,
+        wait,
     )
 }
 
@@ -311,7 +366,8 @@ pub struct LastApplied {
 }
 /// Read the last successful application; never invokes a remote thread while polling UI.
 pub fn last_applied(expected: &Identity) -> Result<Option<LastApplied>> {
-    let directory = data_dir()?
+    let root = data_dir()?;
+    let directory = root
         .join("sessions")
         .join(format!("{}-{}", expected.pid, expected.created_time));
     let path = directory.join("session.json");
@@ -323,7 +379,15 @@ pub fn last_applied(expected: &Identity) -> Result<Option<LastApplied>> {
         saved.schema_version == 2 && saved.identity == *expected && saved.stage == "ready",
         "Предыдущее применение не завершено или несовместимо"
     );
-    ensure!(saved.dll_sha256 == hash(theme::DLL), ENGINE_MISMATCH);
+    let dll = engine_dll::session_path(
+        &root.join("runtime"),
+        DLL_NAME,
+        &saved.dll_sha256,
+        theme::DLL,
+    )
+    .and_then(|path| win::canonical(&path))
+    .context(ENGINE_MISMATCH)?;
+    ensure!(win::same_path(&saved.dll, &dll), ENGINE_MISMATCH);
     ensure!(
         win::same_path(
             &win::canonical(&saved.log)?,
@@ -349,7 +413,7 @@ fn attach_verified(
     directory: &Path,
     dll: &Path,
 ) -> Result<Applied> {
-    attach_appearance_verified(expected, theme_id, directory, dll, false)
+    attach_appearance_verified(expected, theme_id, directory, dll, false, THEME_WAIT)
 }
 
 fn attach_appearance_verified(
@@ -358,6 +422,7 @@ fn attach_appearance_verified(
     directory: &Path,
     dll: &Path,
     custom_icons: bool,
+    wait: Duration,
 ) -> Result<Applied> {
     fs::create_dir_all(directory)?;
     let directory = win::canonical(directory)?;
@@ -385,10 +450,6 @@ fn attach_appearance_verified(
             "Путь журнала отличается от сохранённой сессии"
         );
         ensure!(
-            state.dll_sha256 == hash(theme::DLL) && win::same_path(&state.dll, dll),
-            ENGINE_MISMATCH
-        );
-        ensure!(
             state.stage == "ready",
             "Предыдущая операция не завершена; автоматический повтор запрещён ({}). Закройте 1С штатно",
             state.stage
@@ -397,22 +458,26 @@ fn attach_appearance_verified(
     } else {
         None
     };
-    let deadline = Instant::now() + Duration::from_secs(30);
+    let deadline = Instant::now() + wait;
     let modules = loop {
-        let modules = process.modules()?;
-        if ["frame.dll", "grphcs.dll", "cairo.dll"]
-            .iter()
-            .all(|name| modules.contains_key(*name))
-        {
-            break modules;
+        match process.module_snapshot() {
+            Ok(modules) if THEME_MODULES.iter().all(|name| modules.contains_key(*name)) => {
+                break modules;
+            }
+            Ok(_) if Instant::now() >= deadline => return Err(ThemeNotReady.into()),
+            Ok(_) => {}
+            Err(error) if win::module_list_changing(&error) => {
+                if Instant::now() >= deadline {
+                    return Err(error.context(ThemeNotReady));
+                }
+            }
+            Err(error) => return Err(error),
         }
-        ensure!(
-            Instant::now() < deadline,
-            "Не дождались готовности модулей конфигуратора"
+        std::thread::sleep(
+            Duration::from_millis(100).min(deadline.saturating_duration_since(Instant::now())),
         );
-        std::thread::sleep(Duration::from_millis(100));
     };
-    for name in ["frame.dll", "grphcs.dll", "cairo.dll"] {
+    for name in THEME_MODULES {
         ensure!(
             win::same_path(
                 &modules[name].1,
@@ -439,14 +504,21 @@ fn attach_appearance_verified(
     let action;
     let exports;
     if let Some((_, loaded)) = modules.get("themeprobe.dll") {
-        ensure!(
-            win::same_path(loaded, dll),
-            "В процессе уже загружена другая DLL темы; требуется штатный перезапуск 1С"
-        );
         let saved = state
             .as_mut()
             .context("DLL есть, но реестр сессии отсутствует; повторная инициализация запрещена")?;
-        exports = process.exports(dll)?;
+        let runtime = dll
+            .parent()
+            .and_then(Path::parent)
+            .context("Нет каталога движков")?;
+        let recorded = engine_dll::session_path(runtime, DLL_NAME, &saved.dll_sha256, theme::DLL)
+            .and_then(|path| win::canonical(&path))
+            .context(ENGINE_MISMATCH)?;
+        ensure!(
+            win::same_path(loaded, &recorded) && win::same_path(&saved.dll, &recorded),
+            ENGINE_MISMATCH
+        );
+        exports = process.exports(&recorded)?;
         let current = snapshot(&process, exports["ThemeSnapshot"], &log)?;
         let marker = fs::read(&marker_path)
             .ok()
@@ -543,6 +615,26 @@ mod tests {
             expected as i64
         );
         assert!(wmi_created_micros("20261027182742.******+***").is_err());
+    }
+
+    #[test]
+    fn only_brief_transient_discovery_failures_are_silent() {
+        let wmi_error = |hres: u32| {
+            anyhow::Error::new(wmi::WMIError::HResultError { hres: hres as i32 }).context("WMI")
+        };
+        let mut failures = DiscoveryFailures::default();
+        let transient = wmi_error(0x80041069);
+        assert!(!failures.should_report(&transient));
+        assert!(!failures.should_report(&transient));
+        assert!(failures.should_report(&transient));
+        assert!(failures.should_report(&transient));
+        failures.recovered();
+        assert!(!failures.should_report(&transient));
+        assert!(failures.should_report(&wmi_error(0x80041003)));
+        failures.recovered();
+        assert!(failures.should_report(&wmi_error(0x80070005)));
+        failures.recovered();
+        assert!(failures.should_report(&wmi_error(0x80041017)));
     }
     #[test]
     fn rejects_non_platform_executable() {
@@ -686,6 +778,38 @@ mod tests {
         assert_eq!(fs::read(path).unwrap(), b"second");
     }
     #[test]
+    fn missing_theme_modules_do_not_start_a_remote_operation() -> Result<()> {
+        let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+        let mut child = std::process::Command::new(fixtures.join("mode_host.exe")).spawn()?;
+        let result = (|| -> Result<()> {
+            let expected = Process::open(child.id(), false)?.identity;
+            let temp = tempfile::tempdir()?;
+            let directory = temp.path().join("session");
+            let dll = materialize(&temp.path().join("runtime"))?;
+            let attempt = attach_appearance_verified(
+                &expected,
+                "dracula",
+                &directory,
+                &dll,
+                false,
+                Duration::ZERO,
+            );
+            ensure!(attempt.is_err_and(|error| error.is::<ThemeNotReady>()));
+            ensure!(!directory.join("session.json").exists());
+            ensure!(!directory.join("colors.csv").exists());
+            ensure!(
+                !Process::open(child.id(), false)?
+                    .modules()?
+                    .contains_key("themeprobe.dll")
+            );
+            Ok(())
+        })();
+        let _ = child.kill();
+        child.wait()?;
+        result
+    }
+
+    #[test]
     fn late_attach_native_recovery_and_live_switching() -> Result<()> {
         use windows_sys::Win32::{
             Foundation::FreeLibrary,
@@ -746,7 +870,9 @@ mod tests {
                 repeated.action == "unchanged" && repeated.generation == 1,
                 "duplicate attach"
             );
-            let enabled = attach_appearance_verified(&expected, "dracula", &directory, &dll, true)?;
+            let enabled = attach_appearance_verified(
+                &expected, "dracula", &directory, &dll, true, THEME_WAIT,
+            )?;
             ensure!(
                 enabled.action == "applied"
                     && enabled.icons == "unavailable"

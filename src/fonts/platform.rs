@@ -1,6 +1,6 @@
 use super::FontSettings;
 use crate::{
-    manager,
+    engine_dll, manager,
     storage::{Lock, atomic_write},
     win::{self, Identity, Process},
 };
@@ -17,6 +17,8 @@ use windows_sys::Win32::Foundation::{ERROR_NOT_READY, ERROR_NOT_SUPPORTED};
 use windows_sys::Win32::Graphics::Gdi::*;
 
 const DLL: &[u8] = include_bytes!("../../assets/FontProbe.dll");
+const DLL_NAME: &str = "FontProbe.dll";
+const ENGINE_MISMATCH: &str = "Изменилась версия движка шрифтов; перезапустите этот Конфигуратор";
 const EXPORTS: &[&str] = &[
     "FontProbeStart",
     "FontProbeApply",
@@ -191,9 +193,16 @@ pub fn last_applied(identity: &Identity) -> Result<Option<FontApplied>> {
     }
     let saved: Session = serde_json::from_slice(&fs::read(path)?)?;
     ensure!(
-        saved.identity == *identity && saved.dll_sha256 == manager::hash(DLL),
-        "Изменилась версия движка шрифтов; перезапустите этот Конфигуратор"
+        saved.identity == *identity,
+        "Сессия шрифта относится к другому процессу"
     );
+    engine_dll::session_path(
+        &manager::data_dir()?.join("fonts/runtime"),
+        DLL_NAME,
+        &saved.dll_sha256,
+        DLL,
+    )
+    .context(ENGINE_MISMATCH)?;
     if can_resume_refresh(&saved) {
         return Ok(None);
     }
@@ -368,14 +377,12 @@ pub(crate) fn apply_with_wait(
             );
         }
     }
-    let runtime = manager::data_dir()?
-        .join("fonts")
-        .join("runtime")
-        .join(manager::hash(DLL));
-    fs::create_dir_all(&runtime)?;
-    let dll = runtime.join("FontProbe.dll");
+    let runtime = manager::data_dir()?.join("fonts/runtime");
+    let current_runtime = runtime.join(manager::hash(DLL));
+    fs::create_dir_all(&current_runtime)?;
+    let dll = current_runtime.join(DLL_NAME);
     {
-        let _lock = Lock::acquire(&runtime.join("runtime.lock"))?;
+        let _lock = Lock::acquire(&current_runtime.join("runtime.lock"))?;
         if dll.exists() {
             ensure!(
                 manager::hash(&fs::read(&dll)?) == manager::hash(DLL),
@@ -385,21 +392,21 @@ pub(crate) fn apply_with_wait(
             atomic_write(&dll, DLL)?;
         }
     }
-    let dll = win::canonical(&dll)?;
+    let mut dll = win::canonical(&dll)?;
     let log = prepare_log(&directory)?;
     let payload = config(font, &log)?;
     if let Some((_, loaded)) = modules.get("fontprobe.dll") {
-        ensure!(
-            win::same_path(loaded, &dll),
-            "В процессе загружена другая версия шрифтов; перезапустите этот Конфигуратор"
-        );
         let state = saved
             .as_ref()
             .context("Движок шрифтов загружен вне менеджера; перезапустите этот Конфигуратор")?;
         ensure!(
-            state.identity == *expected && state.dll_sha256 == manager::hash(DLL),
+            state.identity == *expected,
             "Незавершённое или несовместимое применение шрифта. Повтор запрещён; перезапустите этот Конфигуратор"
         );
+        dll = engine_dll::session_path(&runtime, DLL_NAME, &state.dll_sha256, DLL)
+            .and_then(|path| win::canonical(&path))
+            .context(ENGINE_MISMATCH)?;
+        ensure!(win::same_path(loaded, &dll), ENGINE_MISMATCH);
         if state.stage == "unsupported" {
             let state = saved.as_mut().context("Нет сессии шрифта")?;
             state.requested = font.clone();

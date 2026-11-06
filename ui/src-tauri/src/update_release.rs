@@ -8,7 +8,7 @@ use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
     fs::File,
-    io::{Read, Write},
+    io::{self, Read, Write},
     path::Path,
     time::Duration,
 };
@@ -225,6 +225,45 @@ pub fn verify_file(path: &Path, expected: &str) -> Result<()> {
     Ok(())
 }
 
+pub fn transient_network_error(error: &anyhow::Error) -> bool {
+    !access_denied(error)
+        && error.chain().any(|cause| {
+            if let Some(error) = cause.downcast_ref::<reqwest::Error>() {
+                return error.is_timeout()
+                    || error.is_connect()
+                    || error
+                        .status()
+                        .is_some_and(|status| status.is_server_error() || status.as_u16() == 408);
+            }
+            cause.downcast_ref::<io::Error>().is_some_and(|error| {
+                matches!(
+                    error.kind(),
+                    io::ErrorKind::TimedOut
+                        | io::ErrorKind::ConnectionReset
+                        | io::ErrorKind::ConnectionAborted
+                        | io::ErrorKind::UnexpectedEof
+                )
+            })
+        })
+}
+
+fn access_denied(error: &anyhow::Error) -> bool {
+    error.chain().any(|cause| {
+        cause
+            .downcast_ref::<io::Error>()
+            .is_some_and(|error| error.kind() == io::ErrorKind::PermissionDenied)
+    })
+}
+
+#[derive(Debug)]
+struct TransferInterrupted;
+impl std::fmt::Display for TransferInterrupted {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Загрузка EXE не завершена")
+    }
+}
+impl std::error::Error for TransferInterrupted {}
+
 pub fn download(
     client: &Client,
     asset: &Asset,
@@ -236,15 +275,68 @@ pub fn download(
         asset.size > 0 && asset.size <= MAX_EXE,
         "Недопустимый размер EXE"
     );
+    download_with_delays(
+        client,
+        asset,
+        path,
+        hash,
+        progress,
+        &[Duration::from_secs(1), Duration::from_secs(3)],
+    )
+}
+
+fn download_with_delays(
+    client: &Client,
+    asset: &Asset,
+    path: &Path,
+    hash: &str,
+    progress: impl Fn(u64, u64),
+    delays: &[Duration],
+) -> Result<()> {
+    let mut delays = delays.iter();
+    loop {
+        progress(0, asset.size);
+        match download_once(client, asset, path, hash, &progress) {
+            Err(error) if error.is::<TransferInterrupted>() => match delays.next() {
+                Some(delay) => std::thread::sleep(*delay),
+                None => return Err(error),
+            },
+            result => return result,
+        }
+    }
+}
+
+fn download_once(
+    client: &Client,
+    asset: &Asset,
+    path: &Path,
+    hash: &str,
+    progress: impl Fn(u64, u64),
+) -> Result<()> {
     let mut response = client
         .get(&asset.browser_download_url)
-        .send()?
-        .error_for_status()?;
+        .send()
+        .and_then(reqwest::blocking::Response::error_for_status)
+        .map_err(|error| {
+            let error = anyhow::Error::from(error);
+            if transient_network_error(&error) {
+                error.context(TransferInterrupted)
+            } else {
+                error
+            }
+        })?;
     let mut file = File::create(path)?;
     let mut size = 0;
     let mut buffer = [0u8; 65536];
     loop {
-        let n = response.read(&mut buffer)?;
+        let n = response.read(&mut buffer).map_err(|error| {
+            let error = anyhow::Error::from(error);
+            if access_denied(&error) {
+                error
+            } else {
+                error.context(TransferInterrupted)
+            }
+        })?;
         if n == 0 {
             break;
         }
@@ -255,7 +347,7 @@ pub fn download(
         file.write_all(&buffer[..n])?;
         progress(size, asset.size);
     }
-    ensure!(size == asset.size, "Загрузка EXE не завершена");
+    ensure!(size == asset.size, TransferInterrupted);
     file.sync_all()?;
     drop(file);
     verify_file(path, hash)
@@ -275,6 +367,89 @@ mod tests {
         verify_file(file.path(), &hashes[GUI]).unwrap();
         std::fs::write(file.path(), b"tampered").unwrap();
         assert!(verify_file(file.path(), &hashes[GUI]).is_err());
+    }
+    #[test]
+    fn interrupted_exe_download_restarts_but_bad_hash_and_access_fail_immediately() -> Result<()> {
+        use std::{cell::Cell, net::TcpListener, time::Instant};
+
+        let valid = b"HTTP/1.1 200 OK\r\nContent-Length: 7\r\nConnection: close\r\n\r\nnew gui";
+        let cut = b"HTTP/1.1 200 OK\r\nContent-Length: 7\r\nConnection: close\r\n\r\nnew";
+        let denied = b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+        let hash = verify_manifest(TEST_KEY, "v9.0.0", VALID, SIG)?;
+        let client = Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(2))
+            .build()?;
+        for (responses, expected_hash, error_message) in [
+            (
+                vec![cut.as_slice(), valid.as_slice()],
+                hash[GUI].as_str(),
+                None,
+            ),
+            (
+                vec![cut.as_slice(); 3],
+                hash[GUI].as_str(),
+                Some("Загрузка EXE не завершена"),
+            ),
+            (vec![valid.as_slice()], &hash[CLI], Some("SHA-256")),
+            (vec![denied.as_slice()], &hash[GUI], Some("403")),
+        ] {
+            let listener = TcpListener::bind(("127.0.0.1", 0))?;
+            listener.set_nonblocking(true)?;
+            let url = format!("http://{}/file.exe", listener.local_addr()?);
+            let requests = responses.len();
+            let server = std::thread::spawn(move || -> io::Result<()> {
+                let deadline = Instant::now() + Duration::from_secs(5);
+                for response in responses {
+                    let mut stream = loop {
+                        match listener.accept() {
+                            Ok((stream, _)) => break stream,
+                            Err(error)
+                                if error.kind() == io::ErrorKind::WouldBlock
+                                    && Instant::now() < deadline =>
+                            {
+                                std::thread::sleep(Duration::from_millis(5));
+                            }
+                            Err(error) => return Err(error),
+                        }
+                    };
+                    stream.set_read_timeout(Some(Duration::from_secs(2)))?;
+                    let mut request = [0u8; 1024];
+                    assert!(stream.read(&mut request)? > 0);
+                    stream.write_all(response)?;
+                }
+                Ok(())
+            });
+            let asset = Asset {
+                name: GUI.into(),
+                browser_download_url: url,
+                size: 7,
+            };
+            let temp = tempfile::tempdir()?;
+            let path = temp.path().join("new.exe");
+            let attempts = Cell::new(0);
+            let result = download_with_delays(
+                &client,
+                &asset,
+                &path,
+                expected_hash,
+                |size, _| {
+                    if size == 0 {
+                        attempts.set(attempts.get() + 1);
+                    }
+                },
+                &[Duration::ZERO; 2],
+            );
+            server.join().unwrap()?;
+            assert_eq!(attempts.get(), requests);
+            if let Some(message) = error_message {
+                assert!(format!("{:#}", result.unwrap_err()).contains(message));
+            } else {
+                result?;
+                assert_eq!(std::fs::read(path)?, b"new gui");
+            }
+        }
+        Ok(())
     }
     #[test]
     fn tampering_wrong_version_and_wrong_key_are_rejected() {
