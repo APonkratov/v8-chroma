@@ -8,6 +8,12 @@ pub mod ui_fonts;
     target_arch = "x86_64",
     feature = "windows-engine"
 ))]
+mod engine_dll;
+#[cfg(all(
+    target_os = "windows",
+    target_arch = "x86_64",
+    feature = "windows-engine"
+))]
 pub mod manager;
 pub mod process;
 pub mod settings;

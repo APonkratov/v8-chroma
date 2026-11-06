@@ -18,8 +18,14 @@ fn appearance(settings: &Settings) -> Appearance {
 #[derive(Default)]
 pub struct Controller {
     attempted: BTreeMap<(u32, u64), Appearance>,
-    pending_fonts: BTreeMap<(u32, u64, FontTarget), FontRetry>,
+    pending: BTreeMap<(u32, u64, ApplyTarget), Retry>,
     enabled: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ApplyTarget {
+    Theme,
+    Font(FontTarget),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -56,7 +62,7 @@ impl FontTarget {
     }
 }
 
-struct FontRetry {
+struct Retry {
     due: Instant,
     delay: Duration,
 }
@@ -64,41 +70,42 @@ struct FontRetry {
 impl Controller {
     pub fn pause(&mut self) {
         self.enabled = false;
-        self.pending_fonts.clear();
+        self.pending.clear();
     }
-    pub fn set_font_pending(
+    pub fn forget_pending(&mut self, identity: &Identity) {
+        self.pending.retain(|&(pid, created, _), _| {
+            (pid, created) != (identity.pid, identity.created_time)
+        });
+    }
+    pub fn set_pending(
         &mut self,
         identity: &Identity,
-        target: FontTarget,
+        target: ApplyTarget,
         pending: bool,
         now: Instant,
     ) {
         let key = (identity.pid, identity.created_time, target);
         if !self.enabled || !pending {
-            self.pending_fonts.remove(&key);
+            self.pending.remove(&key);
             return;
         }
         let delay = self
-            .pending_fonts
+            .pending
             .get(&key)
             .map_or(Duration::from_secs(2), |retry| {
                 (retry.delay * 2).min(Duration::from_secs(30))
             });
-        self.pending_fonts.insert(
+        self.pending.insert(
             key,
-            FontRetry {
+            Retry {
                 due: now + delay,
                 delay,
             },
         );
     }
     /// Call after normal apply attempts, so a settings change supersedes an older retry.
-    pub fn font_retries(
-        &self,
-        identities: &[Identity],
-        now: Instant,
-    ) -> Vec<(Identity, FontTarget)> {
-        self.pending_fonts
+    pub fn retries(&self, identities: &[Identity], now: Instant) -> Vec<(Identity, ApplyTarget)> {
+        self.pending
             .iter()
             .filter(|(_, retry)| retry.due <= now)
             .filter_map(|(&(pid, created, target), _)| {
@@ -133,7 +140,7 @@ impl Controller {
                 .iter()
                 .any(|i| i.pid == pid && i.created_time == created)
         });
-        self.pending_fonts.retain(|&(pid, created, _), _| {
+        self.pending.retain(|&(pid, created, _), _| {
             identities
                 .iter()
                 .any(|i| i.pid == pid && i.created_time == created)
@@ -221,35 +228,45 @@ mod tests {
         assert_eq!(controller.plan(&[id(10, 2)], &settings), vec![id(10, 2)]);
     }
     #[test]
-    fn pending_font_waits_retries_only_its_target_and_never_follows_a_reused_pid() {
+    fn pending_appearance_waits_retries_only_its_targets_and_never_follows_a_reused_pid() {
         let mut controller = Controller::default();
         let settings = Settings::default();
         let identities = [id(10, 1)];
         let now = Instant::now();
         assert_eq!(controller.plan(&identities, &settings), identities);
-        controller.set_font_pending(&identities[0], FontTarget::Editor, true, now);
-        assert!(controller.font_retries(&identities, now).is_empty());
+        let editor = ApplyTarget::Font(FontTarget::Editor);
+        controller.set_pending(&identities[0], editor, true, now);
+        controller.set_pending(&identities[0], ApplyTarget::Theme, true, now);
+        assert!(controller.retries(&identities, now).is_empty());
         let due = now + Duration::from_secs(2);
         assert!(controller.plan(&identities, &settings).is_empty());
         assert_eq!(
-            controller.font_retries(&identities, due),
-            vec![(identities[0].clone(), FontTarget::Editor)]
+            controller.retries(&identities, due),
+            vec![
+                (identities[0].clone(), ApplyTarget::Theme),
+                (identities[0].clone(), editor),
+            ]
         );
-        controller.set_font_pending(&identities[0], FontTarget::Editor, true, due);
+        controller.set_pending(&identities[0], ApplyTarget::Theme, false, due);
+        controller.set_pending(&identities[0], editor, true, due);
         assert!(
             controller
-                .font_retries(&identities, due + Duration::from_secs(2))
+                .retries(&identities, due + Duration::from_secs(2))
                 .is_empty()
         );
+        assert_eq!(
+            controller.retries(&identities, due + Duration::from_secs(4)),
+            vec![(identities[0].clone(), editor)]
+        );
         assert!(
             controller
-                .font_retries(&[id(10, 2)], due + Duration::from_secs(4))
+                .retries(&[id(10, 2)], due + Duration::from_secs(4))
                 .is_empty()
         );
         controller.pause();
         assert!(
             controller
-                .font_retries(&identities, due + Duration::from_secs(30))
+                .retries(&identities, due + Duration::from_secs(30))
                 .is_empty()
         );
     }

@@ -11,9 +11,9 @@ use std::{
 };
 use v8_chroma_core::{
     fonts::{FontApplied, FontNotReady},
-    manager,
+    manager::{self, DiscoveryFailures, ThemeNotReady},
     settings::{Loaded, Settings, SettingsPatch, Store, WindowPatch},
-    watch::{Controller, FontTarget},
+    watch::{ApplyTarget, Controller, FontTarget},
     win::{Identity, Process},
 };
 
@@ -33,6 +33,7 @@ pub struct ProcessRow {
     pub eligible: bool,
     pub status: String,
     pub theme: Option<String>,
+    pub theme_warning: Option<String>,
     pub detail: Option<String>,
     pub icons: Option<String>,
     pub icon_warning: Option<String>,
@@ -42,6 +43,8 @@ pub struct ProcessRow {
     pub ui_font_warning: Option<String>,
     #[serde(skip)]
     theme_error: Option<String>,
+    #[serde(skip)]
+    theme_pending: bool,
     #[serde(skip)]
     editor_issue: FontIssue,
     #[serde(skip)]
@@ -56,6 +59,20 @@ impl ProcessRow {
                 .as_deref()
                 .and_then(|value| value.parse().ok())
                 == Some(identity.created_time)
+    }
+
+    fn record_theme(&mut self, result: Result<manager::Applied>) {
+        self.theme_error = None;
+        self.theme_pending = false;
+        match result {
+            Ok(applied) => {
+                self.theme = Some(applied.theme);
+                self.icons = Some(applied.icons);
+                self.icon_warning = applied.icon_warning;
+            }
+            Err(error) if error.is::<ThemeNotReady>() => self.theme_pending = true,
+            Err(error) => self.theme_error = Some(format!("{error:#}")),
+        }
     }
 
     fn record_font(&mut self, target: FontTarget, result: Result<FontApplied>, auto_apply: bool) {
@@ -90,6 +107,7 @@ impl ProcessRow {
     }
 
     fn summarize(&mut self, auto_apply: bool) {
+        self.theme_warning = (self.theme_pending && !auto_apply).then(|| ThemeNotReady.to_string());
         let errors = [
             &self.theme_error,
             &self.editor_issue.error,
@@ -102,7 +120,9 @@ impl ProcessRow {
         self.detail = (!errors.is_empty()).then(|| errors.join("\n"));
         self.status = if self.detail.is_some() {
             "error"
-        } else if auto_apply && (self.editor_issue.pending || self.interface_issue.pending) {
+        } else if auto_apply
+            && (self.theme_pending || self.editor_issue.pending || self.interface_issue.pending)
+        {
             "waiting"
         } else if self.theme.is_some() {
             "applied"
@@ -171,6 +191,7 @@ impl Service {
         let background = service.clone();
         std::thread::spawn(move || {
             let mut controller = Controller::default();
+            let mut discovery_failures = DiscoveryFailures::default();
             let mut last_scan = Instant::now() - Duration::from_secs(3);
             let mut geometry: Option<(Instant, WindowPatch)> = None;
             let mut results: BTreeMap<(u32, u64), ProcessRow> = BTreeMap::new();
@@ -231,10 +252,10 @@ impl Service {
                 let settings = match loaded {
                     Ok(loaded) => {
                         let settings = loaded.settings.clone();
-                        background.edit(|s| {
-                            s.settings = Some(loaded);
-                            s.error = None;
-                        });
+                        background.edit(|s| s.settings = Some(loaded));
+                        if !settings.auto_apply {
+                            controller.pause();
+                        }
                         Some(settings)
                     }
                     Err(error) => {
@@ -248,6 +269,7 @@ impl Service {
                 };
                 match manager::discover() {
                     Ok(candidates) => {
+                        discovery_failures.recovered();
                         let identities: Vec<_> = candidates
                             .iter()
                             .filter(|c| c.eligible)
@@ -341,50 +363,62 @@ impl Service {
                                 row
                             })
                             .collect();
-                        background.edit(|s| s.processes = rows);
-                        if let Some(settings) = settings {
-                            if !settings.auto_apply {
-                                controller.pause();
-                            } else if background
+                        background.edit(|s| {
+                            s.processes = rows;
+                            if settings.is_some() {
+                                s.error = None;
+                            }
+                        });
+                        if let Some(settings) = settings
+                            && settings.auto_apply
+                            && background
                                 .shared
                                 .busy
                                 .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
                                 .is_ok()
-                            {
-                                for identity in controller.plan(&identities, &settings) {
-                                    if background.shared.stop.load(Ordering::Acquire) {
-                                        break;
-                                    }
-                                    background.apply(
-                                        &identity,
-                                        &settings,
-                                        &mut controller,
-                                        &mut results,
-                                    );
+                        {
+                            for identity in controller.plan(&identities, &settings) {
+                                if background.shared.stop.load(Ordering::Acquire) {
+                                    break;
                                 }
-                                for (identity, target) in
-                                    controller.font_retries(&identities, Instant::now())
-                                {
-                                    if background.shared.stop.load(Ordering::Acquire) {
-                                        break;
-                                    }
-                                    background.retry_font(
-                                        &identity,
-                                        target,
-                                        &settings,
-                                        &mut controller,
-                                        &mut results,
-                                    );
-                                }
-                                background.shared.busy.store(false, Ordering::Release);
+                                background.apply(
+                                    &identity,
+                                    &settings,
+                                    &mut controller,
+                                    &mut results,
+                                );
                             }
+                            for (identity, target) in
+                                controller.retries(&identities, Instant::now())
+                            {
+                                if background.shared.stop.load(Ordering::Acquire) {
+                                    break;
+                                }
+                                background.retry_appearance(
+                                    &identity,
+                                    target,
+                                    &settings,
+                                    &mut controller,
+                                    &mut results,
+                                );
+                            }
+                            background.shared.busy.store(false, Ordering::Release);
                         }
                     }
                     Err(error) => {
-                        controller.pause();
-                        background.edit(|s| {
-                            s.error = Some(format!("Не удалось обновить процессы: {error:#}"))
-                        });
+                        if discovery_failures.should_report(&error) {
+                            background.edit(|s| {
+                                let message = format!("Не удалось обновить процессы: {error:#}");
+                                s.error = match s.error.take().filter(|_| settings.is_none()) {
+                                    Some(settings_error) => {
+                                        Some(format!("{settings_error}\n{message}"))
+                                    }
+                                    None => Some(message),
+                                };
+                            });
+                        } else if settings.is_some() {
+                            background.edit(|s| s.error = None);
+                        }
                     }
                 }
             }
@@ -547,9 +581,7 @@ impl Service {
         if !Process::is_gone(identity) {
             return false;
         }
-        for target in [FontTarget::Editor, FontTarget::Interface] {
-            controller.set_font_pending(identity, target, false, Instant::now());
-        }
+        controller.forget_pending(identity);
         results.remove(&(identity.pid, identity.created_time));
         self.edit(|s| s.processes.retain(|row| !row.matches(identity)));
         true
@@ -583,29 +615,58 @@ impl Service {
         let pending = result
             .as_ref()
             .is_err_and(|error| error.is::<FontNotReady>());
-        controller.set_font_pending(identity, target, pending, Instant::now());
+        controller.set_pending(identity, ApplyTarget::Font(target), pending, Instant::now());
         row.record_font(target, result, settings.auto_apply);
     }
 
-    fn retry_font(
+    fn apply_theme(
+        identity: &Identity,
+        settings: &Settings,
+        controller: &mut Controller,
+        row: &mut ProcessRow,
+        wait: Duration,
+    ) {
+        row.record_theme(manager::attach_to_with_icons_wait(
+            identity,
+            &settings.selected_theme,
+            settings.custom_icons,
+            wait,
+        ));
+        controller.set_pending(
+            identity,
+            ApplyTarget::Theme,
+            row.theme_pending,
+            Instant::now(),
+        );
+    }
+
+    fn retry_appearance(
         &self,
         identity: &Identity,
-        target: FontTarget,
+        target: ApplyTarget,
         settings: &Settings,
         controller: &mut Controller,
         results: &mut BTreeMap<(u32, u64), ProcessRow>,
     ) {
+        if self.forget_gone(identity, controller, results) {
+            return;
+        }
         let Some(mut row) = results.get(&(identity.pid, identity.created_time)).cloned() else {
             return;
         };
-        Self::apply_font(
-            identity,
-            target,
-            settings,
-            controller,
-            &mut row,
-            Duration::ZERO,
-        );
+        match target {
+            ApplyTarget::Theme => {
+                Self::apply_theme(identity, settings, controller, &mut row, Duration::ZERO)
+            }
+            ApplyTarget::Font(target) => Self::apply_font(
+                identity,
+                target,
+                settings,
+                controller,
+                &mut row,
+                Duration::ZERO,
+            ),
+        }
         if !self.forget_gone(identity, controller, results) {
             row.summarize(settings.auto_apply);
             self.publish_row(identity, row, results);
@@ -628,23 +689,21 @@ impl Service {
                 row.detail = None;
             }
         });
-        let result = manager::attach_to_with_icons(
-            identity,
-            &settings.selected_theme,
-            settings.custom_icons,
-        );
         let mut row = ProcessRow {
             pid: identity.pid,
             created_time: Some(identity.created_time.to_string()),
             title: "Конфигуратор".into(),
             exe: Some(identity.exe.display().to_string()),
             eligible: true,
-            theme: result.as_ref().ok().map(|r| r.theme.clone()),
-            icons: result.as_ref().ok().map(|r| r.icons.clone()),
-            icon_warning: result.as_ref().ok().and_then(|r| r.icon_warning.clone()),
-            theme_error: result.err().map(|error| format!("{error:#}")),
             ..Default::default()
         };
+        Self::apply_theme(
+            identity,
+            settings,
+            controller,
+            &mut row,
+            Duration::from_secs(5),
+        );
         for target in [FontTarget::Editor, FontTarget::Interface] {
             if self.forget_gone(identity, controller, results) {
                 return;
@@ -1009,6 +1068,29 @@ mod tests {
         assert_eq!(row.font.as_deref(), Some("Consolas"));
         assert_eq!(row.status, "error");
         assert_eq!(row.detail.as_deref(), Some("Win32=1460"));
+    }
+    #[test]
+    fn theme_preflight_waits_and_does_not_hide_mutation_errors() {
+        let mut row = ProcessRow {
+            theme: Some("dracula".into()),
+            ..Default::default()
+        };
+        row.record_theme(Err(ThemeNotReady.into()));
+        row.summarize(true);
+        assert_eq!(row.status, "waiting");
+        assert_eq!(row.theme.as_deref(), Some("dracula"));
+        assert!(row.theme_warning.is_none());
+        assert!(row.detail.is_none());
+
+        row.summarize(false);
+        assert!(row.theme_warning.is_some());
+        assert!(row.detail.is_none());
+
+        row.record_theme(Err(anyhow::anyhow!("ThemeApply: Win32=1460")));
+        row.summarize(true);
+        assert_eq!(row.status, "error");
+        assert!(!row.theme_pending);
+        assert_eq!(row.detail.as_deref(), Some("ThemeApply: Win32=1460"));
     }
     #[test]
     fn maximize_preserves_pending_normal_size() {

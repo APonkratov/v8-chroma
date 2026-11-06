@@ -32,6 +32,14 @@ fn check(ok: i32, label: &str) -> Result<()> {
     }
     Ok(())
 }
+
+pub(crate) fn module_list_changing(error: &anyhow::Error) -> bool {
+    error
+        .downcast_ref::<std::io::Error>()
+        .and_then(std::io::Error::raw_os_error)
+        .is_some_and(|code| matches!(code as u32, ERROR_BAD_LENGTH | ERROR_PARTIAL_COPY))
+}
+
 pub fn wide(value: &OsStr) -> Vec<u16> {
     value.encode_wide().chain(Some(0)).collect()
 }
@@ -193,21 +201,19 @@ impl Process {
     pub fn modules(&self) -> Result<BTreeMap<String, (usize, PathBuf)>> {
         let deadline = Instant::now() + Duration::from_secs(2);
         loop {
-            self.alive()?;
-            match self.modules_once() {
-                Err(e)
-                    if e.downcast_ref::<std::io::Error>()
-                        .is_some_and(|e| matches!(e.raw_os_error(), Some(24 | 299)))
-                        && Instant::now() < deadline =>
-                {
+            match self.module_snapshot() {
+                Err(e) if module_list_changing(&e) && Instant::now() < deadline => {
                     std::thread::sleep(Duration::from_millis(50))
                 }
-                result => {
-                    self.alive()?;
-                    return result;
-                }
+                result => return result,
             }
         }
+    }
+    pub(crate) fn module_snapshot(&self) -> Result<BTreeMap<String, (usize, PathBuf)>> {
+        self.alive()?;
+        let result = self.modules_once();
+        self.alive()?;
+        result
     }
     fn modules_once(&self) -> Result<BTreeMap<String, (usize, PathBuf)>> {
         unsafe {

@@ -1,7 +1,7 @@
 use crate::{
     service::Service,
     update_install,
-    update_release::{self as release, Available, Release},
+    update_release::{self as release, Available, Release, transient_network_error},
 };
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -17,27 +17,6 @@ use std::{
 
 const INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 const RETRY_DELAYS: [Duration; 2] = [Duration::from_secs(120), Duration::from_secs(300)];
-
-fn transient_check_error(error: &anyhow::Error) -> bool {
-    error.chain().any(|cause| {
-        if let Some(error) = cause.downcast_ref::<reqwest::Error>() {
-            return error.is_timeout()
-                || error.is_connect()
-                || error
-                    .status()
-                    .is_some_and(|status| status.is_server_error() || status.as_u16() == 408);
-        }
-        cause.downcast_ref::<std::io::Error>().is_some_and(|error| {
-            matches!(
-                error.kind(),
-                std::io::ErrorKind::TimedOut
-                    | std::io::ErrorKind::ConnectionReset
-                    | std::io::ErrorKind::ConnectionAborted
-                    | std::io::ErrorKind::UnexpectedEof
-            )
-        })
-    })
-}
 
 fn retry_delay(failures: &mut usize, manual: bool, transient: bool) -> Option<Duration> {
     let delay = (!manual && transient)
@@ -238,8 +217,11 @@ impl Updater {
                         on_release(version, show_notice);
                     }
                     Err(error) => {
-                        let retry =
-                            retry_delay(&mut check_failures, manual, transient_check_error(&error));
+                        let retry = retry_delay(
+                            &mut check_failures,
+                            manual,
+                            transient_network_error(&error),
+                        );
                         if let Some(delay) = retry {
                             due = Instant::now() + delay;
                         }
@@ -440,7 +422,11 @@ mod tests {
                 .unwrap()
                 .error_for_status()
                 .unwrap_err();
-            assert_eq!(transient_check_error(&error.into()), transient, "{status}");
+            assert_eq!(
+                transient_network_error(&error.into()),
+                transient,
+                "{status}"
+            );
         }
         thread.join().unwrap();
     }
@@ -450,9 +436,9 @@ mod tests {
         let network = Error::from(ErrorKind::ConnectionReset).into();
         let signature = anyhow::anyhow!("Подпись обновления не прошла проверку");
         let denied = Error::from(ErrorKind::PermissionDenied).into();
-        assert!(transient_check_error(&network));
-        assert!(!transient_check_error(&signature));
-        assert!(!transient_check_error(&denied));
+        assert!(transient_network_error(&network));
+        assert!(!transient_network_error(&signature));
+        assert!(!transient_network_error(&denied));
 
         let mut failures = 0;
         assert_eq!(

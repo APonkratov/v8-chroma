@@ -5,10 +5,10 @@ use std::{
     time::{Duration, Instant},
 };
 use v8_chroma_core::{
-    manager,
+    manager::{self, DiscoveryFailures, ThemeNotReady},
     settings::{Loaded, Settings, SettingsPatch, Store, WindowPatch},
     theme,
-    watch::{Controller, FontTarget},
+    watch::{ApplyTarget, Controller, FontTarget},
     win::{Identity, Process},
 };
 
@@ -269,9 +269,11 @@ fn watch(store: &Store, override_theme: Option<String>, seconds: u64) -> Result<
     }
     store.ensure_initialized()?;
     let mut controller = Controller::default();
+    let mut discovery_failures = DiscoveryFailures::default();
     let started = Instant::now();
     let mut last_policy = None;
     let mut last_message = None;
+    let mut last_discovery_error = None;
     loop {
         match store.load() {
             Ok(loaded) => {
@@ -301,9 +303,13 @@ fn watch(store: &Store, override_theme: Option<String>, seconds: u64) -> Result<
                 }
                 if !settings.auto_apply {
                     controller.pause();
+                    discovery_failures.recovered();
+                    last_discovery_error = None;
                 } else {
                     match manager::discover() {
                         Ok(candidates) => {
+                            discovery_failures.recovered();
+                            last_discovery_error = None;
                             let identities: Vec<_> = candidates
                                 .into_iter()
                                 .filter(|c| c.eligible)
@@ -313,17 +319,12 @@ fn watch(store: &Store, override_theme: Option<String>, seconds: u64) -> Result<
                                 if Process::is_gone(&identity) {
                                     continue;
                                 }
-                                match manager::attach_to_with_icons(
+                                watch_theme(
+                                    &mut controller,
                                     &identity,
-                                    &settings.selected_theme,
-                                    settings.custom_icons,
-                                ) {
-                                    Ok(result) => print(&result)?,
-                                    Err(_) if Process::is_gone(&identity) => continue,
-                                    Err(error) => print(
-                                        &serde_json::json!({"pid":identity.pid,"error":format!("{error:#}")}),
-                                    )?,
-                                }
+                                    &settings,
+                                    Duration::from_secs(5),
+                                )?;
                                 for target in [FontTarget::Editor, FontTarget::Interface] {
                                     watch_font(
                                         &mut controller,
@@ -335,21 +336,33 @@ fn watch(store: &Store, override_theme: Option<String>, seconds: u64) -> Result<
                                 }
                             }
                             for (identity, target) in
-                                controller.font_retries(&identities, Instant::now())
+                                controller.retries(&identities, Instant::now())
                             {
-                                watch_font(
-                                    &mut controller,
-                                    &identity,
-                                    target,
-                                    &settings,
-                                    Duration::ZERO,
-                                )?;
+                                match target {
+                                    ApplyTarget::Theme => watch_theme(
+                                        &mut controller,
+                                        &identity,
+                                        &settings,
+                                        Duration::ZERO,
+                                    )?,
+                                    ApplyTarget::Font(target) => watch_font(
+                                        &mut controller,
+                                        &identity,
+                                        target,
+                                        &settings,
+                                        Duration::ZERO,
+                                    )?,
+                                }
                             }
                         }
-                        Err(error) => {
-                            controller.pause();
-                            eprintln!("Наблюдение приостановлено: {error:#}");
+                        Err(error) if discovery_failures.should_report(&error) => {
+                            let message = format!("Наблюдение приостановлено: {error:#}");
+                            if last_discovery_error.as_ref() != Some(&message) {
+                                eprintln!("{message}");
+                                last_discovery_error = Some(message);
+                            }
                         }
+                        Err(_) => {}
                     }
                 }
             }
@@ -373,6 +386,33 @@ fn watch(store: &Store, override_theme: Option<String>, seconds: u64) -> Result<
     Ok(())
 }
 
+fn watch_theme(
+    controller: &mut Controller,
+    identity: &Identity,
+    settings: &Settings,
+    wait: Duration,
+) -> Result<()> {
+    if Process::is_gone(identity) {
+        controller.forget_pending(identity);
+        return Ok(());
+    }
+    let result = manager::attach_to_with_icons_wait(
+        identity,
+        &settings.selected_theme,
+        settings.custom_icons,
+        wait,
+    );
+    let pending = result
+        .as_ref()
+        .is_err_and(|error| error.is::<ThemeNotReady>());
+    controller.set_pending(identity, ApplyTarget::Theme, pending, Instant::now());
+    match result {
+        Ok(result) => print(&result),
+        Err(_) if pending || Process::is_gone(identity) => Ok(()),
+        Err(error) => print(&serde_json::json!({"pid":identity.pid,"error":format!("{error:#}")})),
+    }
+}
+
 fn watch_font(
     controller: &mut Controller,
     identity: &Identity,
@@ -381,14 +421,14 @@ fn watch_font(
     wait: Duration,
 ) -> Result<()> {
     if Process::is_gone(identity) {
-        controller.set_font_pending(identity, target, false, Instant::now());
+        controller.forget_pending(identity);
         return Ok(());
     }
     let result = target.apply(identity, settings, wait);
     let pending = result
         .as_ref()
         .is_err_and(|error| error.is::<v8_chroma_core::fonts::FontNotReady>());
-    controller.set_font_pending(identity, target, pending, Instant::now());
+    controller.set_pending(identity, ApplyTarget::Font(target), pending, Instant::now());
     let (field, error_field) = match target {
         FontTarget::Editor => ("font", "font_error"),
         FontTarget::Interface => ("ui_font", "ui_font_error"),

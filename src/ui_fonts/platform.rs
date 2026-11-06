@@ -1,5 +1,6 @@
 use super::{DEFAULT_FAMILY, FALLBACK_FAMILY, UiFontSettings};
 use crate::{
+    engine_dll,
     fonts::{self, FontApplied, FontNotReady, refresh_when_ready},
     manager,
     storage::{Lock, atomic_write},
@@ -12,9 +13,12 @@ use std::{
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
-use windows_sys::Win32::Foundation::ERROR_NOT_READY;
+use windows_sys::Win32::Foundation::{ERROR_BUSY, ERROR_NOT_READY, ERROR_TIMEOUT};
 
 const DLL: &[u8] = include_bytes!("../../assets/UiFontEngine.dll");
+const DLL_NAME: &str = "UiFontEngine.dll";
+const ENGINE_MISMATCH: &str =
+    "Изменилась версия движка шрифта интерфейса; перезапустите этот Конфигуратор";
 const EXPORTS: &[&str] = &[
     "UiFontCapabilities",
     "UiFontStart",
@@ -53,7 +57,7 @@ fn directory(identity: &Identity) -> Result<PathBuf> {
         .join(format!("{}-{}", identity.pid, identity.created_time)))
 }
 fn session_result(session: &Session) -> Result<Option<FontApplied>> {
-    if can_resume_refresh(session) {
+    if can_resume_refresh(session) || previous_preflight_timeout(session).is_some() {
         return Ok(None);
     }
     ensure!(
@@ -73,6 +77,21 @@ fn session_result(session: &Session) -> Result<Option<FontApplied>> {
     );
     Ok(session.applied.clone())
 }
+fn previous_preflight_timeout(session: &Session) -> Option<Stage> {
+    if session.stage != Stage::Failed {
+        return None;
+    }
+    match session
+        .failure
+        .as_deref()?
+        .strip_prefix(FAILURE_CONTEXT)?
+        .strip_prefix(": ")?
+    {
+        "UiFontStart: Win32=1460" => Some(Stage::Loaded),
+        "UiFontApply: Win32=1460" => Some(Stage::Ready),
+        _ => None,
+    }
+}
 fn can_resume_refresh(session: &Session) -> bool {
     session.stage == Stage::RefreshPending
         || session.stage == Stage::Failed
@@ -87,9 +106,16 @@ pub fn last_applied(identity: &Identity) -> Result<Option<FontApplied>> {
     }
     let saved: Session = serde_json::from_slice(&fs::read(path)?)?;
     ensure!(
-        saved.identity == *identity && saved.dll_sha256 == manager::hash(DLL),
-        "Изменилась версия движка шрифта интерфейса; перезапустите этот Конфигуратор"
+        saved.identity == *identity,
+        "Сессия шрифта интерфейса относится к другому процессу"
     );
+    engine_dll::session_path(
+        &manager::data_dir()?.join("ui-fonts/runtime"),
+        DLL_NAME,
+        &saved.dll_sha256,
+        DLL,
+    )
+    .context(ENGINE_MISMATCH)?;
     session_result(&saved)
 }
 fn save(path: &Path, session: &Session) -> Result<()> {
@@ -124,8 +150,9 @@ fn configure(
     state.stage = Stage::Applying;
     save(path, state)?;
     let code = run(path, state, || operation(command))?;
-    if code == ERROR_NOT_READY {
-        // Start/Apply preflight has not changed the target font or installed hooks.
+    if matches!(code, ERROR_NOT_READY | ERROR_TIMEOUT | ERROR_BUSY) {
+        // These returned Start/Apply codes precede configuration and hook changes.
+        // The readiness callback never notifies subscribers, even if it runs late.
         // The DLL is already loaded; retry Start without another LoadLibrary call.
         if first {
             state.stage = Stage::Loaded;
@@ -300,11 +327,12 @@ pub(crate) fn apply_with_wait(
         }
     }
     let digest = manager::hash(DLL);
-    let runtime = manager::data_dir()?.join("ui-fonts/runtime").join(&digest);
-    fs::create_dir_all(&runtime)?;
-    let dll = runtime.join("UiFontEngine.dll");
+    let runtime = manager::data_dir()?.join("ui-fonts/runtime");
+    let current_runtime = runtime.join(&digest);
+    fs::create_dir_all(&current_runtime)?;
+    let dll = current_runtime.join(DLL_NAME);
     {
-        let _lock = Lock::acquire(&runtime.join("runtime.lock"))?;
+        let _lock = Lock::acquire(&current_runtime.join("runtime.lock"))?;
         if dll.exists() {
             ensure!(
                 manager::hash(&fs::read(&dll)?) == digest,
@@ -314,7 +342,7 @@ pub(crate) fn apply_with_wait(
             atomic_write(&dll, DLL)?;
         }
     }
-    let dll = win::canonical(&dll)?;
+    let mut dll = win::canonical(&dll)?;
     let log = directory.join("ui-font.txt");
     fs::OpenOptions::new()
         .create(true)
@@ -323,17 +351,22 @@ pub(crate) fn apply_with_wait(
     let log = win::canonical(&log)?;
     let payload = config(family.as_deref(), &log)?;
     let mut state = if let Some((_, loaded)) = modules.get("uifontengine.dll") {
-        ensure!(
-            win::same_path(loaded, &dll),
-            "В процессе другая версия шрифта интерфейса; перезапустите этот Конфигуратор"
-        );
-        let state = saved.context(
+        let mut state = saved.context(
             "Движок шрифта интерфейса загружен вне менеджера; перезапустите этот Конфигуратор",
         )?;
         ensure!(
-            state.identity == *expected && state.dll_sha256 == digest,
+            state.identity == *expected,
             "Несовместимая сессия шрифта интерфейса; перезапустите этот Конфигуратор"
         );
+        dll = engine_dll::session_path(&runtime, DLL_NAME, &state.dll_sha256, DLL)
+            .and_then(|path| win::canonical(&path))
+            .context(ENGINE_MISMATCH)?;
+        ensure!(win::same_path(loaded, &dll), ENGINE_MISMATCH);
+        if let Some(stage) = previous_preflight_timeout(&state) {
+            state.stage = stage;
+            state.applied = None;
+            state.failure = None;
+        }
         session_result(&state)?;
         if !can_resume_refresh(&state)
             && state.requested == *font
@@ -378,10 +411,13 @@ pub(crate) fn apply_with_wait(
         }
         process.named_exports(&dll, EXPORTS)
     })?;
-    let capabilities = run(&path, &mut state, || {
-        process.call(exports["UiFontCapabilities"], None)
-    })?;
-    if capabilities != 3 {
+    // Established sessions already verified the API. In particular, do not
+    // rediscover it while a timed-out, read-only GUI callback may still run.
+    if load
+        && run(&path, &mut state, || {
+            process.call(exports["UiFontCapabilities"], None)
+        })? != 3
+    {
         state.stage = Stage::Unsupported;
         state.applied=Some(FontApplied {label:stock().label,warning:font.enabled.then(||"API горячего обновления шрифта интерфейса этой платформы не распознан; оставлен штатный шрифт 1С.".into())});
         save(&path, &state)?;
@@ -455,14 +491,15 @@ mod tests {
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("session.json");
         let mut state = session(Stage::Loading);
-        for _ in 0..2 {
+        for code in [ERROR_NOT_READY, ERROR_TIMEOUT, ERROR_BUSY] {
             let previous = state.clone();
             let error = configure(&path, &mut state, previous, |command| {
                 assert_eq!(command, "UiFontStart");
-                Ok(ERROR_NOT_READY)
+                Ok(code)
             })
             .unwrap_err();
             assert!(error.to_string().contains("Конфигуратор ещё запускается"));
+            assert!(error.is::<FontNotReady>());
             state = restore(&path);
             assert_eq!(state.stage, Stage::Loaded);
             assert!(session_result(&state).unwrap().is_none());
@@ -477,7 +514,7 @@ mod tests {
         assert_eq!(restore(&path).stage, Stage::Applying);
     }
     #[test]
-    fn not_ready_apply_preserves_previous_font_and_allows_retry() {
+    fn preflight_timeout_preserves_previous_font_and_allows_retry() {
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("session.json");
         let mut state = session(Stage::Ready);
@@ -492,7 +529,7 @@ mod tests {
         assert!(
             configure(&path, &mut state, previous, |command| {
                 assert_eq!(command, "UiFontApply");
-                Ok(ERROR_NOT_READY)
+                Ok(ERROR_TIMEOUT)
             })
             .is_err()
         );
@@ -533,6 +570,24 @@ mod tests {
                 assert!(diagnostic.contains(if timeout { "1460" } else { "Win32=50" }));
                 assert_eq!(diagnostic, format!("{error:#}"));
             }
+        }
+    }
+    #[test]
+    fn only_old_start_and_apply_preflight_timeouts_are_recoverable() {
+        let mut state = session(Stage::Failed);
+        for (cause, stage) in [
+            ("UiFontStart: Win32=1460", Some(Stage::Loaded)),
+            ("UiFontApply: Win32=1460", Some(Stage::Ready)),
+            (
+                "Шрифт настроен, но горячее обновление завершилось ошибкой Win32=1460",
+                None,
+            ),
+            ("REMOTE_TIMEOUT", None),
+            ("UiFontStart: Win32=5", None),
+        ] {
+            state.failure = Some(format!("{FAILURE_CONTEXT}: {cause}"));
+            assert_eq!(previous_preflight_timeout(&state), stage);
+            assert_eq!(session_result(&state).is_ok(), stage.is_some());
         }
     }
     #[test]
