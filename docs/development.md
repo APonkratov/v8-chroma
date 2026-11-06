@@ -25,8 +25,9 @@ Rust 1.97.1 фиксируется в rust-toolchain.toml. Общие коман
 1.13.2; достаточно CMake 3.25+ для самостоятельного запуска presets.
 Cargo.lock и package-lock.json фиксируют зависимости приложения.
 
-Полная сборка Windows x64 требует MSVC и Windows SDK. В Visual Studio Installer
-добавьте «Разработка классических приложений на C++» с MSVC v143 x64/x86 и Windows SDK.
+Для полной сборки Windows x64 установите Visual Studio 2022 или Build Tools 2022.
+В Visual Studio Installer добавьте «Разработка классических приложений на C++»
+с MSVC v143 x64/x86 и Windows SDK.
 Готовый минимальный набор компонентов сохранён в [`.vsconfig`](../.vsconfig):
 его можно импортировать в Visual Studio Installer вместо ручного выбора.
 `scripts/build.py` находит MSVC через `vswhere` и загружает x64-окружение автоматически;

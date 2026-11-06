@@ -37,14 +37,14 @@ def configure_windows_tools(msvc):
     installation = subprocess.check_output([str(vswhere), "-latest", "-version", "[17.0,18.0)", "-products", "*", "-requires",
         "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property", "installationPath", "-utf8"], encoding="utf-8").strip()
     if not installation:
-        raise ValueError("MSVC x64/x86 tools not installed. Add Desktop development with C++ and Windows SDK in Visual Studio Installer")
+        raise ValueError("Install Visual Studio 2022 with MSVC x64/x86 tools and the Windows SDK")
     env = os.environ.copy()
     env["V8_CHROMA_VSDEVCMD"] = str(Path(installation) / "Common7/Tools/VsDevCmd.bat")
     with tempfile.TemporaryDirectory(prefix="v8-chroma-msvc-") as temporary:
         batch = Path(temporary) / "environment.cmd"
         batch.write_text('@call "%V8_CHROMA_VSDEVCMD%" -arch=x64 -host_arch=x64 >nul\n@if errorlevel 1 exit /b %errorlevel%\n@set\n', encoding="ascii")
-        command = f'"{os.environ.get("COMSPEC", "cmd.exe")}" /d /s /c ""{batch}""'
-        output = subprocess.check_output(command, env=env).decode("mbcs")
+        command = f'"{os.environ.get("COMSPEC", "cmd.exe")}" /d /u /s /c ""{batch}""'
+        output = subprocess.check_output(command, env=env, encoding="utf-16-le")
     for line in output.splitlines():
         key, separator, value = line.partition("=")
         if key and separator:

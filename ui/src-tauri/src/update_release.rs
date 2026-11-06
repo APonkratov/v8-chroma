@@ -110,6 +110,7 @@ pub fn client() -> Result<Client> {
     Client::builder()
         .https_only(true)
         .connect_timeout(Duration::from_secs(10))
+        // The blocking client applies this timeout to each read of the EXE stream.
         .timeout(Duration::from_secs(180))
         .user_agent(concat!("v8-chroma/", env!("CARGO_PKG_VERSION")))
         .redirect(reqwest::redirect::Policy::limited(5))
