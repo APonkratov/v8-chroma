@@ -39,14 +39,19 @@ fn same_except_timestamps(embedded: &[u8], previous: &[u8]) -> bool {
     if embedded.len() != previous.len() {
         return false;
     }
-    // Derive both offsets only from the trusted embedded DLL. A modified PE
+    // Derive offsets only from the trusted embedded DLL. A modified PE
     // header in the on-disk candidate cannot redirect the exclusions.
-    let Some([coff, exports]) = timestamp_offsets(embedded) else {
+    let Some(offsets) = timestamp_offsets(embedded) else {
         return false;
     };
-    embedded[..coff] == previous[..coff]
-        && embedded[coff + 4..exports] == previous[coff + 4..exports]
-        && embedded[exports + 4..] == previous[exports + 4..]
+    let mut start = 0;
+    for offset in offsets {
+        if offset < start || embedded[start..offset] != previous[start..offset] {
+            return false;
+        }
+        start = offset + 4;
+    }
+    embedded[start..] == previous[start..]
 }
 
 fn u16_at(data: &[u8], offset: usize) -> Option<u16> {
@@ -59,7 +64,8 @@ fn u32_at(data: &[u8], offset: usize) -> Option<usize> {
     Some(u32::from_le_bytes(data.get(offset..offset + 4)?.try_into().ok()?) as usize)
 }
 
-fn timestamp_offsets(data: &[u8]) -> Option<[usize; 2]> {
+/// Locate COFF, export and MSVC POGO timestamps using the embedded PE's tables.
+fn timestamp_offsets(data: &[u8]) -> Option<Vec<usize>> {
     if data.get(..2)? != b"MZ" {
         return None;
     }
@@ -75,7 +81,8 @@ fn timestamp_offsets(data: &[u8]) -> Option<[usize; 2]> {
         return None;
     }
     let optional_size = u16_at(data, coff + 16)? as usize;
-    if optional_size < 120 || u32_at(data, optional + 108)? == 0 {
+    let directory_count = u32_at(data, optional + 108)?;
+    if optional_size < 120 || directory_count == 0 {
         return None;
     }
     let export_rva = u32_at(data, optional + 112)?;
@@ -85,20 +92,45 @@ fn timestamp_offsets(data: &[u8]) -> Option<[usize; 2]> {
     let section_table = optional + optional_size;
     let section_count = u16_at(data, coff + 2)? as usize;
     let sections_end = section_table + section_count * 40;
-    for section in data.get(section_table..sections_end)?.chunks_exact(40) {
-        let section_rva = u32_at(section, 12)?;
-        let raw_size = u32_at(section, 16)?;
-        if let Some(delta) = export_rva.checked_sub(section_rva)
-            && delta + 40 <= raw_size
-        {
-            let export_offset = u32_at(section, 20)? + delta;
-            if export_offset >= sections_end && export_offset + 40 <= data.len() {
-                return Some([coff + 4, export_offset + 4]);
+    let sections = data.get(section_table..sections_end)?;
+    let file_offset = |rva: usize, size: usize| {
+        for section in sections.chunks_exact(40) {
+            let section_rva = u32_at(section, 12)?;
+            let raw_size = u32_at(section, 16)?;
+            if let Some(delta) = rva.checked_sub(section_rva)
+                && delta <= raw_size
+                && size <= raw_size - delta
+            {
+                let offset = u32_at(section, 20)? + delta;
+                return (offset >= sections_end && offset + size <= data.len()).then_some(offset);
             }
+        }
+        None
+    };
+    let mut offsets = vec![coff + 4, file_offset(export_rva, 40)? + 4];
+    if directory_count > 6 {
+        // IMAGE_DIRECTORY_ENTRY_DEBUG is the seventh PE32+ data directory.
+        if optional_size < 168 {
             return None;
         }
+        let debug_rva = u32_at(data, optional + 160)?;
+        let debug_size = u32_at(data, optional + 164)?;
+        if debug_rva != 0 || debug_size != 0 {
+            const ENTRY_SIZE: usize = 28;
+            const POGO: usize = 13;
+            if debug_rva == 0 || debug_size == 0 || !debug_size.is_multiple_of(ENTRY_SIZE) {
+                return None;
+            }
+            let debug = file_offset(debug_rva, debug_size)?;
+            for entry in (debug..debug + debug_size).step_by(ENTRY_SIZE) {
+                if u32_at(data, entry + 12)? == POGO {
+                    offsets.push(entry + 4);
+                }
+            }
+        }
     }
-    None
+    offsets.sort_unstable();
+    Some(offsets)
 }
 
 #[cfg(test)]
@@ -122,9 +154,11 @@ mod tests {
         ] {
             let runtime = tempfile::tempdir()?;
             let mut previous = embedded.to_vec();
-            let [coff, exports] = timestamp_offsets(embedded).context(name)?;
-            previous[coff] ^= 1;
-            previous[exports] ^= 1;
+            let offsets = timestamp_offsets(embedded).context(name)?;
+            let coff = offsets[0];
+            for offset in offsets {
+                previous[offset] ^= 1;
+            }
             let digest = hash(&previous);
             let directory = runtime.path().join(&digest);
             fs::create_dir(&directory)?;
@@ -136,9 +170,9 @@ mod tests {
             fs::write(&file, &previous)?;
             assert!(session_path(runtime.path(), name, &digest, embedded).is_err());
 
-            // A change adjacent to the export timestamp still requires a restart,
+            // A change adjacent to the COFF timestamp still requires a restart,
             // even when the registry and runtime directory carry its correct hash.
-            previous[exports + 4] ^= 1;
+            previous[coff + 4] ^= 1;
             let changed_digest = hash(&previous);
             let changed = runtime.path().join(&changed_digest);
             fs::create_dir(&changed)?;
@@ -146,5 +180,40 @@ mod tests {
             assert!(session_path(runtime.path(), name, &changed_digest, embedded).is_err());
         }
         Ok(())
+    }
+
+    #[test]
+    fn only_the_pogo_timestamp_is_ignored_in_the_debug_directory() {
+        let mut pe = vec![0; 1024];
+        pe[..2].copy_from_slice(b"MZ");
+        pe[0x3c] = 64;
+        pe[64..68].copy_from_slice(b"PE\0\0");
+        pe[68..70].copy_from_slice(&0x8664u16.to_le_bytes());
+        pe[70] = 1; // One section.
+        pe[84] = 240; // Optional header size.
+        pe[86..88].copy_from_slice(&0x2000u16.to_le_bytes());
+        pe[88..90].copy_from_slice(&0x20bu16.to_le_bytes());
+        pe[196] = 7; // NumberOfRvaAndSizes.
+        pe[200..204].copy_from_slice(&0x1000u32.to_le_bytes());
+        pe[204] = 40;
+        pe[248..252].copy_from_slice(&0x1040u32.to_le_bytes());
+        pe[252] = 56; // Two IMAGE_DEBUG_DIRECTORY records.
+        pe[340..344].copy_from_slice(&0x1000u32.to_le_bytes());
+        pe[344..348].copy_from_slice(&512u32.to_le_bytes());
+        pe[348..352].copy_from_slice(&512u32.to_le_bytes());
+        let pogo = 576;
+        let codeview = pogo + 28;
+        pe[pogo + 12] = 13;
+        pe[codeview + 12] = 2;
+
+        let mut previous = pe.clone();
+        previous[72] = 1; // COFF timestamp.
+        previous[pogo + 4] = 1;
+        assert!(same_except_timestamps(&pe, &previous));
+        previous[codeview + 4] = 1;
+        assert!(!same_except_timestamps(&pe, &previous));
+        previous[codeview + 4] = 0;
+        previous[pogo + 12] = 2;
+        assert!(!same_except_timestamps(&pe, &previous));
     }
 }
