@@ -152,6 +152,8 @@ impl Updater {
                     Ok(Request::Check) => true,
                     Ok(Request::Changed) => {
                         due = Instant::now();
+                        let version = worker.snapshot().available.map(|release| release.version);
+                        on_release(version, false);
                         false
                     }
                     Err(mpsc::RecvTimeoutError::Disconnected) => break,
