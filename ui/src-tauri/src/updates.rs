@@ -16,6 +16,37 @@ use std::{
 };
 
 const INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
+const RETRY_DELAYS: [Duration; 2] = [Duration::from_secs(120), Duration::from_secs(300)];
+
+fn transient_check_error(error: &anyhow::Error) -> bool {
+    error.chain().any(|cause| {
+        if let Some(error) = cause.downcast_ref::<reqwest::Error>() {
+            return error.is_timeout()
+                || error.is_connect()
+                || error
+                    .status()
+                    .is_some_and(|status| status.is_server_error() || status.as_u16() == 408);
+        }
+        cause.downcast_ref::<std::io::Error>().is_some_and(|error| {
+            matches!(
+                error.kind(),
+                std::io::ErrorKind::TimedOut
+                    | std::io::ErrorKind::ConnectionReset
+                    | std::io::ErrorKind::ConnectionAborted
+                    | std::io::ErrorKind::UnexpectedEof
+            )
+        })
+    })
+}
+
+fn retry_delay(failures: &mut usize, manual: bool, transient: bool) -> Option<Duration> {
+    let delay = (!manual && transient)
+        .then(|| RETRY_DELAYS.get(*failures))
+        .flatten()
+        .copied();
+    *failures = if delay.is_some() { *failures + 1 } else { 0 };
+    delay
+}
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Preferences {
@@ -39,6 +70,7 @@ pub struct Snapshot {
     pub installing: bool,
     pub available: Option<Available>,
     pub error: Option<String>,
+    pub check_error: Option<String>,
     pub last_checked: Option<u64>,
     pub downloaded: u64,
     pub total: u64,
@@ -96,7 +128,8 @@ impl Updater {
                     checking: false,
                     installing: false,
                     available: None,
-                    error,
+                    error: None,
+                    check_error: error,
                     last_checked: None,
                     downloaded: 0,
                     total: 0,
@@ -107,6 +140,7 @@ impl Updater {
         let worker = updater.clone();
         std::thread::spawn(move || {
             let mut due = Instant::now() + Duration::from_secs(3);
+            let mut check_failures = 0;
             let mut cleanup_due = Instant::now() + Duration::from_secs(5);
             loop {
                 let request = rx.recv_timeout(Duration::from_secs(1));
@@ -119,7 +153,7 @@ impl Updater {
                     }
                     cleanup_due = Instant::now() + Duration::from_secs(3600);
                 }
-                let check = match request {
+                let manual = match request {
                     Ok(Request::NotificationShown(version)) => {
                         worker.edit(|state| {
                             if state
@@ -154,26 +188,37 @@ impl Updater {
                         due = Instant::now();
                         let version = worker.snapshot().available.map(|release| release.version);
                         on_release(version, false);
-                        false
+                        check_failures = 0;
+                        continue;
                     }
                     Err(mpsc::RecvTimeoutError::Disconnected) => break,
-                    Err(mpsc::RecvTimeoutError::Timeout) => {
-                        worker.snapshot().preferences.auto_check && Instant::now() >= due
-                    }
+                    Err(mpsc::RecvTimeoutError::Timeout) if Instant::now() >= due => false,
+                    Err(mpsc::RecvTimeoutError::Timeout) => continue,
                 };
-                if !check {
-                    continue;
-                }
-                due = Instant::now() + INTERVAL;
-                worker.edit(|s| {
-                    s.snapshot.checking = true;
-                    s.snapshot.error = None;
+                let include_rc = worker.edit(|state| {
+                    let snapshot = &mut state.snapshot;
+                    if !manual
+                        && (!snapshot.preferences.auto_check
+                            || snapshot.checking
+                            || snapshot.installing)
+                    {
+                        return None;
+                    }
+                    snapshot.checking = true;
+                    if manual {
+                        snapshot.check_error = None;
+                    }
+                    Some(snapshot.preferences.include_rc)
                 });
-                let include_rc = worker.snapshot().preferences.include_rc;
+                let Some(include_rc) = include_rc else {
+                    continue;
+                };
                 let result =
                     release::client().and_then(|client| release::discover(&client, include_rc));
+                due = Instant::now() + INTERVAL;
                 match result {
                     Ok(found) => {
+                        check_failures = 0;
                         let version = found.as_ref().map(|r| r.available().version);
                         worker.edit(|s| {
                             s.snapshot.available = found.as_ref().map(Release::available);
@@ -185,23 +230,34 @@ impl Updater {
                                     .as_secs(),
                             );
                             s.snapshot.checking = false;
+                            s.snapshot.check_error = None;
                         });
                         let show_notice = version.as_ref().is_some_and(|version| {
                             worker.snapshot().preferences.notified.as_ref() != Some(version)
                         });
                         on_release(version, show_notice);
                     }
-                    Err(e) => worker.edit(|s| {
-                        s.snapshot.checking = false;
-                        s.snapshot.error = Some(format!("Проверка обновлений: {e:#}"));
-                    }),
+                    Err(error) => {
+                        let retry =
+                            retry_delay(&mut check_failures, manual, transient_check_error(&error));
+                        if let Some(delay) = retry {
+                            due = Instant::now() + delay;
+                        }
+                        worker.edit(|s| {
+                            s.snapshot.checking = false;
+                            if retry.is_none() {
+                                s.snapshot.check_error =
+                                    Some(format!("Проверка обновлений: {error:#}"));
+                            }
+                        });
+                    }
                 }
             }
         });
         updater
     }
-    fn edit(&self, f: impl FnOnce(&mut Shared)) {
-        f(&mut self.shared.lock().unwrap_or_else(|e| e.into_inner()));
+    fn edit<T>(&self, f: impl FnOnce(&mut Shared) -> T) -> T {
+        f(&mut self.shared.lock().unwrap_or_else(|e| e.into_inner()))
     }
     pub fn snapshot(&self) -> Snapshot {
         self.shared
@@ -236,6 +292,8 @@ impl Updater {
         self.persist(&prefs)?;
         state.snapshot.preferences = prefs;
         state.snapshot.available = None;
+        state.snapshot.last_checked = None;
+        state.snapshot.check_error = None;
         state.release = None;
         self.tx.send(Request::Changed)?;
         Ok(())
@@ -328,5 +386,34 @@ impl Updater {
         let _ = stage.keep();
         service.quit();
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{Error, ErrorKind};
+
+    #[test]
+    fn transient_background_failures_retry_but_manual_and_other_failures_are_reported() {
+        let network = Error::from(ErrorKind::ConnectionReset).into();
+        let signature = anyhow::anyhow!("Подпись обновления не прошла проверку");
+        let denied = Error::from(ErrorKind::PermissionDenied).into();
+        assert!(transient_check_error(&network));
+        assert!(!transient_check_error(&signature));
+        assert!(!transient_check_error(&denied));
+
+        let mut failures = 0;
+        assert_eq!(
+            retry_delay(&mut failures, false, true),
+            Some(Duration::from_secs(120))
+        );
+        assert_eq!(
+            retry_delay(&mut failures, false, true),
+            Some(Duration::from_secs(300))
+        );
+        assert_eq!(retry_delay(&mut failures, false, true), None);
+        assert_eq!(retry_delay(&mut failures, true, true), None);
+        assert_eq!(retry_delay(&mut failures, false, false), None);
     }
 }

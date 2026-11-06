@@ -8,7 +8,8 @@ use v8_chroma_core::{
     manager,
     settings::{Loaded, Settings, SettingsPatch, Store, WindowPatch},
     theme,
-    watch::Controller,
+    watch::{Controller, FontTarget},
+    win::{Identity, Process},
 };
 
 #[derive(Parser)]
@@ -309,38 +310,40 @@ fn watch(store: &Store, override_theme: Option<String>, seconds: u64) -> Result<
                                 .filter_map(|c| c.identity)
                                 .collect();
                             for identity in controller.plan(&identities, &settings) {
+                                if Process::is_gone(&identity) {
+                                    continue;
+                                }
                                 match manager::attach_to_with_icons(
                                     &identity,
                                     &settings.selected_theme,
                                     settings.custom_icons,
                                 ) {
                                     Ok(result) => print(&result)?,
+                                    Err(_) if Process::is_gone(&identity) => continue,
                                     Err(error) => print(
                                         &serde_json::json!({"pid":identity.pid,"error":format!("{error:#}")}),
                                     )?,
                                 }
-                                match v8_chroma_core::fonts::apply_to(
-                                    &identity,
-                                    &settings.editor_font,
-                                ) {
-                                    Ok(font) => {
-                                        print(&serde_json::json!({"pid":identity.pid,"font":font}))?
-                                    }
-                                    Err(error) => print(
-                                        &serde_json::json!({"pid":identity.pid,"font_error":format!("{error:#}")}),
-                                    )?,
+                                for target in [FontTarget::Editor, FontTarget::Interface] {
+                                    watch_font(
+                                        &mut controller,
+                                        &identity,
+                                        target,
+                                        &settings,
+                                        Duration::from_secs(5),
+                                    )?;
                                 }
-                                match v8_chroma_core::ui_fonts::apply_to(
+                            }
+                            for (identity, target) in
+                                controller.font_retries(&identities, Instant::now())
+                            {
+                                watch_font(
+                                    &mut controller,
                                     &identity,
-                                    &settings.ui_font,
-                                ) {
-                                    Ok(font) => print(
-                                        &serde_json::json!({"pid":identity.pid,"ui_font":font}),
-                                    )?,
-                                    Err(error) => print(
-                                        &serde_json::json!({"pid":identity.pid,"ui_font_error":format!("{error:#}")}),
-                                    )?,
-                                }
+                                    target,
+                                    &settings,
+                                    Duration::ZERO,
+                                )?;
                             }
                         }
                         Err(error) => {
@@ -368,4 +371,33 @@ fn watch(store: &Store, override_theme: Option<String>, seconds: u64) -> Result<
         std::thread::sleep(Duration::from_secs(2));
     }
     Ok(())
+}
+
+fn watch_font(
+    controller: &mut Controller,
+    identity: &Identity,
+    target: FontTarget,
+    settings: &Settings,
+    wait: Duration,
+) -> Result<()> {
+    if Process::is_gone(identity) {
+        controller.set_font_pending(identity, target, false, Instant::now());
+        return Ok(());
+    }
+    let result = target.apply(identity, settings, wait);
+    let pending = result
+        .as_ref()
+        .is_err_and(|error| error.is::<v8_chroma_core::fonts::FontNotReady>());
+    controller.set_font_pending(identity, target, pending, Instant::now());
+    let (field, error_field) = match target {
+        FontTarget::Editor => ("font", "font_error"),
+        FontTarget::Interface => ("ui_font", "ui_font_error"),
+    };
+    match result {
+        Ok(font) => print(&serde_json::json!({"pid":identity.pid, (field):font})),
+        Err(_) if pending || Process::is_gone(identity) => Ok(()),
+        Err(error) => {
+            print(&serde_json::json!({"pid":identity.pid, (error_field):format!("{error:#}")}))
+        }
+    }
 }

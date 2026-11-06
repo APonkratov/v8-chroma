@@ -6,7 +6,14 @@ use crate::{
 };
 use anyhow::{Context, Result, ensure};
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, fs, path::Path};
+use std::{
+    collections::BTreeMap,
+    fs,
+    path::Path,
+    thread,
+    time::{Duration, Instant},
+};
+use windows_sys::Win32::Foundation::{ERROR_NOT_READY, ERROR_NOT_SUPPORTED};
 use windows_sys::Win32::Graphics::Gdi::*;
 
 const DLL: &[u8] = include_bytes!("../../assets/FontProbe.dll");
@@ -17,6 +24,8 @@ const EXPORTS: &[&str] = &[
     "FontProbeRefresh",
     "FontProbeCapabilities",
 ];
+const FONT_FAILURE_CONTEXT: &str =
+    "Ошибка движка шрифтов; повтор запрещён до перезапуска Конфигуратора";
 
 /// GDI enumerates local fonts; no catalog request or font download is made.
 pub fn installed() -> Result<Vec<String>> {
@@ -82,6 +91,15 @@ pub struct FontApplied {
     pub label: String,
     pub warning: Option<String>,
 }
+#[derive(Debug)]
+pub struct FontNotReady;
+impl std::fmt::Display for FontNotReady {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Конфигуратор ещё запускается. Повторите применение после открытия редактора.")
+    }
+}
+impl std::error::Error for FontNotReady {}
+
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Session {
@@ -104,7 +122,10 @@ fn session_result(saved: &Session) -> Result<Option<FontApplied>> {
         );
     }
     ensure!(
-        saved.stage == "ready" || saved.stage == "unsupported",
+        matches!(
+            saved.stage.as_str(),
+            "ready" | "unsupported" | "refresh_pending"
+        ),
         "Предыдущее применение шрифта не завершено. Повтор запрещён; перезапустите этот Конфигуратор"
     );
     Ok(saved.applied.clone())
@@ -129,9 +150,13 @@ fn persist_failure<T>(
 ) -> Result<T> {
     match operation() {
         Ok(value) => Ok(value),
+        Err(error) if error.is::<FontNotReady>() => {
+            state.stage = "refresh_pending".into();
+            atomic_write(path, &serde_json::to_vec_pretty(state)?)?;
+            Err(error)
+        }
         Err(error) => {
-            let error = error
-                .context("Ошибка движка шрифтов; повтор запрещён до перезапуска Конфигуратора");
+            let error = error.context(FONT_FAILURE_CONTEXT);
             state.stage = "failed".into();
             state.failure = Some(format!("{error:#}"));
             state.applied = None;
@@ -169,6 +194,9 @@ pub fn last_applied(identity: &Identity) -> Result<Option<FontApplied>> {
         saved.identity == *identity && saved.dll_sha256 == manager::hash(DLL),
         "Изменилась версия движка шрифтов; перезапустите этот Конфигуратор"
     );
+    if can_resume_refresh(&saved) {
+        return Ok(None);
+    }
     session_result(&saved)
 }
 fn push_wide(out: &mut Vec<u8>, value: &str, capacity: usize) -> Result<()> {
@@ -217,16 +245,52 @@ fn prepare_log(directory: &Path) -> Result<std::path::PathBuf> {
 
 const REOPEN_EDITOR: &str = "Переоткройте модуль для применения шрифта: механизм обновления открытого редактора не распознан.";
 
+fn refresh_failure(code: u32) -> String {
+    format!(
+        "Шрифт настроен, но обновление редактора завершилось ошибкой Win32={code}. Повтор запрещён до перезапуска Конфигуратора"
+    )
+}
+
+fn can_resume_refresh(state: &Session) -> bool {
+    // Versions before the readiness retry persisted this specific refresh failure
+    // as terminal even though the native engine returned before editing any window.
+    state.stage == "failed"
+        && state.failure.as_ref().is_some_and(|reason| {
+            *reason
+                == format!(
+                    "{FONT_FAILURE_CONTEXT}: {}",
+                    refresh_failure(ERROR_NOT_READY)
+                )
+        })
+}
+
+pub(crate) fn refresh_when_ready(
+    mut refresh: impl FnMut() -> Result<u32>,
+    wait: Duration,
+) -> Result<u32> {
+    const POLL: Duration = Duration::from_millis(100);
+    let deadline = Instant::now() + wait;
+    loop {
+        let code = refresh()?;
+        // NOT_READY is returned before updating any editor. A timed-out GUI
+        // dispatch may still be running, so other results must stop the retry.
+        if code != ERROR_NOT_READY || Instant::now() + POLL >= deadline {
+            return Ok(code);
+        }
+        thread::sleep(POLL);
+    }
+}
+
 fn confirm_refresh(code: u32, data: &str, enabled: bool, replaced: u64) -> Result<Option<String>> {
     // Native NOT_SUPPORTED is returned before changing any editor's font.
     // The conversion hook is already configured and can serve new editors.
-    if code == windows_sys::Win32::Foundation::ERROR_NOT_SUPPORTED {
+    if code == ERROR_NOT_SUPPORTED {
         return Ok(Some(REOPEN_EDITOR.into()));
     }
-    ensure!(
-        code == 0,
-        "Шрифт настроен, но обновление редактора завершилось ошибкой Win32={code}. Повтор запрещён до перезапуска Конфигуратора"
-    );
+    if code == ERROR_NOT_READY {
+        return Err(FontNotReady.into());
+    }
+    ensure!(code == 0, "{}", refresh_failure(code));
     ensure!(
         field(data, "enabled")? == u64::from(enabled) && field(data, "editor_status")? == 0,
         "Движок не подтвердил применение шрифта"
@@ -236,6 +300,14 @@ fn confirm_refresh(code: u32, data: &str, enabled: bool, replaced: u64) -> Resul
 }
 
 pub fn apply_to(expected: &Identity, font: &FontSettings) -> Result<FontApplied> {
+    apply_with_wait(expected, font, Duration::from_secs(5))
+}
+
+pub(crate) fn apply_with_wait(
+    expected: &Identity,
+    font: &FontSettings,
+    wait: Duration,
+) -> Result<FontApplied> {
     font.validate()?;
     ensure!(
         manager::identity(expected.pid)? == *expected,
@@ -273,6 +345,13 @@ pub fn apply_to(expected: &Identity, font: &FontSettings) -> Result<FontApplied>
             "Шрифт «{}» не установлен",
             font.family
         );
+    }
+    if !modules.contains_key("grphcs.dll")
+        || !["core83.dll", "core85.dll"]
+            .iter()
+            .any(|name| modules.contains_key(*name))
+    {
+        return Err(FontNotReady.into());
     }
     for name in ["grphcs.dll", "core83.dll", "core85.dll", "txtedui.dll"] {
         if let Some((_, path)) = modules.get(name) {
@@ -326,7 +405,9 @@ pub fn apply_to(expected: &Identity, font: &FontSettings) -> Result<FontApplied>
             state.requested = font.clone();
             return unsupported_session(state, &state_path);
         }
-        session_result(state)?;
+        if !can_resume_refresh(state) {
+            session_result(state)?;
+        }
     } else {
         ensure!(
             saved.is_none(),
@@ -343,6 +424,8 @@ pub fn apply_to(expected: &Identity, font: &FontSettings) -> Result<FontApplied>
         atomic_write(&state_path, &serde_json::to_vec_pretty(&saved)?)?;
     }
     let state = saved.as_mut().context("Нет сессии шрифта")?;
+    let resume =
+        state.requested == *font && (state.stage == "refresh_pending" || can_resume_refresh(state));
     state.requested = font.clone();
     let Some((exports, capabilities)) = prepare_engine(state, &state_path, || {
         if !modules.contains_key("fontprobe.dll") {
@@ -361,6 +444,7 @@ pub fn apply_to(expected: &Identity, font: &FontSettings) -> Result<FontApplied>
     let first = state.stage == "loading";
     state.stage = "applying".into();
     state.requested = font.clone();
+    state.failure = None;
     atomic_write(&state_path, &serde_json::to_vec_pretty(state)?)?;
     let command = if first {
         "FontProbeStart"
@@ -370,23 +454,37 @@ pub fn apply_to(expected: &Identity, font: &FontSettings) -> Result<FontApplied>
         "FontProbeStop"
     };
     let applied = persist_failure(state, &state_path, || {
-        let code = process.call(
-            exports[command],
-            if font.enabled { Some(&payload) } else { None },
-        )?;
-        ensure!(
-            code == 0,
-            "{command}: Win32={code}; повтор запрещён до перезапуска Конфигуратора"
-        );
+        if !resume {
+            let code = process.call(
+                exports[command],
+                if font.enabled { Some(&payload) } else { None },
+            )?;
+            ensure!(
+                code == 0,
+                "{command}: Win32={code}; повтор запрещён до перезапуска Конфигуратора"
+            );
+        }
         let before = String::from_utf8_lossy(&fs::read(&log)?).into_owned();
         let replaced = field(&before, "replaced")?;
         let mut warning = None;
         if modules.contains_key("txtedui.dll") && capabilities & 2 != 0 {
             let mut refresh = 8u32.to_le_bytes().to_vec();
             refresh.extend(4u32.to_le_bytes());
-            let code = process.call(exports["FontProbeRefresh"], Some(&refresh))?;
-            let data = String::from_utf8_lossy(&fs::read(&log)?).into_owned();
-            warning = confirm_refresh(code, &data, font.enabled, replaced)?;
+            let code = refresh_when_ready(
+                || process.call(exports["FontProbeRefresh"], Some(&refresh)),
+                wait,
+            )?;
+            let data = if code == 0 {
+                fs::read(&log)?
+            } else {
+                Vec::new()
+            };
+            warning = confirm_refresh(
+                code,
+                &String::from_utf8_lossy(&data),
+                font.enabled,
+                replaced,
+            )?;
         } else if modules.contains_key("txtedui.dll") {
             warning = Some(REOPEN_EDITOR.into());
         }
@@ -515,6 +613,43 @@ mod tests {
             let restored: Session = serde_json::from_slice(&bytes).unwrap();
             assert!(session_result(&restored).is_err());
         }
+    }
+    #[test]
+    fn old_not_ready_refresh_can_resume_but_other_failures_stay_locked() {
+        let mut state = loading_session();
+        state.stage = "failed".into();
+        state.failure = Some("Ошибка движка шрифтов; повтор запрещён до перезапуска Конфигуратора: Шрифт настроен, но обновление редактора завершилось ошибкой Win32=21. Повтор запрещён до перезапуска Конфигуратора".into());
+        assert!(can_resume_refresh(&state));
+        state.failure = Some(format!("{FONT_FAILURE_CONTEXT}: {}", refresh_failure(1460)));
+        assert!(!can_resume_refresh(&state));
+        state.failure = Some(format!("{FONT_FAILURE_CONTEXT}: FontProbeStart: Win32=21"));
+        assert!(!can_resume_refresh(&state));
+    }
+    #[test]
+    fn refresh_retries_until_ready_and_stops_after_any_other_result() {
+        for terminal in [0, ERROR_NOT_SUPPORTED, 1460] {
+            let mut codes = [ERROR_NOT_READY, terminal].into_iter();
+            let code = refresh_when_ready(|| Ok(codes.next().unwrap()), Duration::from_secs(5));
+            assert_eq!(code.unwrap(), terminal);
+            assert_eq!(codes.next(), None);
+        }
+    }
+    #[test]
+    fn an_editor_that_stays_unready_can_be_applied_again_later() {
+        let mut codes = [ERROR_NOT_READY].into_iter();
+        let code = refresh_when_ready(|| Ok(codes.next().unwrap()), Duration::ZERO).unwrap();
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("session.json");
+        let mut state = loading_session();
+        state.stage = "applying".into();
+        assert!(
+            persist_failure(&mut state, &path, || confirm_refresh(code, "", true, 0))
+                .unwrap_err()
+                .is::<FontNotReady>()
+        );
+        let saved: Session = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+        assert_eq!(saved.stage, "refresh_pending");
+        assert!(session_result(&saved).unwrap().is_none());
     }
     #[test]
     fn font_payload_layout_and_unicode_log_path() {

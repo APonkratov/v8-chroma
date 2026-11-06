@@ -1,6 +1,9 @@
 //! Application-independent application policy, also usable by the future Tauri worker.
 use crate::{process::Identity, settings::Settings};
-use std::collections::BTreeMap;
+use std::{
+    collections::BTreeMap,
+    time::{Duration, Instant},
+};
 
 type Appearance = (String, bool, Option<(String, u32)>, Option<String>);
 fn appearance(settings: &Settings) -> Appearance {
@@ -15,11 +18,96 @@ fn appearance(settings: &Settings) -> Appearance {
 #[derive(Default)]
 pub struct Controller {
     attempted: BTreeMap<(u32, u64), Appearance>,
+    pending_fonts: BTreeMap<(u32, u64, FontTarget), FontRetry>,
     enabled: bool,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum FontTarget {
+    Editor,
+    Interface,
+}
+
+#[cfg(all(
+    target_os = "windows",
+    target_arch = "x86_64",
+    feature = "windows-engine"
+))]
+impl FontTarget {
+    pub fn apply(
+        self,
+        identity: &Identity,
+        settings: &Settings,
+        wait: Duration,
+    ) -> anyhow::Result<crate::fonts::FontApplied> {
+        match self {
+            Self::Editor => crate::fonts::apply_with_wait(identity, &settings.editor_font, wait),
+            Self::Interface => crate::ui_fonts::apply_with_wait(identity, &settings.ui_font, wait),
+        }
+    }
+    pub fn last_applied(
+        self,
+        identity: &Identity,
+    ) -> anyhow::Result<Option<crate::fonts::FontApplied>> {
+        match self {
+            Self::Editor => crate::fonts::last_applied(identity),
+            Self::Interface => crate::ui_fonts::last_applied(identity),
+        }
+    }
+}
+
+struct FontRetry {
+    due: Instant,
+    delay: Duration,
+}
+
 impl Controller {
     pub fn pause(&mut self) {
         self.enabled = false;
+        self.pending_fonts.clear();
+    }
+    pub fn set_font_pending(
+        &mut self,
+        identity: &Identity,
+        target: FontTarget,
+        pending: bool,
+        now: Instant,
+    ) {
+        let key = (identity.pid, identity.created_time, target);
+        if !self.enabled || !pending {
+            self.pending_fonts.remove(&key);
+            return;
+        }
+        let delay = self
+            .pending_fonts
+            .get(&key)
+            .map_or(Duration::from_secs(2), |retry| {
+                (retry.delay * 2).min(Duration::from_secs(30))
+            });
+        self.pending_fonts.insert(
+            key,
+            FontRetry {
+                due: now + delay,
+                delay,
+            },
+        );
+    }
+    /// Call after normal apply attempts, so a settings change supersedes an older retry.
+    pub fn font_retries(
+        &self,
+        identities: &[Identity],
+        now: Instant,
+    ) -> Vec<(Identity, FontTarget)> {
+        self.pending_fonts
+            .iter()
+            .filter(|(_, retry)| retry.due <= now)
+            .filter_map(|(&(pid, created, target), _)| {
+                identities
+                    .iter()
+                    .find(|i| i.pid == pid && i.created_time == created)
+                    .map(|i| (i.clone(), target))
+            })
+            .collect()
     }
     /// Explicit Apply commands work even while automatic application is paused.
     /// Keep other identities' attempts, so a single-process retry doesn't retry them.
@@ -41,6 +129,11 @@ impl Controller {
     /// An attempt is recorded before dispatch, so a failing remote call isn't retried per tick.
     pub fn plan(&mut self, identities: &[Identity], settings: &Settings) -> Vec<Identity> {
         self.attempted.retain(|&(pid, created), _| {
+            identities
+                .iter()
+                .any(|i| i.pid == pid && i.created_time == created)
+        });
+        self.pending_fonts.retain(|&(pid, created, _), _| {
             identities
                 .iter()
                 .any(|i| i.pid == pid && i.created_time == created)
@@ -126,6 +219,39 @@ mod tests {
         );
         assert_eq!(controller.plan(&[a.clone(), b.clone()], &settings), vec![b]);
         assert_eq!(controller.plan(&[id(10, 2)], &settings), vec![id(10, 2)]);
+    }
+    #[test]
+    fn pending_font_waits_retries_only_its_target_and_never_follows_a_reused_pid() {
+        let mut controller = Controller::default();
+        let settings = Settings::default();
+        let identities = [id(10, 1)];
+        let now = Instant::now();
+        assert_eq!(controller.plan(&identities, &settings), identities);
+        controller.set_font_pending(&identities[0], FontTarget::Editor, true, now);
+        assert!(controller.font_retries(&identities, now).is_empty());
+        let due = now + Duration::from_secs(2);
+        assert!(controller.plan(&identities, &settings).is_empty());
+        assert_eq!(
+            controller.font_retries(&identities, due),
+            vec![(identities[0].clone(), FontTarget::Editor)]
+        );
+        controller.set_font_pending(&identities[0], FontTarget::Editor, true, due);
+        assert!(
+            controller
+                .font_retries(&identities, due + Duration::from_secs(2))
+                .is_empty()
+        );
+        assert!(
+            controller
+                .font_retries(&[id(10, 2)], due + Duration::from_secs(4))
+                .is_empty()
+        );
+        controller.pause();
+        assert!(
+            controller
+                .font_retries(&identities, due + Duration::from_secs(30))
+                .is_empty()
+        );
     }
     #[test]
     fn theme_change_updates_all_but_geometry_change_does_not() {

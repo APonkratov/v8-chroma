@@ -67,6 +67,15 @@ impl Drop for Handle {
 
 pub use crate::process::Identity;
 
+#[derive(Debug)]
+pub struct ProcessExited;
+impl std::fmt::Display for ProcessExited {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Целевой процесс уже завершён")
+    }
+}
+impl std::error::Error for ProcessExited {}
+
 pub struct Process {
     pub handle: Handle,
     pub identity: Identity,
@@ -85,7 +94,19 @@ impl Process {
                 } else {
                     0
                 };
-            let handle = Handle::new(OpenProcess(rights, 0, pid), "OpenProcess")?;
+            let handle =
+                Handle::new(OpenProcess(rights, 0, pid), "OpenProcess").map_err(|error| {
+                    if pid != 0
+                        && error
+                            .downcast_ref::<std::io::Error>()
+                            .and_then(std::io::Error::raw_os_error)
+                            == Some(ERROR_INVALID_PARAMETER as i32)
+                    {
+                        ProcessExited.into()
+                    } else {
+                        error
+                    }
+                })?;
             let mut buffer = vec![0u16; 32768];
             let mut length = buffer.len() as u32;
             check(
@@ -123,11 +144,17 @@ impl Process {
         }
     }
     pub fn alive(&self) -> Result<()> {
-        ensure!(
-            unsafe { WaitForSingleObject(self.handle.0, 0) } == WAIT_TIMEOUT,
-            "Целевой процесс уже завершён"
-        );
-        Ok(())
+        match unsafe { WaitForSingleObject(self.handle.0, 0) } {
+            WAIT_TIMEOUT => Ok(()),
+            WAIT_OBJECT_0 => Err(ProcessExited.into()),
+            _ => Err(std::io::Error::last_os_error()).context("Проверка состояния процесса"),
+        }
+    }
+    pub fn is_gone(expected: &Identity) -> bool {
+        match Self::open(expected.pid, false) {
+            Ok(process) => process.identity.created_time != expected.created_time,
+            Err(error) => error.is::<ProcessExited>(),
+        }
     }
     pub fn matches(&self, expected: &Identity) -> Result<()> {
         ensure!(
@@ -568,8 +595,10 @@ mod tests {
     fn process_identity_and_owner_on_current_process() {
         let p = Process::open(std::process::id(), false).unwrap();
         p.matches(&p.identity).unwrap();
+        assert!(!Process::is_gone(&p.identity));
         let mut stale = p.identity.clone();
         stale.created_time += 1;
         assert!(p.matches(&stale).is_err());
+        assert!(Process::is_gone(&stale));
     }
 }
