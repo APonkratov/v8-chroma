@@ -392,7 +392,58 @@ impl Updater {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::{Error, ErrorKind};
+    use std::{
+        io::{BufRead, BufReader, Error, ErrorKind, Write},
+        net::TcpListener,
+    };
+
+    #[test]
+    fn background_checks_distinguish_http_outages_from_access_and_rate_limits() {
+        let responses = [
+            ("408 Request Timeout", true),
+            ("503 Service Unavailable", true),
+            ("403 Forbidden", false),
+            ("429 Too Many Requests", false),
+        ];
+        let server = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = server.local_addr().unwrap();
+        let thread = std::thread::spawn(move || {
+            for (status, _) in responses {
+                let (mut stream, _) = server.accept().unwrap();
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(5)))
+                    .unwrap();
+                let mut reader = BufReader::new(&mut stream);
+                let mut line = String::new();
+                loop {
+                    line.clear();
+                    if reader.read_line(&mut line).unwrap() == 0 || line == "\r\n" {
+                        break;
+                    }
+                }
+                write!(
+                    stream,
+                    "HTTP/1.1 {status}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                )
+                .unwrap();
+            }
+        });
+        let client = reqwest::blocking::Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(5))
+            .build()
+            .unwrap();
+        for (status, transient) in responses {
+            let error = client
+                .get(format!("http://{address}/"))
+                .send()
+                .unwrap()
+                .error_for_status()
+                .unwrap_err();
+            assert_eq!(transient_check_error(&error.into()), transient, "{status}");
+        }
+        thread.join().unwrap();
+    }
 
     #[test]
     fn transient_background_failures_retry_but_manual_and_other_failures_are_reported() {
