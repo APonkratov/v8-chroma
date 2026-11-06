@@ -1,6 +1,6 @@
 use super::{DEFAULT_FAMILY, FALLBACK_FAMILY, UiFontSettings};
 use crate::{
-    fonts::{self, FontApplied},
+    fonts::{self, FontApplied, FontNotReady, refresh_when_ready},
     manager,
     storage::{Lock, atomic_write},
     win::{self, Identity, Process},
@@ -22,6 +22,8 @@ const EXPORTS: &[&str] = &[
     "UiFontRefresh",
     "UiFontSnapshot",
 ];
+const FAILURE_CONTEXT: &str =
+    "Ошибка движка шрифта интерфейса; повтор запрещён до перезапуска этого Конфигуратора";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -29,6 +31,7 @@ enum Stage {
     Loading,
     Loaded,
     Applying,
+    RefreshPending,
     Ready,
     Unsupported,
     Failed,
@@ -50,6 +53,9 @@ fn directory(identity: &Identity) -> Result<PathBuf> {
         .join(format!("{}-{}", identity.pid, identity.created_time)))
 }
 fn session_result(session: &Session) -> Result<Option<FontApplied>> {
+    if can_resume_refresh(session) {
+        return Ok(None);
+    }
     ensure!(
         session.stage != Stage::Failed,
         "{}",
@@ -61,11 +67,18 @@ fn session_result(session: &Session) -> Result<Option<FontApplied>> {
     ensure!(
         matches!(
             session.stage,
-            Stage::Loaded | Stage::Ready | Stage::Unsupported
+            Stage::Loaded | Stage::Ready | Stage::Unsupported | Stage::RefreshPending
         ),
         "Предыдущее применение шрифта интерфейса не завершено. Повтор запрещён до перезапуска этого Конфигуратора"
     );
     Ok(session.applied.clone())
+}
+fn can_resume_refresh(session: &Session) -> bool {
+    session.stage == Stage::RefreshPending
+        || session.stage == Stage::Failed
+            && session.failure.as_deref().is_some_and(|failure| failure == format!(
+                "{FAILURE_CONTEXT}: Шрифт настроен, но горячее обновление завершилось ошибкой Win32={ERROR_NOT_READY}"
+            ))
 }
 pub fn last_applied(identity: &Identity) -> Result<Option<FontApplied>> {
     let path = directory(identity)?.join("session.json");
@@ -85,8 +98,13 @@ fn save(path: &Path, session: &Session) -> Result<()> {
 fn run<T>(path: &Path, state: &mut Session, operation: impl FnOnce() -> Result<T>) -> Result<T> {
     match operation() {
         Ok(value) => Ok(value),
+        Err(error) if error.is::<FontNotReady>() => {
+            state.stage = Stage::RefreshPending;
+            save(path, state)?;
+            Err(error)
+        }
         Err(error) => {
-            let error=error.context("Ошибка движка шрифта интерфейса; повтор запрещён до перезапуска этого Конфигуратора");
+            let error = error.context(FAILURE_CONTEXT);
             state.stage = Stage::Failed;
             state.applied = None;
             state.failure = Some(format!("{error:#}"));
@@ -117,9 +135,7 @@ fn configure(
             *state = previous;
         }
         save(path, state)?;
-        anyhow::bail!(
-            "Конфигуратор ещё запускается; повторите применение после открытия главного окна"
-        );
+        return Err(FontNotReady.into());
     }
     run(path, state, || {
         ensure!(code == 0, "{command}: Win32={code}");
@@ -195,19 +211,18 @@ fn confirm(data: &str, family: Option<&str>) -> Result<Option<String>> {
     );
     Ok((field(data,"reopen_dialogs")?=="1").then(||"Переоткройте уже открытые диалоги, если подписи обрезаны: их размеры могли сохраниться от предыдущего шрифта.".into()))
 }
-fn retry_ready(process: &Process, address: usize, payload: &[u8]) -> Result<u32> {
-    let deadline = Instant::now() + Duration::from_secs(5);
-    loop {
-        let code = process.call(address, Some(payload))?;
-        // NOT_READY is guaranteed to return before changing font state or notifying
-        // any subscriber. New Designer windows can still be starting or minimized.
-        if code != ERROR_NOT_READY || Instant::now() >= deadline {
-            return Ok(code);
-        }
-        std::thread::sleep(Duration::from_millis(100));
-    }
+fn retry_ready(process: &Process, address: usize, payload: &[u8], wait: Duration) -> Result<u32> {
+    refresh_when_ready(|| process.call(address, Some(payload)), wait)
 }
 pub fn apply_to(expected: &Identity, font: &UiFontSettings) -> Result<FontApplied> {
+    apply_with_wait(expected, font, Duration::from_secs(5))
+}
+
+pub(crate) fn apply_with_wait(
+    expected: &Identity,
+    font: &UiFontSettings,
+    wait: Duration,
+) -> Result<FontApplied> {
     font.validate()?;
     ensure!(
         manager::identity(expected.pid)? == *expected,
@@ -254,7 +269,7 @@ pub fn apply_to(expected: &Identity, font: &UiFontSettings) -> Result<FontApplie
     }
     // Discovery can see a new Designer before its drawing modules are loaded.
     // Wait before injecting; a missing startup module is not an unsupported ABI.
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + wait;
     while !(["frame.dll", "grphcs.dll"]
         .iter()
         .all(|name| modules.contains_key(*name))
@@ -262,10 +277,9 @@ pub fn apply_to(expected: &Identity, font: &UiFontSettings) -> Result<FontApplie
             .iter()
             .any(|name| modules.contains_key(*name)))
     {
-        ensure!(
-            Instant::now() < deadline,
-            "Конфигуратор ещё запускается; повторите применение после открытия главного окна"
-        );
+        if Instant::now() >= deadline {
+            return Err(FontNotReady.into());
+        }
         std::thread::sleep(Duration::from_millis(100));
         process.matches(expected)?;
         modules = process.modules()?;
@@ -321,7 +335,8 @@ pub fn apply_to(expected: &Identity, font: &UiFontSettings) -> Result<FontApplie
             "Несовместимая сессия шрифта интерфейса; перезапустите этот Конфигуратор"
         );
         session_result(&state)?;
-        if state.requested == *font
+        if !can_resume_refresh(&state)
+            && state.requested == *font
             && state.effective == family
             && let Some(applied) = &state.applied
         {
@@ -345,6 +360,9 @@ pub fn apply_to(expected: &Identity, font: &UiFontSettings) -> Result<FontApplie
     };
     let load = state.stage == Stage::Loading;
     let previous = state.clone();
+    let resume = can_resume_refresh(&previous)
+        && previous.requested == *font
+        && previous.effective == family;
     state.requested = font.clone();
     state.effective = family.clone();
     if state.stage == Stage::Unsupported {
@@ -371,13 +389,22 @@ pub fn apply_to(expected: &Identity, font: &UiFontSettings) -> Result<FontApplie
             .applied
             .context("Нет результата проверки шрифта интерфейса");
     }
-    configure(&path, &mut state, previous, |command| {
-        retry_ready(&process, exports[command], &payload)
-    })?;
+    if resume {
+        state.stage = Stage::Applying;
+        state.failure = None;
+        save(&path, &state)?;
+    } else {
+        configure(&path, &mut state, previous, |command| {
+            retry_ready(&process, exports[command], &payload, wait)
+        })?;
+    }
     let result = run(&path, &mut state, || {
         let mut refresh = 8u32.to_le_bytes().to_vec();
         refresh.extend(5u32.to_le_bytes());
-        let code = retry_ready(&process, exports["UiFontRefresh"], &refresh)?;
+        let code = retry_ready(&process, exports["UiFontRefresh"], &refresh, wait)?;
+        if code == ERROR_NOT_READY {
+            return Err(FontNotReady.into());
+        }
         ensure!(
             code == 0,
             "Шрифт настроен, но горячее обновление завершилось ошибкой Win32={code}"
@@ -509,19 +536,17 @@ mod tests {
         }
     }
     #[test]
-    fn not_ready_refresh_after_successful_configuration_remains_terminal() {
+    fn not_ready_refresh_after_successful_configuration_stays_pending() {
         let temp = tempfile::tempdir().unwrap();
         let path = temp.path().join("session.json");
         let mut state = session(Stage::Loading);
         let previous = state.clone();
         configure(&path, &mut state, previous, |_| Ok(0)).unwrap();
-        assert!(
-            run::<()>(&path, &mut state, || {
-                anyhow::bail!("UiFontRefresh: Win32={ERROR_NOT_READY}")
-            })
-            .is_err()
-        );
-        assert_eq!(restore(&path).stage, Stage::Failed);
+        let error = run::<()>(&path, &mut state, || Err(FontNotReady.into())).unwrap_err();
+        assert!(error.is::<FontNotReady>());
+        let saved = restore(&path);
+        assert_eq!(saved.stage, Stage::RefreshPending);
+        assert!(session_result(&saved).unwrap().is_none());
     }
     #[test]
     fn default_fallback_and_custom_missing_fonts() {

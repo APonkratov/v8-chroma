@@ -10,14 +10,20 @@ use std::{
     time::{Duration, Instant},
 };
 use v8_chroma_core::{
-    fonts, manager,
+    fonts::{FontApplied, FontNotReady},
+    manager,
     settings::{Loaded, Settings, SettingsPatch, Store, WindowPatch},
-    ui_fonts,
-    watch::Controller,
-    win::Identity,
+    watch::{Controller, FontTarget},
+    win::{Identity, Process},
 };
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Default)]
+struct FontIssue {
+    pending: bool,
+    error: Option<String>,
+}
+
+#[derive(Clone, Default, Serialize)]
 pub struct ProcessRow {
     pub pid: u32,
     pub created_time: Option<String>,
@@ -34,6 +40,77 @@ pub struct ProcessRow {
     pub font_warning: Option<String>,
     pub ui_font: Option<String>,
     pub ui_font_warning: Option<String>,
+    #[serde(skip)]
+    theme_error: Option<String>,
+    #[serde(skip)]
+    editor_issue: FontIssue,
+    #[serde(skip)]
+    interface_issue: FontIssue,
+}
+
+impl ProcessRow {
+    fn matches(&self, identity: &Identity) -> bool {
+        self.pid == identity.pid
+            && self
+                .created_time
+                .as_deref()
+                .and_then(|value| value.parse().ok())
+                == Some(identity.created_time)
+    }
+
+    fn record_font(&mut self, target: FontTarget, result: Result<FontApplied>, auto_apply: bool) {
+        let (label, warning, issue) = match target {
+            FontTarget::Editor => (
+                &mut self.font,
+                &mut self.font_warning,
+                &mut self.editor_issue,
+            ),
+            FontTarget::Interface => (
+                &mut self.ui_font,
+                &mut self.ui_font_warning,
+                &mut self.interface_issue,
+            ),
+        };
+        *issue = FontIssue::default();
+        match result {
+            Ok(font) => {
+                *label = Some(font.label);
+                *warning = font.warning;
+            }
+            Err(error) if error.is::<FontNotReady>() => {
+                issue.pending = true;
+                *warning = (!auto_apply).then(|| error.to_string());
+            }
+            Err(error) => {
+                *label = None;
+                *warning = None;
+                issue.error = Some(format!("{error:#}"));
+            }
+        }
+    }
+
+    fn summarize(&mut self, auto_apply: bool) {
+        let errors = [
+            &self.theme_error,
+            &self.editor_issue.error,
+            &self.interface_issue.error,
+        ]
+        .into_iter()
+        .flatten()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
+        self.detail = (!errors.is_empty()).then(|| errors.join("\n"));
+        self.status = if self.detail.is_some() {
+            "error"
+        } else if auto_apply && (self.editor_issue.pending || self.interface_issue.pending) {
+            "waiting"
+        } else if self.theme.is_some() {
+            "applied"
+        } else {
+            "idle"
+        }
+        .into();
+    }
 }
 #[derive(Clone, Serialize)]
 pub struct Snapshot {
@@ -120,7 +197,12 @@ impl Service {
                                         if background.shared.stop.load(Ordering::Acquire) {
                                             break;
                                         }
-                                        background.apply(&identity, &settings, &mut results);
+                                        background.apply(
+                                            &identity,
+                                            &settings,
+                                            &mut controller,
+                                            &mut results,
+                                        );
                                     }
                                     background.shared.busy.store(false, Ordering::Release);
                                     last_scan = Instant::now() - Duration::from_secs(3);
@@ -209,50 +291,52 @@ impl Service {
                                         } else {
                                             Some(candidate.reason)
                                         },
+                                        ..Default::default()
                                     });
                                 row.command_line = candidate.command_line;
-                                if row.status != "error"
-                                    && let Some(identity) = identity
-                                {
-                                    match manager::last_applied(identity) {
-                                        Ok(Some(applied)) => {
-                                            row.theme = Some(applied.theme);
-                                            row.icons = Some(applied.icons);
-                                            row.icon_warning = applied.icon_warning;
-                                            row.status = "applied".into();
-                                        }
-                                        Err(error) => {
-                                            row.status = "error".into();
-                                            row.detail = Some(format!("{error:#}"));
-                                        }
-                                        _ => {}
-                                    }
-                                }
                                 if let Some(identity) = identity {
-                                    match fonts::last_applied(identity) {
-                                        Ok(Some(font)) => {
-                                            row.font = Some(font.label);
-                                            row.font_warning = font.warning;
+                                    if row.theme_error.is_none() {
+                                        match manager::last_applied(identity) {
+                                            Ok(Some(applied)) => {
+                                                row.theme = Some(applied.theme);
+                                                row.icons = Some(applied.icons);
+                                                row.icon_warning = applied.icon_warning;
+                                            }
+                                            Err(error) => {
+                                                row.theme_error = Some(format!("{error:#}"));
+                                            }
+                                            _ => {}
                                         }
-                                        Err(error) => {
-                                            row.status = "error".into();
-                                            row.detail = Some(format!("{error:#}"));
-                                        }
-                                        _ => {}
                                     }
-                                }
-                                if let Some(identity) = identity {
-                                    match ui_fonts::last_applied(identity) {
-                                        Ok(Some(font)) => {
-                                            row.ui_font = Some(font.label);
-                                            row.ui_font_warning = font.warning;
+                                    let auto_apply = settings
+                                        .as_ref()
+                                        .is_some_and(|settings| settings.auto_apply);
+                                    for target in [FontTarget::Editor, FontTarget::Interface] {
+                                        let issue = match target {
+                                            FontTarget::Editor => &row.editor_issue,
+                                            FontTarget::Interface => &row.interface_issue,
+                                        };
+                                        if issue.pending {
+                                            if !auto_apply {
+                                                row.record_font(
+                                                    target,
+                                                    Err(FontNotReady.into()),
+                                                    false,
+                                                );
+                                            }
+                                        } else if issue.error.is_none() {
+                                            match target.last_applied(identity) {
+                                                Ok(Some(font)) => {
+                                                    row.record_font(target, Ok(font), auto_apply)
+                                                }
+                                                Err(error) => {
+                                                    row.record_font(target, Err(error), auto_apply)
+                                                }
+                                                Ok(None) => {}
+                                            }
                                         }
-                                        Err(error) => {
-                                            row.status = "error".into();
-                                            row.detail = Some(format!("{error:#}"));
-                                        }
-                                        _ => {}
                                     }
+                                    row.summarize(auto_apply);
                                 }
                                 row
                             })
@@ -271,7 +355,26 @@ impl Service {
                                     if background.shared.stop.load(Ordering::Acquire) {
                                         break;
                                     }
-                                    background.apply(&identity, &settings, &mut results);
+                                    background.apply(
+                                        &identity,
+                                        &settings,
+                                        &mut controller,
+                                        &mut results,
+                                    );
+                                }
+                                for (identity, target) in
+                                    controller.font_retries(&identities, Instant::now())
+                                {
+                                    if background.shared.stop.load(Ordering::Acquire) {
+                                        break;
+                                    }
+                                    background.retry_font(
+                                        &identity,
+                                        target,
+                                        &settings,
+                                        &mut controller,
+                                        &mut results,
+                                    );
                                 }
                                 background.shared.busy.store(false, Ordering::Release);
                             }
@@ -435,20 +538,92 @@ impl Service {
             self.edit(|s| s.error = Some(format!("Размер окна не сохранён: {error:#}")));
         }
     }
+    fn forget_gone(
+        &self,
+        identity: &Identity,
+        controller: &mut Controller,
+        results: &mut BTreeMap<(u32, u64), ProcessRow>,
+    ) -> bool {
+        if !Process::is_gone(identity) {
+            return false;
+        }
+        for target in [FontTarget::Editor, FontTarget::Interface] {
+            controller.set_font_pending(identity, target, false, Instant::now());
+        }
+        results.remove(&(identity.pid, identity.created_time));
+        self.edit(|s| s.processes.retain(|row| !row.matches(identity)));
+        true
+    }
+
+    fn publish_row(
+        &self,
+        identity: &Identity,
+        row: ProcessRow,
+        results: &mut BTreeMap<(u32, u64), ProcessRow>,
+    ) {
+        results.insert((identity.pid, identity.created_time), row.clone());
+        self.edit(|s| {
+            if let Some(existing) = s.processes.iter_mut().find(|row| row.matches(identity)) {
+                let command_line = existing.command_line.take();
+                *existing = row;
+                existing.command_line = command_line;
+            }
+        });
+    }
+
+    fn apply_font(
+        identity: &Identity,
+        target: FontTarget,
+        settings: &Settings,
+        controller: &mut Controller,
+        row: &mut ProcessRow,
+        wait: Duration,
+    ) {
+        let result = target.apply(identity, settings, wait);
+        let pending = result
+            .as_ref()
+            .is_err_and(|error| error.is::<FontNotReady>());
+        controller.set_font_pending(identity, target, pending, Instant::now());
+        row.record_font(target, result, settings.auto_apply);
+    }
+
+    fn retry_font(
+        &self,
+        identity: &Identity,
+        target: FontTarget,
+        settings: &Settings,
+        controller: &mut Controller,
+        results: &mut BTreeMap<(u32, u64), ProcessRow>,
+    ) {
+        let Some(mut row) = results.get(&(identity.pid, identity.created_time)).cloned() else {
+            return;
+        };
+        Self::apply_font(
+            identity,
+            target,
+            settings,
+            controller,
+            &mut row,
+            Duration::ZERO,
+        );
+        if !self.forget_gone(identity, controller, results) {
+            row.summarize(settings.auto_apply);
+            self.publish_row(identity, row, results);
+        }
+    }
+
     fn apply(
         &self,
         identity: &Identity,
         settings: &Settings,
+        controller: &mut Controller,
         results: &mut BTreeMap<(u32, u64), ProcessRow>,
     ) {
+        if self.forget_gone(identity, controller, results) {
+            return;
+        }
         self.edit(|s| {
-            if let Some(row) = s.processes.iter_mut().find(|r| {
-                r.pid == identity.pid
-                    && r.created_time
-                        .as_deref()
-                        .and_then(|v| v.parse::<u64>().ok())
-                        == Some(identity.created_time)
-            }) {
+            if let Some(row) = s.processes.iter_mut().find(|row| row.matches(identity)) {
                 row.status = "applying".into();
                 row.detail = None;
             }
@@ -458,53 +633,35 @@ impl Service {
             &settings.selected_theme,
             settings.custom_icons,
         );
-        let font_result = fonts::apply_to(identity, &settings.editor_font);
-        let ui_font_result = ui_fonts::apply_to(identity, &settings.ui_font);
-        let detail = [
-            result.as_ref().err(),
-            font_result.as_ref().err(),
-            ui_font_result.as_ref().err(),
-        ]
-        .into_iter()
-        .flatten()
-        .map(|e| format!("{e:#}"))
-        .collect::<Vec<_>>()
-        .join("\n");
-        let row = ProcessRow {
+        let mut row = ProcessRow {
             pid: identity.pid,
             created_time: Some(identity.created_time.to_string()),
             title: "Конфигуратор".into(),
             exe: Some(identity.exe.display().to_string()),
-            command_line: None,
             eligible: true,
-            status: if result.is_ok() && font_result.is_ok() && ui_font_result.is_ok() {
-                "applied".into()
-            } else {
-                "error".into()
-            },
             theme: result.as_ref().ok().map(|r| r.theme.clone()),
             icons: result.as_ref().ok().map(|r| r.icons.clone()),
             icon_warning: result.as_ref().ok().and_then(|r| r.icon_warning.clone()),
-            font: font_result.as_ref().ok().map(|r| r.label.clone()),
-            font_warning: font_result.as_ref().ok().and_then(|r| r.warning.clone()),
-            ui_font: ui_font_result.as_ref().ok().map(|r| r.label.clone()),
-            ui_font_warning: ui_font_result.as_ref().ok().and_then(|r| r.warning.clone()),
-            detail: (!detail.is_empty()).then_some(detail),
+            theme_error: result.err().map(|error| format!("{error:#}")),
+            ..Default::default()
         };
-        results.insert((identity.pid, identity.created_time), row.clone());
-        self.edit(|s| {
-            if let Some(existing) = s.processes.iter_mut().find(|r| {
-                r.pid == identity.pid
-                    && r.created_time
-                        .as_deref()
-                        .and_then(|v| v.parse::<u64>().ok())
-                        == Some(identity.created_time)
-            }) {
-                let command_line = existing.command_line.clone();
-                *existing = row;
-                existing.command_line = command_line;
+        for target in [FontTarget::Editor, FontTarget::Interface] {
+            if self.forget_gone(identity, controller, results) {
+                return;
             }
-        });
+            Self::apply_font(
+                identity,
+                target,
+                settings,
+                controller,
+                &mut row,
+                Duration::from_secs(5),
+            );
+        }
+        if !self.forget_gone(identity, controller, results) {
+            row.summarize(settings.auto_apply);
+            self.publish_row(identity, row, results);
+        }
     }
 }
 
@@ -772,6 +929,7 @@ mod tests {
                 font_warning: None,
                 ui_font: None,
                 ui_font_warning: None,
+                ..Default::default()
             }];
         });
         service.request_apply(Some((123, 456))).unwrap();
@@ -806,6 +964,7 @@ mod tests {
             ui_font: None,
             ui_font_warning: None,
             detail: None,
+            ..Default::default()
         };
         let json = serde_json::to_value(row).unwrap();
         assert_eq!(
@@ -821,6 +980,35 @@ mod tests {
             json["command_line"],
             r#""C:\Program Files\1cv8\bin\1cv8.exe" DESIGNER /F "D:\Базы\Тест UI""#
         );
+    }
+    #[test]
+    fn waiting_and_successful_font_retries_preserve_other_errors() {
+        let mut row = ProcessRow {
+            theme: Some("monokai".into()),
+            ..Default::default()
+        };
+        row.record_font(FontTarget::Editor, Err(FontNotReady.into()), true);
+        row.summarize(true);
+        assert_eq!(row.status, "waiting");
+        assert!(row.detail.is_none());
+
+        row.record_font(
+            FontTarget::Interface,
+            Err(anyhow::anyhow!("Win32=1460")),
+            true,
+        );
+        row.record_font(
+            FontTarget::Editor,
+            Ok(FontApplied {
+                label: "Consolas".into(),
+                warning: None,
+            }),
+            true,
+        );
+        row.summarize(true);
+        assert_eq!(row.font.as_deref(), Some("Consolas"));
+        assert_eq!(row.status, "error");
+        assert_eq!(row.detail.as_deref(), Some("Win32=1460"));
     }
     #[test]
     fn maximize_preserves_pending_normal_size() {

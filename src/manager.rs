@@ -1,7 +1,7 @@
 use crate::{
     storage::{Lock, atomic_write},
     theme,
-    win::{self, Identity, Process},
+    win::{self, Identity, Process, ProcessExited},
 };
 use anyhow::{Context, Result, ensure};
 use directories::ProjectDirs;
@@ -86,24 +86,25 @@ pub fn validate_platform(exe: &Path) -> Result<()> {
 pub fn discover() -> Result<Vec<Candidate>> {
     Ok(rows(None)?
         .into_iter()
-        .map(|row| {
+        .filter_map(|row| {
             let pid = row.process_id;
             let command_line = row.command_line.clone();
             match inspect(row) {
-                Ok(identity) => Candidate {
+                Ok(identity) => Some(Candidate {
                     pid,
                     command_line,
                     identity: Some(identity),
                     eligible: true,
                     reason: "Готов к проверке модулей".into(),
-                },
-                Err(error) => Candidate {
+                }),
+                Err(error) if error.is::<ProcessExited>() => None,
+                Err(error) => Some(Candidate {
                     pid,
                     command_line,
                     identity: None,
                     eligible: false,
                     reason: format!("{error:#}"),
-                },
+                }),
             }
         })
         .collect())
