@@ -313,10 +313,25 @@ pub fn attach(pid: u32, theme_id: &str) -> Result<Applied> {
     attach_with_icons(pid, theme_id, false)
 }
 pub fn attach_with_icons(pid: u32, theme_id: &str, custom_icons: bool) -> Result<Applied> {
+    attach_with_options(pid, theme_id, custom_icons, true)
+}
+
+pub fn attach_with_options(
+    pid: u32,
+    theme_id: &str,
+    custom_icons: bool,
+    semantic_highlighting: bool,
+) -> Result<Applied> {
     // Validate the theme before opening a writable process handle.
     theme::config(theme_id, Path::new("x"), Path::new("y"))?;
     let expected = identity(pid)?;
-    attach_to_with_icons(&expected, theme_id, custom_icons)
+    attach_to_with_options_wait(
+        &expected,
+        theme_id,
+        custom_icons,
+        semantic_highlighting,
+        THEME_WAIT,
+    )
 }
 
 /// GUI requests carry the identity observed in the process list, not only a PID.
@@ -338,6 +353,16 @@ pub fn attach_to_with_icons_wait(
     custom_icons: bool,
     wait: Duration,
 ) -> Result<Applied> {
+    attach_to_with_options_wait(expected, theme_id, custom_icons, true, wait)
+}
+
+pub fn attach_to_with_options_wait(
+    expected: &Identity,
+    theme_id: &str,
+    custom_icons: bool,
+    semantic_highlighting: bool,
+    wait: Duration,
+) -> Result<Applied> {
     theme::config(theme_id, Path::new("x"), Path::new("y"))?;
     ensure!(
         identity(expected.pid)? == *expected,
@@ -353,6 +378,7 @@ pub fn attach_to_with_icons_wait(
         &directory,
         &materialize(&root)?,
         custom_icons,
+        semantic_highlighting,
         wait,
     )
 }
@@ -413,7 +439,7 @@ fn attach_verified(
     directory: &Path,
     dll: &Path,
 ) -> Result<Applied> {
-    attach_appearance_verified(expected, theme_id, directory, dll, false, THEME_WAIT)
+    attach_appearance_verified(expected, theme_id, directory, dll, false, true, THEME_WAIT)
 }
 
 fn attach_appearance_verified(
@@ -422,6 +448,7 @@ fn attach_appearance_verified(
     directory: &Path,
     dll: &Path,
     custom_icons: bool,
+    semantic_highlighting: bool,
     wait: Duration,
 ) -> Result<Applied> {
     fs::create_dir_all(directory)?;
@@ -490,11 +517,12 @@ fn attach_appearance_verified(
             "Модуль {name} загружен из неожиданного каталога"
         );
     }
-    let cfg = theme::config_with_icons(
+    let cfg = theme::config_with_options(
         theme_id,
         expected.exe.parent().context("Нет каталога exe")?,
         &log,
         custom_icons,
+        semantic_highlighting,
     )?;
     // A preset name can stay the same when its palette/profile is corrected.
     // Keep this marker separate so older managers can still read session.json.
@@ -792,6 +820,7 @@ mod tests {
                 &directory,
                 &dll,
                 false,
+                true,
                 Duration::ZERO,
             );
             ensure!(attempt.is_err_and(|error| error.is::<ThemeNotReady>()));
@@ -871,7 +900,7 @@ mod tests {
                 "duplicate attach"
             );
             let enabled = attach_appearance_verified(
-                &expected, "dracula", &directory, &dll, true, THEME_WAIT,
+                &expected, "dracula", &directory, &dll, true, true, THEME_WAIT,
             )?;
             ensure!(
                 enabled.action == "applied"

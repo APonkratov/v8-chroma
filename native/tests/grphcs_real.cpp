@@ -1,4 +1,5 @@
 #include "../src/protocol.h"
+#include "../src/contrast.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -265,6 +266,20 @@ extern "C" __declspec(dllexport) BOOL chrome_probe(const ProbeConfig* cfg) {
         else cairo_set_source_rgb(ctx,r,g,b);
         cairo_paint(ctx); flush(surface);
         ok &= ((uint32_t*)bytes(surface))[0]==(0xFF000000|(cfg->mode?cfg->colors.glyphForeground:c));
+    }
+    // Inactive captions opened after theme activation use native gray text.
+    // Its color must contrast with the actual themed frame fill in every palette.
+    cairo_set_source_rgb(ctx,178./255.,178./255.,178./255.); cairo_paint(ctx);
+    family(ctx,"Arial",0,0); fontSize(ctx,14.);
+    cairo_set_source_rgba(ctx,102./255.,102./255.,102./255.,1.);
+    Glyph* captionGlyphs=nullptr; int captionCount=0;
+    ok &= textGlyphs(getFont(ctx),4,18,"Title",5,&captionGlyphs,&captionCount,nullptr,nullptr,nullptr)==0;
+    cairo_show_glyphs(ctx,captionGlyphs,captionCount); freeGlyphs(captionGlyphs); flush(surface);
+    if (cfg->mode) {
+        unsigned visible=0;
+        for (unsigned y=0;y<24;++y) for (unsigned x=0;x<60;++x)
+            visible+=ChromaContrast::ratio(((uint32_t*)bytes(surface))[80*y+x]&0xFFFFFF,cfg->colors.border)>=4.5;
+        ok &= visible>8;
     }
     void* gradient=linear(0.,0.,0.,24.);
     const DWORD native[]={0xF5F2DD,0xFCFAEB,0xEEEAD3,0xEBE6CC,0xD6D1BA,0xCCC6AD};

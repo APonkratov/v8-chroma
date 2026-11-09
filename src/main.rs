@@ -76,6 +76,8 @@ enum SettingsCommand {
         auto_apply: Option<Switch>,
         #[arg(long, value_enum)]
         custom_icons: Option<Switch>,
+        #[arg(long, value_enum)]
+        semantic_highlighting: Option<Switch>,
         /// Семейство шрифта интерфейса; одновременно включает его подмену.
         #[arg(long)]
         ui_font: Option<String>,
@@ -142,8 +144,12 @@ fn run() -> Result<()> {
         Some(Command::Themes) => print(&theme::IDS)?,
         Some(Command::Attach { pid, theme }) => {
             let settings = selected(&store(cli.config_dir)?, theme)?;
-            let applied =
-                manager::attach_with_icons(pid, &settings.selected_theme, settings.custom_icons)?;
+            let applied = manager::attach_with_options(
+                pid,
+                &settings.selected_theme,
+                settings.custom_icons,
+                settings.semantic_highlighting,
+            )?;
             let mut result = serde_json::to_value(&applied)?;
             result["font"] = serde_json::to_value(v8_chroma_core::fonts::apply_to(
                 &applied.identity,
@@ -159,10 +165,11 @@ fn run() -> Result<()> {
             let settings = selected(&store(cli.config_dir)?, theme)?;
             let mut failed = false;
             for candidate in manager::discover()?.into_iter().filter(|c| c.eligible) {
-                match manager::attach_with_icons(
+                match manager::attach_with_options(
                     candidate.pid,
                     &settings.selected_theme,
                     settings.custom_icons,
+                    settings.semantic_highlighting,
                 ) {
                     Ok(result) => {
                         let mut value = serde_json::to_value(&result)?;
@@ -210,6 +217,7 @@ fn run() -> Result<()> {
                     theme,
                     auto_apply,
                     custom_icons,
+                    semantic_highlighting,
                     ui_font,
                     native_ui_font,
                     width,
@@ -220,6 +228,7 @@ fn run() -> Result<()> {
                         theme.is_some()
                             || auto_apply.is_some()
                             || custom_icons.is_some()
+                            || semantic_highlighting.is_some()
                             || ui_font.is_some()
                             || native_ui_font
                             || width.is_some()
@@ -250,6 +259,7 @@ fn run() -> Result<()> {
                         selected_theme: theme,
                         auto_apply: auto_apply.map(Switch::value),
                         custom_icons: custom_icons.map(Switch::value),
+                        semantic_highlighting: semantic_highlighting.map(Switch::value),
                         ui_font,
                         window,
                         ..Default::default()
@@ -292,12 +302,13 @@ fn watch(store: &Store, override_theme: Option<String>, seconds: u64) -> Result<
                     settings.selected_theme.clone(),
                     settings.auto_apply,
                     settings.custom_icons,
+                    settings.semantic_highlighting,
                     settings.editor_font.appearance(),
                     settings.ui_font.appearance(),
                 );
                 if last_policy.as_ref() != Some(&policy) {
                     print(
-                        &serde_json::json!({"event":"settings","theme":policy.0,"auto_apply":policy.1,"custom_icons":policy.2,"editor_font":policy.3,"ui_font":policy.4,"path":loaded.path}),
+                        &serde_json::json!({"event":"settings","theme":policy.0,"auto_apply":policy.1,"custom_icons":policy.2,"semantic_highlighting":policy.3,"editor_font":policy.4,"ui_font":policy.5,"path":loaded.path}),
                     )?;
                     last_policy = Some(policy);
                 }
@@ -396,10 +407,11 @@ fn watch_theme(
         controller.forget_pending(identity);
         return Ok(());
     }
-    let result = manager::attach_to_with_icons_wait(
+    let result = manager::attach_to_with_options_wait(
         identity,
         &settings.selected_theme,
         settings.custom_icons,
+        settings.semantic_highlighting,
         wait,
     );
     let pending = result

@@ -58,3 +58,12 @@ subtrees are excluded. No separately maintained dependency inventory is required
 Microsoft WebView2 SDK 1.0.3800.47 loader LICENSE and NOTICE are retained under
 licenses/webview2-sdk/ in the source repository and included in release notices.
 WebView2 Runtime is a separate prerequisite and is not redistributed here.
+
+Module highlighting embeds vscode-textmate 9.3.2 (MIT) and the BSL and SDBL
+grammars from 1c-syntax/vsc-language-1c-bsl, revision
+9ed084a3a8593ce12b3f7437b86794658825f7bc (MIT).
+https://github.com/microsoft/vscode-textmate
+https://github.com/1c-syntax/vsc-language-1c-bsl
+ThemeProbe links QuickJS-NG v0.10.1 (MIT), Oniguruma v6.9.10 (BSD-2-Clause)
+and MinHook v1.3.4 (BSD-2-Clause). Their pinned build sources are listed in
+native/cmake/textmate.cmake. License texts are in assets/syntax/.

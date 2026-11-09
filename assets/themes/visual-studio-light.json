@@ -11,7 +11,7 @@
     "selection.text": "#000000",
     "line": "#BAC1C9",
     "comment": "#008000",
-    "keyword": "#0000FF",
+    "keyword": "#0000E6",
     "string": "#A31515",
     "number": "#098658",
     "directive": "#AF00DB",
@@ -32,5 +32,14 @@
     "window.text": "text",
     "window.border": "border",
     "window.dark": false
+  },
+  "syntax": {
+    "function": "#795E26",
+    "builtin": "#694C14",
+    "parameter": "#001080",
+    "variable": "#653B8A",
+    "type": "#267F79",
+    "query-keyword": "#006965",
+    "query-function": "#795E26"
   }
 }

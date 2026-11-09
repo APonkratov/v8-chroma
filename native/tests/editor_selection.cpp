@@ -1,4 +1,5 @@
 #include "../src/editor_selection.h"
+#include "../src/contrast.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -6,6 +7,15 @@
 
 struct UserExtents { double xBearing,yBearing,width,height,xAdvance,yAdvance; };
 static unsigned userConversions;
+static void*(*testSource)(void*);
+static int(*testRgba)(void*,double*,double*,double*,double*);
+static DWORD glyphInks[3];
+static unsigned glyphBatches;
+static void recordGlyphInk(void* context,const void*,int) {
+    double r,g,b,a;
+    if (glyphBatches >= 3 || testRgba(testSource(context),&r,&g,&b,&a)) return;
+    glyphInks[glyphBatches++]=RGB(unsigned(r*255+.5),unsigned(g*255+.5),unsigned(b*255+.5));
+}
 static int userUnicode(void*,unsigned long codepoint,unsigned long* glyph) {
     ++userConversions; *glyph=codepoint; return 0;
 }
@@ -67,6 +77,39 @@ int wmain(int argc,wchar_t** argv) {
     colors.selectionBackground=0xADD6FF; black(); newPath(ctx); rectangle(ctx,2,2,60,16);
     changed=beginEditorSelectionFill(ctx,colors); ok &= changed; fill(ctx); endEditorSelectionFill(ctx,changed); flush(output);
     ok &= ((uint32_t*)bytes(output))[80*5+5]==0xFFADD6FF;
+    // A TextMate glyph batch can include ordinary ink on both sides of a selection.
+    struct Glyph { unsigned long index; double x,y; };
+    Glyph mixed[]={{42,6,10},{42,40,10},{42,72,10}};
+    testSource=getSource;
+    testRgba=load<int(*)(void*,double*,double*,double*,double*)>(cairo,"cairo_pattern_get_rgba");
+    colors.glyphBackground=0x011627;
+    colors.selectionBackground=0x103362;
+    colors.selectionForeground=0xD8EAFA;
+    {
+        EditorSelectionPaint paint(true);
+        black(); newPath(ctx); rectangle(ctx,20,2,35,16);
+        changed=beginEditorSelectionFill(ctx,colors); ok &= changed; fill(ctx); endEditorSelectionFill(ctx,changed);
+        rgba(ctx,16./255.,52./255.,151./255.,1.); rememberEditorSource(ctx,0x103497);
+        original=getSource(ctx);
+        ok &= !editorSelectionGlyph(ctx);
+        ok &= drawSyntaxSelectionGlyphs(ctx,mixed,3,colors,recordGlyphInk);
+        ok &= glyphBatches==3 && glyphInks[0]==RGB(16,52,151) &&
+            glyphInks[1]==RGB(0xD8,0xEA,0xFA) && glyphInks[2]==glyphInks[0] && getSource(ctx)==original;
+    }
+    ok &= !drawSyntaxSelectionGlyphs(ctx,mixed,3,colors,recordGlyphInk);
+    // Native gray caption ink can share the inactive frame's border fill.
+    family(ctx,"Arial",0,0);
+    colors.border=0x5F7E97; colors.captionText=0xD6DEEB;
+    rgba(ctx,95./255.,126./255.,151./255.,1.);
+    newPath(ctx); rectangle(ctx,20,2,35,16); fill(ctx);
+    rememberEditorSource(ctx,0x666666);
+    original=getSource(ctx); glyphBatches=0;
+    ok &= drawInactiveCaptionGlyphs(ctx,mixed,3,colors,recordGlyphInk);
+    DWORD corrected=(GetRValue(glyphInks[1])<<16)|(GetGValue(glyphInks[1])<<8)|GetBValue(glyphInks[1]);
+    ok &= glyphBatches==3 && glyphInks[0]==RGB(95,126,151) && glyphInks[2]==glyphInks[0] &&
+        ChromaContrast::ratio(corrected,colors.border)>=4.5 && getSource(ctx)==original;
+    rememberEditorSource(ctx,0x777777);
+    ok &= !drawInactiveCaptionGlyphs(ctx,mixed,3,colors,recordGlyphInk);
     // Browser fonts supply callbacks owned by WebKit. Merely recognizing an
     // editor glyph must not invoke their Unicode/shaping/rendering callbacks.
     auto userFace=load<void*(*)()>(cairo,"cairo_user_font_face_create");
@@ -79,9 +122,11 @@ int wmain(int argc,wchar_t** argv) {
     bool browserExcluded=!editorSelectionGlyph(ctx) && userConversions==0;
     // Contrast correction must also reject USER fonts before querying metrics.
     rgba(ctx,98./255.,114./255.,164./255.,1.);
-    struct Glyph { unsigned long index; double x,y; } glyph={42,12,25};
+    Glyph glyph={42,12,25};
     browserExcluded &= !drawComparisonGlyphs(ctx,&glyph,1,0x1E4E5A,0xF8F8F2,
         [](void*,const void*,int) { ++userConversions; }) && userConversions==0;
+    rememberEditorSource(ctx,0x808080);
+    browserExcluded &= !drawInactiveCaptionGlyphs(ctx,&glyph,1,colors,recordGlyphInk) && userConversions==0;
     printf("Browser font exclusion: %s; Unicode callbacks=%u\n",browserExcluded?"PASS":"FAIL",userConversions);
     ok &= browserExcluded;
     destroyFace(face);

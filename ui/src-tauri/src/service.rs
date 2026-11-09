@@ -479,9 +479,10 @@ impl Service {
                 && patch.window.is_none()
                 && (patch.selected_theme.is_some()
                     || patch.custom_icons.is_some()
+                    || patch.semantic_highlighting.is_some()
                     || patch.editor_font.is_some()
                     || patch.ui_font.is_some()),
-            "Укажите тему, значки или шрифт"
+            "Укажите тему, подсветку, значки или шрифт"
         );
         ensure!(
             !self.shared.busy.load(Ordering::Acquire),
@@ -626,10 +627,11 @@ impl Service {
         row: &mut ProcessRow,
         wait: Duration,
     ) {
-        row.record_theme(manager::attach_to_with_icons_wait(
+        row.record_theme(manager::attach_to_with_options_wait(
             identity,
             &settings.selected_theme,
             settings.custom_icons,
+            settings.semantic_highlighting,
             wait,
         ));
         controller.set_pending(
@@ -846,6 +848,14 @@ mod tests {
             },
             SettingsPatch {
                 custom_icons: Some(true),
+                ..Default::default()
+            },
+            SettingsPatch {
+                semantic_highlighting: Some(false),
+                ..Default::default()
+            },
+            SettingsPatch {
+                semantic_highlighting: Some(true),
                 ..Default::default()
             },
         ] {

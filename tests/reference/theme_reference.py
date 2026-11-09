@@ -9,6 +9,9 @@ KINDS = {'text': 1, 'background': 2, 'brush': 3, 'pen': 4,
 ROLES = ('editor.background', 'text', 'panel', 'border', 'selection.background',
          'selection.text', 'line', 'comment', 'keyword', 'string', 'number',
          'directive', 'accent', 'error', 'warning', 'disabled', 'hover')
+SYNTAX_ACCENTS = ('function', 'builtin', 'parameter', 'variable', 'type', 'query-keyword', 'query-function')
+SYNTAX_SOURCES = ('text', 'keyword', 'text', 'comment', 'string', 'number', 'number', 'directive',
+                  'directive', *SYNTAX_ACCENTS, 'parameter', 'type')
 # Order is part of protocol v2 (RenderColors in src/protocol.h).
 BINDINGS = ('glyph.background', 'glyph.foreground', 'glyph.selection.background',
             'glyph.selection.foreground', 'raster.background', 'raster.foreground',
@@ -41,6 +44,7 @@ class Theme:
     colors: dict
     render: dict
     source: bytes
+    syntax: dict
 
     @property
     def native_colors(self):
@@ -53,7 +57,7 @@ def load_theme(path):
     if len(data) > 65536:
         raise ValueError('Theme file exceeds 64 KiB')
     document = json.loads(data.decode('utf-8-sig'), object_pairs_hook=unique_object)
-    exact_keys(document, ('format_version', 'id', 'name', 'colors', 'render'), 'theme')
+    exact_keys(document, ('format_version', 'id', 'name', 'colors', 'render', 'syntax'), 'theme')
     if type(document['format_version']) is not int or document['format_version'] != 1:
         raise ValueError('Unsupported theme format_version; expected 1')
     identifier, name = document['id'], document['name']
@@ -63,7 +67,9 @@ def load_theme(path):
         raise ValueError('Theme name: expected 1-80 printable characters')
     colors, render = document['colors'], document['render']
     exact_keys(colors, ROLES, 'colors')
-    for key, value in colors.items():
+    syntax = document['syntax']
+    exact_keys(syntax, SYNTAX_ACCENTS, 'syntax')
+    for key, value in {**colors, **syntax}.items():
         if not isinstance(value, str) or not RGB.fullmatch(value):
             raise ValueError(f'colors.{key}: expected #RRGGBB')
     exact_keys(render, (*BINDINGS, 'window.dark'), 'render')
@@ -76,7 +82,7 @@ def load_theme(path):
     if (values[render['glyph.background']] == values[render['glyph.selection.background']] and
             values[render['glyph.foreground']] != values[render['glyph.selection.foreground']]):
         raise ValueError('Glyph background roles coincide but foreground roles differ; rendering would be ambiguous')
-    return Theme(identifier, name, values, dict(render), data)
+    return Theme(identifier, name, values, dict(render), data, {key: int(value[1:], 16) for key, value in syntax.items()})
 
 
 def load_profile(path, theme):
