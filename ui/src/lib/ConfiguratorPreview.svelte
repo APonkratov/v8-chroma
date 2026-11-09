@@ -3,10 +3,18 @@
   import PreviewIcon from './PreviewIcon.svelte';
   import type {ThemePreview} from './preview';
   import {stockReference} from './preview';
-  let {theme, customIcons, fontFamily, fontSize, uiFontFamily}:{theme:ThemePreview;customIcons:boolean;fontFamily?:string;fontSize?:number;uiFontFamily?:string} = $props();
+  let {theme, customIcons, semanticHighlighting = true, fontFamily, fontSize, uiFontFamily}:{theme:ThemePreview;customIcons:boolean;semanticHighlighting?:boolean;fontFamily?:string;fontSize?:number;uiFontFamily?:string} = $props();
   const fontStyle = $derived(fontFamily && fontSize ? `font-family:${fontFamily};font-size:${fontSize}pt;line-height:1.65` : undefined);
   const colors = $derived(theme.colors);
-  const editor = $derived(theme.editor);
+  const editor = $derived.by(() => {
+    if (semanticHighlighting || theme.id === 'standard') return theme.editor;
+    return {
+      ...Object.fromEntries(Object.keys(theme.editor).map(role => [role, colors.text])),
+      keyword: colors.keyword,
+      comment: colors.comment,
+      directive: colors.directive,
+    };
+  });
   const reference = $derived(stockReference(theme.id));
   const commands = [
     {icon:'new',label:'Создать'},{icon:'open',label:'Открыть'},{icon:'save',label:'Сохранить'},
@@ -43,15 +51,17 @@
     <div class="preview-module">
       <div class="preview-module-tab"><FileCode2 size={13}/><span>Модуль формы</span><span class="preview-tab-dot"></span></div>
       <div class="preview-code">
-        <div style={fontStyle} class="preview-numbers" aria-hidden="true">1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8</div>
+        <div style={fontStyle} class="preview-numbers" aria-hidden="true">1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9</div>
         <pre style={fontStyle} style:color={editor.identifier}><span style:color={editor.comment}>// Проверка оформления</span>
-<span style:color={editor.keyword}>Процедура</span> ПроверитьТему<span style:color={editor.punctuation}>()</span>
-    Тема <span style:color={editor.punctuation}>=</span> <span style:color={editor.string}>"{theme.name}"</span><span style:color={editor.punctuation}>;</span>
-    <span style:color={editor.keyword}>Если</span> <span style:color={editor.number}>42</span> <span style:color={editor.punctuation}>&gt;</span> <span style:color={editor.number}>0</span> <span style:color={editor.keyword}>Тогда</span>
-        <span style:color={editor.builtin}>Сообщить</span><span style:color={editor.punctuation}>(</span>Тема<span style:color={editor.punctuation}>);</span>
-    <span style:color={editor.keyword}>КонецЕсли</span><span style:color={editor.punctuation}>;</span>
+<span style:color={editor.keyword}>Процедура</span> <span style:color={editor.function}>ПроверитьТему</span>(<span style:color={editor.parameter}>Порог</span>)
+    <span style:color={editor.variable}>Тема</span> = <span style:color={editor.string}>"{theme.name}"</span>;
+    <span style:color={editor.variable}>Запрос</span> = <span style:color={editor.keyword}>Новый</span> <span style:color={editor.type}>Запрос</span>;
+    Запрос.Текст = <span style:color={editor.string}>"</span><span style:color={editor['query-keyword']}>ВЫБРАТЬ</span> <span style:color={editor.number}>1</span><span style:color={editor.string}>"</span>;
+    <span style:color={editor.keyword}>Если</span> <span style:color={editor.number}>42</span> &gt; Порог <span style:color={editor.keyword}>Тогда</span>
+        <span style:color={editor.builtin}>Сообщить</span>(Тема);
+    <span style:color={editor.keyword}>КонецЕсли</span>;
 <span style:color={editor.keyword}>КонецПроцедуры</span>
-<span style:color={editor.comment}>// &lt;&gt; != == := // &lt;= &gt;= =&gt; -&gt;</span></pre>
+</pre>
       </div>
       <div class="preview-samples"><span style:background={colors['selection.background']} style:color={colors['selection.text']}>Выделение</span><span style:background={colors.hover}>Наведение</span></div>
     </div>

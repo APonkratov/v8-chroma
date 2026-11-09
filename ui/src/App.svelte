@@ -7,7 +7,7 @@
   type Theme = {id:string;name:string;dark:boolean;colors:Record<string,string>;editor:Record<string,string>};
   type FontSettings = {enabled:boolean;family:string;points10:number};
   type UiFontSettings = {enabled:boolean;family:string};
-  type Preferences = {editor_font:FontSettings;ui_font:UiFontSettings;selected_theme:string;auto_apply:boolean;custom_icons:boolean;window:{width:number;height:number;maximized:boolean}};
+  type Preferences = {editor_font:FontSettings;ui_font:UiFontSettings;selected_theme:string;auto_apply:boolean;custom_icons:boolean;semantic_highlighting:boolean;window:{width:number;height:number;maximized:boolean}};
   type ProcessRow = {pid:number;created_time:string|null;title:string;exe:string|null;command_line:string|null;eligible:boolean;status:string;theme:string|null;theme_warning:string|null;detail:string|null;icons:string|null;icon_warning:string|null;font:string|null;font_warning:string|null;ui_font:string|null;ui_font_warning:string|null};
   type UpdateState = {preferences:{auto_check:boolean;include_rc:boolean};checking:boolean;installing:boolean;available:{version:string;notes:string;url:string}|null;error:string|null;check_error:string|null;last_checked:number|null;downloaded:number;total:number};
   type AppState = {settings:{path:string;settings:Preferences;warning:string|null}|null;processes:ProcessRow[];error:string|null;busy:boolean;stopping:boolean;version:string;autostart_enabled:boolean|null;autostart_error:string|null;custom_profile:boolean;updates:UpdateState};
@@ -39,6 +39,7 @@
   const selected = $derived(catalog.find(t=>t.id===selectedId) ?? themes[2] ?? standard);
   const editor = $derived(selected.editor);
   const customIcons = $derived(appState?.settings?.settings.custom_icons ?? false);
+  const semanticHighlighting = $derived(appState?.settings?.settings.semantic_highlighting ?? true);
   const font = $derived(appState?.settings?.settings.editor_font ?? {enabled:false,family:'JetBrains Mono Medium',points10:130});
   const fontFamily = $derived(`${CSS.escape(font.family)}, monospace`);
   const uiFont = $derived(appState?.settings?.settings.ui_font ?? {enabled:true,family:'Segoe UI Variable Small'});
@@ -60,6 +61,7 @@
     if(!error)window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
   }
   function toggleIcons(){return perform(()=>invoke('set_appearance',{patch:{custom_icons:!customIcons}}));}
+  function saveHighlighting(enabled:boolean){return perform(()=>invoke('set_appearance',{patch:{semantic_highlighting:enabled}}));}
   function saveFont(patch:Partial<FontSettings>){return perform(()=>invoke('set_appearance',{patch:{editor_font:{...font,...patch}}}));}
   function saveUiFont(family:string){return perform(()=>invoke('set_appearance',{patch:{ui_font:family?{enabled:true,family}:{...uiFont,enabled:false}}}));}
   function toggleAuto(){return perform(()=>invoke('save_settings',{patch:{auto_apply:!auto}}),auto?'Авто-применение выключено':'Авто-применение включено');}
@@ -109,11 +111,14 @@
         </div>
         <div class="appearance-controls">
           <div class="appearance-field font-family-control ui-font-control"><label for="ui-font-family">Шрифт интерфейса</label><div class="font-select"><select id="ui-font-family" aria-label="Шрифт интерфейса" value={uiFont.enabled?uiFont.family:''} disabled={disabled} onchange={event=>saveUiFont(event.currentTarget.value)}><option value="">Как в 1С</option>{#if uiFont.enabled && !fonts.includes(uiFont.family)}<option value={uiFont.family} disabled>{uiFont.family} — не установлен</option>{/if}<optgroup label="Рекомендуемые">{#each recommendedUiFonts as family}<option value={family}>{family}</option>{/each}</optgroup><optgroup label="Другие установленные шрифты">{#each otherUiFonts as family}<option value={family}>{family}</option>{/each}</optgroup></select><ChevronDown size={15} aria-hidden="true"/></div></div>
-          <div class="appearance-field font-family-control"><label for="font-family">Шрифт редактора</label><div class="font-select"><select id="font-family" aria-label="Шрифт редактора" value={font.enabled?font.family:''} disabled={disabled || fonts.length===0} onchange={event=>saveFont(event.currentTarget.value?{enabled:true,family:event.currentTarget.value}:{enabled:false})}><option value="">Как в 1С</option>{#if font.enabled && !fonts.includes(font.family)}<option value={font.family} disabled>{font.family} — не установлен</option>{/if}{#each fonts as family}<option value={family}>{family}</option>{/each}</select><ChevronDown size={15} aria-hidden="true"/></div></div>
-          <div class="appearance-field"><label for="font-size">Размер, pt</label><div class="font-stepper" class:inactive={!font.enabled}><button aria-label="Уменьшить размер шрифта" disabled={disabled || !font.enabled || font.points10<=80} onclick={()=>saveFont({points10:font.points10-5})}><Minus size={15}/></button><input id="font-size" aria-label="Размер шрифта" type="number" min="8" max="32" step="0.5" placeholder="1С" value={font.enabled?font.points10/10:undefined} disabled={disabled || !font.enabled} onchange={event=>saveFont({points10:Math.round(Number(event.currentTarget.value)*10)})}/><button aria-label="Увеличить размер шрифта" disabled={disabled || !font.enabled || font.points10>=320} onclick={()=>saveFont({points10:font.points10+5})}><Plus size={15}/></button></div></div>
+          <div class="editor-font-controls">
+            <div class="appearance-field font-family-control"><label for="font-family">Шрифт редактора</label><div class="font-select"><select id="font-family" aria-label="Шрифт редактора" value={font.enabled?font.family:''} disabled={disabled || fonts.length===0} onchange={event=>saveFont(event.currentTarget.value?{enabled:true,family:event.currentTarget.value}:{enabled:false})}><option value="">Как в 1С</option>{#if font.enabled && !fonts.includes(font.family)}<option value={font.family} disabled>{font.family} — не установлен</option>{/if}{#each fonts as family}<option value={family}>{family}</option>{/each}</select><ChevronDown size={15} aria-hidden="true"/></div></div>
+            <div class="appearance-field"><label for="font-size">Размер, pt</label><div class="font-stepper" class:inactive={!font.enabled}><button aria-label="Уменьшить размер шрифта" disabled={disabled || !font.enabled || font.points10<=80} onclick={()=>saveFont({points10:font.points10-5})}><Minus size={15}/></button><input id="font-size" aria-label="Размер шрифта" type="number" min="8" max="32" step="0.5" placeholder="1С" value={font.enabled?font.points10/10:undefined} disabled={disabled || !font.enabled} onchange={event=>saveFont({points10:Math.round(Number(event.currentTarget.value)*10)})}/><button aria-label="Увеличить размер шрифта" disabled={disabled || !font.enabled || font.points10>=320} onclick={()=>saveFont({points10:font.points10+5})}><Plus size={15}/></button></div></div>
+          </div>
+          <div class="appearance-field"><label for="semantic-highlighting">Подсветка кода</label><div class="font-select"><select id="semantic-highlighting" aria-label="Подсветка кода" value={selectedId!=='standard' && semanticHighlighting?'extended':'standard'} disabled={disabled || selectedId==='standard'} onchange={event=>saveHighlighting(event.currentTarget.value==='extended')}><option value="standard">Стандартная</option><option value="extended">Расширенная</option></select><ChevronDown size={15} aria-hidden="true"/></div></div>
           <div class="appearance-field"><label for="custom-icons">Значки</label><button id="custom-icons" class="appearance-toggle" role="switch" aria-checked={customIcons} aria-label="Новые значки конфигуратора" disabled={disabled} onclick={toggleIcons}><span>{customIcons?'Новые':'Штатные'}</span><span class="switch" class:checked={customIcons} aria-hidden="true"><i></i></span></button></div>
         </div>
-        <ConfiguratorPreview theme={selected} {customIcons} {uiFontFamily} fontFamily={font.enabled?fontFamily:undefined} fontSize={font.enabled?font.points10/10:undefined}/>
+        <ConfiguratorPreview theme={selected} {customIcons} {semanticHighlighting} {uiFontFamily} fontFamily={font.enabled?fontFamily:undefined} fontSize={font.enabled?font.points10/10:undefined}/>
         {#if !auto}<div class="appearance-apply"><button class="primary" disabled={disabled || eligible===0} onclick={()=>apply()}><Check size={15}/>Применить оформление</button></div>{/if}
       </section>
       <section class="collection" aria-label="Коллекция тем">

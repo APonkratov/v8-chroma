@@ -32,5 +32,14 @@
     "window.text": "text",
     "window.border": "border",
     "window.dark": true
+  },
+  "syntax": {
+    "function": "#DCDCAA",
+    "builtin": "#9FBFFA",
+    "parameter": "#9CDCFE",
+    "variable": "#C586C0",
+    "type": "#4EC9B0",
+    "query-keyword": "#69B9F5",
+    "query-function": "#DCDCAA"
   }
 }

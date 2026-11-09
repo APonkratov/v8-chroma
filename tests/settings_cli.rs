@@ -103,6 +103,7 @@ fn separate_processes_persist_preferences_and_override_is_temporary() {
     let profile = temp.path().join("Настройки пользователя");
     let shown = value(cli(&profile, &["settings", "show"]));
     assert_eq!(shown["source"], "defaults");
+    assert_eq!(shown["settings"]["semantic_highlighting"], true);
     assert!(!profile.join("settings.json").exists());
     value(cli(
         &profile,
@@ -115,6 +116,8 @@ fn separate_processes_persist_preferences_and_override_is_temporary() {
             "off",
             "--custom-icons",
             "on",
+            "--semantic-highlighting",
+            "off",
             "--width",
             "1200",
         ],
@@ -123,11 +126,13 @@ fn separate_processes_persist_preferences_and_override_is_temporary() {
     assert_eq!(shown["settings"]["selected_theme"], "night-owl");
     assert_eq!(shown["settings"]["auto_apply"], false);
     assert_eq!(shown["settings"]["custom_icons"], true);
+    assert_eq!(shown["settings"]["semantic_highlighting"], false);
     let run = cli(&profile, &["watch", "--theme", "dracula", "--seconds", "1"]);
     assert!(run.status.success());
     let event: Value = serde_json::from_slice(&run.stdout).unwrap();
     assert_eq!(event["theme"], "dracula");
     assert_eq!(event["auto_apply"], false);
+    assert_eq!(event["semantic_highlighting"], false);
     let shown = value(cli(&profile, &["settings", "show"]));
     assert_eq!(shown["settings"]["selected_theme"], "night-owl");
     assert_eq!(shown["settings"]["window"]["width"], 1200);

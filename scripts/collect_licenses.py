@@ -86,6 +86,7 @@ def main():
         npm_count += 1
     static_files = [ROOT / "LICENSE", ROOT / "assets/THIRD-PARTY-NOTICES.txt"]
     static_files += sorted(p for p in (ROOT / "assets/palettes").rglob("*LICENSE*") if p.is_file())
+    static_files += sorted((ROOT / "assets/syntax").glob("*-LICENSE.txt"))
     static_files += [ROOT / "assets/palettes/edt/third-party-notices.txt"]
     static_files += sorted((ROOT / "assets/licenses").glob("*.txt"))
     static_files += sorted((ROOT / "licenses/webview2-sdk").glob("*.txt"))

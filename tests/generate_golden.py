@@ -9,7 +9,7 @@ from dataclasses import replace
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tests/reference"))
 from protocol_reference import make_config
-from theme_reference import load_theme, load_profile
+from theme_reference import load_theme, load_profile, SYNTAX_SOURCES
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--check', action='store_true', help='Verify committed fixtures without changing them')
@@ -47,6 +47,14 @@ for path in sorted((ROOT / 'assets/themes').glob('*.json')):
                 break
     theme = replace(theme, colors=colors)
     mappings = load_profile(ROOT / 'assets/profile.properties', theme)
+    for role_id, source in enumerate(SYNTAX_SOURCES):
+        rgb = theme.syntax[source] if source in theme.syntax else colors[source]
+        for text_weight in range(101):
+            ink = sum((((rgb >> bit & 255)*(100-text_weight)
+                       +(colors['text'] >> bit & 255)*text_weight+50)//100) << bit for bit in (16, 8, 0))
+            if contrast(ink, colors['editor.background']) >= 5.0:
+                break
+        mappings.append((9, role_id, ink))
     cfg = make_config(theme, mappings, Path(r'C:\Platform'), Path(r'C:\Logs\colors.csv'))
     data = bytes(cfg)
     cases[theme.id] = data

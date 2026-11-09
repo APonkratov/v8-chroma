@@ -2,6 +2,7 @@
 #include "window_theme.h"
 #include "raster_theme.h"
 #include "editor_selection.h"
+#include "editor_syntax.h"
 #include "icon_theme.h"
 #include "browser_lifetime.h"
 #include <stdio.h>
@@ -191,11 +192,13 @@ static void __cdecl hookedMesh(void* h,unsigned c,double r,double g,double b,dou
 static void __cdecl hookedGlyphs(void* context,const void* glyphs,int count) {
     ThemeRead guard;
     DWORD last=GetLastError();
-    double r,g,b,a;
+    double r=0.,g=0.,b=0.,a=0.;
     bool change=false;
     DWORD foreground=cfg.colors.glyphForeground;
     if (cfg.mode && InterlockedCompareExchange(&active,0,0) &&
         getRgba(getSource(context),&r,&g,&b,&a)==0) {
+        SetLastError(last);
+        if (drawSyntaxSelectionGlyphs(context,glyphs,count,cfg.colors,realGlyphs)) return;
         DWORD current=(channel(r)<<16)|(channel(g)<<8)|channel(b);
         // Selection blue is also used for hot/pressed captions by this platform.
         // Mapping it as a fill makes glyphs disappear on the same selection fill.
@@ -204,6 +207,8 @@ static void __cdecl hookedGlyphs(void* context,const void* glyphs,int count) {
         if (current==cfg.colors.selectionBackground) foreground=cfg.colors.selectionForeground;
         if (editorSelectionGlyph(context)) { change=true; foreground=cfg.colors.selectionForeground; }
         if (!change) {
+            SetLastError(last);
+            if (drawInactiveCaptionGlyphs(context,glyphs,count,cfg.colors,realGlyphs)) return;
             SetLastError(last);
             if (drawComparisonGlyphs(context,glyphs,count,comparisonBackground,cfg.colors.glyphForeground,realGlyphs)) return;
         }
@@ -353,6 +358,8 @@ static DWORD WINAPI writer(void*) {
         AcquireSRWLockExclusive(&lifecycleLock);
         RenderColors c; bool enabled;
         { ThemeRead guard; c=cfg.colors; enabled=cfg.mode && active; }
+        if (enabled) initializeEditorSyntax(cfg.targetDir);
+        configureEditorSyntax(enabled ? &cfg : nullptr);
         updateWindowTheme(enabled,toColor(c.captionBackground),toColor(c.captionText),toColor(c.border),c.darkCaption!=0);
         ReleaseSRWLockExclusive(&lifecycleLock);
         if (!(tick++%4)) ThemeSnapshot(nullptr);
@@ -366,6 +373,7 @@ extern "C" __declspec(dllexport) DWORD WINAPI ThemeStop(void*) {
     InterlockedExchange(&active,0); InterlockedExchange(&stopping,1);
     activateIconTheme(nullptr);
     ReleaseSRWLockExclusive(&themeLock);
+    configureEditorSyntax(nullptr);
     updateWindowTheme(false,0,0,0);
     ReleaseSRWLockExclusive(&lifecycleLock);
     return ThemeSnapshot(nullptr);
@@ -395,7 +403,8 @@ static DWORD validateConfig(void* argument) {
         (incoming->mode && c.glyphBackground==c.selectionBackground && c.glyphForeground!=c.selectionForeground)) return ERROR_INVALID_PARAMETER;
     for (DWORD i=0;i<incoming->mapCount;++i) {
         const auto &map=incoming->maps[i];
-        if (map.kind<Text || map.kind>MeshColor || map.source>0xFFFFFF || map.target>0xFFFFFF) return ERROR_INVALID_PARAMETER;
+        if (map.kind<Text || map.kind>SyntaxColor || map.source>0xFFFFFF || map.target>0xFFFFFF ||
+            (map.kind==SyntaxColor && map.source>=SyntaxRoleCount)) return ERROR_INVALID_PARAMETER;
         for (DWORD j=0;j<i;++j)
             if (incoming->maps[j].kind==map.kind && incoming->maps[j].source==map.source) return ERROR_INVALID_PARAMETER;
     }
@@ -429,7 +438,10 @@ extern "C" __declspec(dllexport) DWORD WINAPI ThemeApply(void* argument) {
     discardIconTheme(prepared);
     RenderColors c=cfg.colors; bool enabled=cfg.mode && active;
     ReleaseSRWLockExclusive(&themeLock);
-    if (!result) updateWindowTheme(enabled,toColor(c.captionBackground),toColor(c.captionText),toColor(c.border),c.darkCaption!=0);
+    if (!result) {
+        configureEditorSyntax(enabled ? &cfg : nullptr);
+        updateWindowTheme(enabled,toColor(c.captionBackground),toColor(c.captionText),toColor(c.border),c.darkCaption!=0);
+    }
     ReleaseSRWLockExclusive(&lifecycleLock);
     return result;
 }

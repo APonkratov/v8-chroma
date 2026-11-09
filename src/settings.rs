@@ -14,6 +14,10 @@ use std::{
 
 const LIMIT: u64 = 65536;
 
+fn default_semantic_highlighting() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct WindowSettings {
@@ -38,6 +42,8 @@ pub struct Settings {
     pub selected_theme: String,
     pub auto_apply: bool,
     pub custom_icons: bool,
+    #[serde(default = "default_semantic_highlighting")]
+    pub semantic_highlighting: bool,
     pub editor_font: crate::fonts::FontSettings,
     pub ui_font: crate::ui_fonts::UiFontSettings,
     pub window: WindowSettings,
@@ -45,10 +51,11 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            schema_version: 4,
+            schema_version: 5,
             selected_theme: "dracula".into(),
             auto_apply: true,
             custom_icons: false,
+            semantic_highlighting: true,
             editor_font: Default::default(),
             ui_font: Default::default(),
             window: WindowSettings::default(),
@@ -58,7 +65,7 @@ impl Default for Settings {
 impl Settings {
     pub fn validate(&self) -> Result<()> {
         ensure!(
-            self.schema_version == 4,
+            self.schema_version == 5,
             "Неизвестная схема настроек: {}",
             self.schema_version
         );
@@ -91,6 +98,7 @@ pub struct SettingsPatch {
     pub selected_theme: Option<String>,
     pub auto_apply: Option<bool>,
     pub custom_icons: Option<bool>,
+    pub semantic_highlighting: Option<bool>,
     pub editor_font: Option<crate::fonts::FontSettings>,
     pub ui_font: Option<crate::ui_fonts::UiFontSettings>,
     pub window: Option<WindowPatch>,
@@ -105,6 +113,9 @@ impl SettingsPatch {
         }
         if let Some(value) = self.custom_icons {
             settings.custom_icons = value;
+        }
+        if let Some(value) = self.semantic_highlighting {
+            settings.semantic_highlighting = value;
         }
         if let Some(value) = self.editor_font {
             settings.editor_font = value;
@@ -182,7 +193,7 @@ fn parse(bytes: &[u8]) -> Result<Settings> {
             let old: Legacy = serde_json::from_slice(bytes)?;
             ensure!(old.schema_version == 1, "Некорректная схема миграции");
             Settings {
-                schema_version: 4,
+                schema_version: 5,
                 selected_theme: if old.selected_theme == "diagnostic" {
                     "standard".into()
                 } else {
@@ -191,6 +202,7 @@ fn parse(bytes: &[u8]) -> Result<Settings> {
                 auto_apply: old.auto_apply,
                 window: old.window,
                 custom_icons: false,
+                semantic_highlighting: true,
                 editor_font: Default::default(),
                 ui_font: Default::default(),
             }
@@ -208,10 +220,11 @@ fn parse(bytes: &[u8]) -> Result<Settings> {
             let old: Legacy = serde_json::from_slice(bytes)?;
             ensure!(old.schema_version == 2, "Некорректная схема миграции");
             Settings {
-                schema_version: 4,
+                schema_version: 5,
                 selected_theme: old.selected_theme,
                 auto_apply: old.auto_apply,
                 custom_icons: old.custom_icons,
+                semantic_highlighting: true,
                 window: old.window,
                 editor_font: Default::default(),
                 ui_font: Default::default(),
@@ -231,16 +244,22 @@ fn parse(bytes: &[u8]) -> Result<Settings> {
             let old: Legacy = serde_json::from_slice(bytes)?;
             ensure!(old.schema_version == 3, "Некорректная схема миграции");
             Settings {
-                schema_version: 4,
+                schema_version: 5,
                 selected_theme: old.selected_theme,
                 auto_apply: old.auto_apply,
                 custom_icons: old.custom_icons,
+                semantic_highlighting: true,
                 editor_font: old.editor_font,
                 window: old.window,
                 ui_font: Default::default(),
             }
         }
-        4 => serde_json::from_slice(bytes)?,
+        4 => {
+            let mut old: Settings = serde_json::from_slice(bytes)?;
+            old.schema_version = 5;
+            old
+        }
+        5 => serde_json::from_slice(bytes)?,
         version => return Err(UnsupportedSchema(version).into()),
     };
     settings.validate()?;
@@ -347,6 +366,7 @@ impl Store {
             if raw["schema_version"] == 1
                 || raw["schema_version"] == 2
                 || raw["schema_version"] == 3
+                || raw["schema_version"] == 4
             {
                 self.persist(settings, &primary, &backup)?;
                 return Ok((read(&self.path())?, read(&self.backup())?));
@@ -518,7 +538,7 @@ mod tests {
         let old=br#"{"schema_version":1,"selected_theme":"diagnostic","auto_apply":false,"window":{"width":1200,"height":800,"maximized":true}}"#;
         fs::write(store.path(), old).unwrap();
         let migrated = store.load().unwrap().settings;
-        assert_eq!(migrated.schema_version, 4);
+        assert_eq!(migrated.schema_version, 5);
         assert_eq!(migrated.selected_theme, "standard");
         assert!(!migrated.custom_icons && !migrated.auto_apply);
         assert_eq!(migrated.window.width, 1200);
@@ -540,7 +560,7 @@ mod tests {
         let old=br#"{"schema_version":2,"selected_theme":"monokai","auto_apply":false,"custom_icons":true,"window":{"width":1200,"height":800,"maximized":false}}"#;
         fs::write(store.path(), old).unwrap();
         let loaded = store.load().unwrap().settings;
-        assert_eq!(loaded.schema_version, 4);
+        assert_eq!(loaded.schema_version, 5);
         assert_eq!(loaded.selected_theme, "monokai");
         assert!(loaded.custom_icons && !loaded.auto_apply && !loaded.editor_font.enabled);
         assert_eq!(fs::read(store.backup()).unwrap(), old);
@@ -578,7 +598,7 @@ mod tests {
         let old = br#"{"schema_version":3,"selected_theme":"darcula","auto_apply":false,"custom_icons":true,"editor_font":{"enabled":true,"family":"Consolas","points10":145},"window":{"width":1200,"height":800,"maximized":false}}"#;
         fs::write(store.path(), old).unwrap();
         let loaded = store.load().unwrap().settings;
-        assert_eq!(loaded.schema_version, 4);
+        assert_eq!(loaded.schema_version, 5);
         assert_eq!(loaded.selected_theme, "darcula");
         assert!(!loaded.auto_apply && loaded.custom_icons && loaded.editor_font.enabled);
         assert_eq!(loaded.editor_font.family, "Consolas");
@@ -618,6 +638,32 @@ mod tests {
             );
             assert_eq!(fs::read(store.path()).unwrap(), before);
         }
+    }
+
+    #[test]
+    fn v4_migration_enables_highlighting_and_persists_an_explicit_opt_out() {
+        let (_temp, store) = profile();
+        fs::create_dir_all(&store.directory).unwrap();
+        let mut old = serde_json::to_value(Settings::default()).unwrap();
+        old["schema_version"] = serde_json::json!(4);
+        old["selected_theme"] = serde_json::json!("night-owl");
+        old["auto_apply"] = serde_json::json!(false);
+        old.as_object_mut().unwrap().remove("semantic_highlighting");
+        let bytes = serde_json::to_vec(&old).unwrap();
+        fs::write(store.path(), &bytes).unwrap();
+        let migrated = store.load().unwrap().settings;
+        assert!(migrated.semantic_highlighting);
+        assert_eq!(migrated.schema_version, 5);
+        assert_eq!(fs::read(store.backup()).unwrap(), bytes);
+        store
+            .update(SettingsPatch {
+                semantic_highlighting: Some(false),
+                ..Default::default()
+            })
+            .unwrap();
+        let saved = store.load().unwrap().settings;
+        assert!(!saved.semantic_highlighting && !saved.auto_apply);
+        assert_eq!(saved.selected_theme, "night-owl");
     }
     #[test]
     fn future_schema_is_never_overwritten() {
@@ -699,8 +745,8 @@ mod tests {
             parse(
                 valid
                     .replace(
-                        "\"schema_version\": 4",
-                        "\"schema_version\": 4, \"typo\": 3"
+                        "\"schema_version\": 5",
+                        "\"schema_version\": 5, \"typo\": 3"
                     )
                     .as_bytes()
             )

@@ -1,6 +1,11 @@
 #pragma once
 #include <windows.h>
-enum ApiKind { Text=1, Background, Brush, Pen, CairoRgb, CairoRgba, ColorStop, MeshColor };
+enum ApiKind { Text=1, Background, Brush, Pen, CairoRgb, CairoRgba, ColorStop, MeshColor, SyntaxColor };
+enum SyntaxRole : DWORD {
+    Identifier, Keyword, Operator, Comment, String, Number, Date, Constant, Directive,
+    Function, Builtin, Parameter, Variable, Type, QueryKeyword, QueryFunction,
+    QueryParameter, QueryType, SyntaxRoleCount
+};
 struct ColorMap { DWORD kind, source, target; };
 struct RenderColors {
     DWORD glyphBackground, glyphForeground, selectionBackground, selectionForeground;

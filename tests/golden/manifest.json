@@ -2,77 +2,77 @@
   {
     "theme": "ayu-dark",
     "bytes": 4760,
-    "sha256": "af686dc00e1d56acb821358cdbfe0011b7ef4c2b883bc09c360ad724d161e9c6"
+    "sha256": "d967f4b5c31e44a75863e24b42d2b6a02d94dbdfd82fa74129a8e46303ac95be"
   },
   {
     "theme": "darcula",
     "bytes": 4760,
-    "sha256": "629781f6919b3177a58968952ef13f7ee593a69f3a7e55293ffdb4123bc8c479"
+    "sha256": "cfc7f68453a7e345af7e0597d28ea5980357e97e44fc0147b578291025d0804c"
   },
   {
     "theme": "dracula",
     "bytes": 4760,
-    "sha256": "fddf2e351581fa1f7b924540de4721951232277aa943b91fc36b99f0efdcde58"
+    "sha256": "1bb256a33b110eedae8cfbb01a74c4f61d9dff765f900d54eec147728fe975af"
   },
   {
     "theme": "github-dark-default",
     "bytes": 4760,
-    "sha256": "255d7409d75f8c02186d860170b034196b9bdf18c899048350712dbb96ef9e0c"
+    "sha256": "b5bbfec907cd349e2ebb041254f2163d22617857fe79d84593189dbdbd8a2de6"
   },
   {
     "theme": "github-light-default",
     "bytes": 4760,
-    "sha256": "391c36e877813ce2c2d6a6eb8e5a9e7a538182237716b2396d0b7b83255dbf5c"
+    "sha256": "c357f56933b66826cd2f083a0a9c0aafa766120235ee69243b971ca631f28f38"
   },
   {
     "theme": "monokai",
     "bytes": 4760,
-    "sha256": "3658c215df4fe6a172fb51b916da7e3e8b17441ab5c1443e74c220801d29664a"
+    "sha256": "3a15dce967f4a7139a5d83850ff805e23a9b13dd489d17e2fc10ebdc29c0fe97"
   },
   {
     "theme": "night-owl",
     "bytes": 4760,
-    "sha256": "73f5193f8941a472d1bfd1fb593142d82c93bfffac975d411a3e0eed30e01719"
+    "sha256": "2b8ac1eb8664d486e87cebe160fe9daf183c272e286da0499192de6d3c0419d7"
   },
   {
     "theme": "noctis-minimus",
     "bytes": 4760,
-    "sha256": "5c58aa2bf5ac768f3c88deb829043b910c000da7c2d67031a14dfc938cef969f"
+    "sha256": "ee81c4a9ee6ddb52f0d8b6ad86f3d72fa0d38d8cbbb4fca70e30b4974ac9d0ab"
   },
   {
     "theme": "one-dark-pro",
     "bytes": 4760,
-    "sha256": "4c6d60e122e33b8b52189a79df760a35a2db6bb28a9614bd1911af726f5d0118"
+    "sha256": "daab8f12a9a7035c9096e7a03e603b511dacc4d7572c01fa71cebac0320b35d2"
   },
   {
     "theme": "shades-of-purple",
     "bytes": 4760,
-    "sha256": "d0ff2212775f65018dd6bbcabda12ad515568e094995d495275484672dac890b"
+    "sha256": "d4c72c8d45b0d707489b72749638ade3dfd5732f118edf818c972de2b0dcfb1e"
   },
   {
     "theme": "visual-studio-dark-cpp",
     "bytes": 4760,
-    "sha256": "8a090e93651778765119b6df341b0ee77534f906863e3002f98d84b27881aefe"
+    "sha256": "f67c7bc54b0caa069beba850508881f04cc069fe95386e3318173f7f0f54b3e0"
   },
   {
     "theme": "visual-studio-light",
     "bytes": 4760,
-    "sha256": "79556faa75bbc2a45d0eec08ec13a4c010dc0efcd565cd36056fb3d8d29d06ed"
+    "sha256": "e496848f13ef42ef1d631a83d176048062d72d9aad8d74b8ecb222b82ddef048"
   },
   {
     "theme": "winter-is-coming-dark-blue",
     "bytes": 4760,
-    "sha256": "85f16dd0d9762ae6f340911408b9c20bedc660eec85c4363126a3d2c6d05f2f3"
+    "sha256": "b5b168b4722776a9b0c9bfd092a530110bf25a9f3ffa0e2747bc2e555766dcde"
   },
   {
     "theme": "icons-dark",
     "bytes": 4760,
-    "sha256": "21ae31d841ab00a53cacfa2f9534d59d5559a98b05b9176995aa93972f4b53b1"
+    "sha256": "40addaa84825eb2be263cc34a13b2e095c6a09db8e0bfa0fda4e2f1ae00130f1"
   },
   {
     "theme": "icons-light",
     "bytes": 4760,
-    "sha256": "9e287e1b1d883938251a7a771139df8b5d6d9d0c5a23c5da14927bf717508a3f"
+    "sha256": "e3dafa705f183572e87ddd913d03e91dab9c7c571a92da13312a507083028026"
   },
   {
     "theme": "icons-standard",

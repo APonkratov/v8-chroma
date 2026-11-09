@@ -30,7 +30,8 @@ namespace {
     unsigned char*(*imageData)(void*);
     void(*flushSurface)(void*),(*userToDevice)(void*,double*,double*);
     void(*deviceOffset)(void*,double*,double*),(*deviceScale)(void*,double*,double*);
-    volatile LONG64 fills,glyphs;
+    volatile LONG64 fills,selectionGlyphs;
+    thread_local EditorSelectionPaint* selectionPaint;
     template<class T> bool load(HMODULE m,const char* name,T &fn) {
         auto proc=GetProcAddress(m,name); static_assert(sizeof(proc)==sizeof(fn));
         memcpy(&fn,&proc,sizeof(fn)); return fn!=nullptr;
@@ -39,14 +40,17 @@ namespace {
         int op=operation(context),kind=surfaceType(target(context));
         return (op==1 || op==2) && (kind==0 || kind==7) && groupTarget(context)==target(context);
     }
-    bool monospace(void* context) {
+    bool nativeFont(void* context) {
         // WebKit USER fonts own shaping callbacks. Asking them to measure probe
         // strings from a rendering hook can re-enter browser code without its
         // shaping state. The editor uses native TOY/FreeType/Win32 faces.
         void* face=fontFace(context);
         if (!face) return false;
         int kind=faceType(face);
-        if (kind!=0 && kind!=1 && kind!=2) return false; // TOY, FT, WIN32; never USER.
+        return kind==0 || kind==1 || kind==2; // TOY, FT, WIN32; never USER.
+    }
+    bool monospace(void* context) {
+        if (!nativeFont(context)) return false;
         void* font=scaledFont(context);
         if (!font || fontStatus(font)) return false;
         Extents thin={},wide={}; textExtents(font,"i",&thin); textExtents(font,"W",&wide);
@@ -106,6 +110,11 @@ bool initializeEditorSelection(HMODULE m) {
     return supported;
 }
 bool editorSelectionSupported() { return supported; }
+EditorSelectionPaint::EditorSelectionPaint(bool track) : previous(selectionPaint) {
+    selectionPaint = track ? this : nullptr;
+}
+EditorSelectionPaint::~EditorSelectionPaint() { selectionPaint = previous; }
+
 bool beginUiHighlightFill(void* context,const RenderColors& colors) {
     if (!supported || original(context)!=0xFFFFFF || !screen(context)) return false;
     Path* path=copyPath(context); if (!path) return false;
@@ -158,6 +167,7 @@ bool beginEditorSelectionFill(void* context,const RenderColors& colors) {
     save(context);
     DWORD color=colors.selectionBackground;
     rgba(context,((color>>16)&255)/255.,((color>>8)&255)/255.,(color&255)/255.,a);
+    if (selectionPaint) selectionPaint->selectionContext = context;
     InterlockedIncrement64(&fills); return true;
 }
 void endEditorSelectionFill(void* context,bool changed) { if (changed) restore(context); }
@@ -166,18 +176,20 @@ bool editorSelectionGlyph(void* context) {
     DWORD rgb=original(context);
     bool inverted=rgb==0xFFFFFF || rgb==0x00FFFF || rgb==0xFFFF00 || rgb==0xFF7FFF || rgb==0x69CDFF;
     if (!inverted || !screen(context) || !monospace(context)) return false;
-    InterlockedIncrement64(&glyphs); return true;
+    InterlockedIncrement64(&selectionGlyphs); return true;
 }
-bool drawComparisonGlyphs(void* context,const void* glyphs,int count,DWORD background,DWORD fallback,
-                          void(__cdecl* draw)(void*,const void*,int)) {
+enum class GlyphFont { Editor, Interface };
+static bool drawGlyphsOnFill(void* context,const void* glyphs,int count,DWORD background,DWORD foreground,
+                             bool useForeground,void(__cdecl* draw)(void*,const void*,int),
+                             GlyphFont font=GlyphFont::Editor) {
     DWORD lastError=GetLastError();
     if (!comparisonSupported || !glyphs || count<=0 || background>0xFFFFFF) return false;
     double r,g,b,a;
     if (getRgba(source(context),&r,&g,&b,&a) || a!=1.) return false;
     auto channel=[](double v)->DWORD { return (DWORD)(fmax(0.,fmin(1.,v))*255.+.5); };
     DWORD current=(channel(r)<<16)|(channel(g)<<8)|channel(b);
-    if (current==fallback) return false;
-    if (ChromaContrast::ratio(current,background)>=4.5 || !screen(context) || !monospace(context)) return false;
+    if (current==foreground || (!useForeground && ChromaContrast::ratio(current,background)>=4.5) ||
+        !screen(context) || !(font==GlyphFont::Editor?monospace(context):nativeFont(context))) return false;
     void* destination=target(context);
     void* image=surfaceType(destination)==7?win32Image(destination):destination;
     if (!image || surfaceType(image)!=0) return false;
@@ -217,7 +229,7 @@ bool drawComparisonGlyphs(void* context,const void* glyphs,int count,DWORD backg
         if (flags[i] && first==count) first=i;
     }
     if (first==count) return false;
-    DWORD ink=ChromaContrast::readableInk(current,background,fallback);
+    DWORD ink=useForeground?foreground:ChromaContrast::readableInk(current,background,foreground);
     if (ink==current) return false;
     // Draw adjacent glyphs with the same background together, preserving their
     // absolute positions and the source pattern/last-error state of the caller.
@@ -234,5 +246,32 @@ bool drawComparisonGlyphs(void* context,const void* glyphs,int count,DWORD backg
     restore(context); heapFlags.reset(); SetLastError(lastError);
     return true;
 }
+bool drawSyntaxSelectionGlyphs(void* context, const void* glyphs, int count, const RenderColors& colors,
+                               void(__cdecl* draw)(void*, const void*, int)) {
+    // The platform inverts the RGB of each selected token. Confirm the fill
+    // under each glyph so arbitrary syntax colors cannot trigger the override.
+    if (!selectionPaint || selectionPaint->selectionContext != context ||
+        colors.selectionBackground == colors.glyphBackground) return false;
+    if (!drawGlyphsOnFill(context, glyphs, count, colors.selectionBackground, colors.selectionForeground, true, draw)) return false;
+    InterlockedIncrement64(&selectionGlyphs);
+    return true;
+}
+bool drawComparisonGlyphs(void* context,const void* glyphs,int count,DWORD background,DWORD fallback,
+                          void(__cdecl* draw)(void*,const void*,int)) {
+    return drawGlyphsOnFill(context,glyphs,count,background,fallback,false,draw);
+}
+bool drawInactiveCaptionGlyphs(void* context,const void* glyphs,int count,const RenderColors& colors,
+                               void(__cdecl* draw)(void*,const void*,int)) {
+    // Newly-created MDI windows use native gray ink for inactive captions.
+    // Some palettes map both that ink and its fill to the same border color.
+    // Correct only glyphs actually painted on that fill, including UI fonts.
+    if (!supported) return false;
+    DWORD ink=original(context);
+    if (ink!=0x666666 && ink!=0x808080) return false;
+    DWORD fallback=colors.captionText;
+    if (ChromaContrast::ratio(fallback,colors.border)<4.5)
+        fallback=ChromaContrast::ratio(0,colors.border)>=ChromaContrast::ratio(0xFFFFFF,colors.border)?0:0xFFFFFF;
+    return drawGlyphsOnFill(context,glyphs,count,colors.border,fallback,false,draw,GlyphFont::Interface);
+}
 unsigned long long editorSelectionFills() { return InterlockedCompareExchange64(&fills,0,0); }
-unsigned long long editorSelectionGlyphs() { return InterlockedCompareExchange64(&glyphs,0,0); }
+unsigned long long editorSelectionGlyphs() { return InterlockedCompareExchange64(&selectionGlyphs,0,0); }

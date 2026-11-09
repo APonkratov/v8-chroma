@@ -11,13 +11,13 @@
     {
       "name": "windows-msvc", "inherits": "base",
       "displayName": "Windows x64 / MSVC (Developer Command Prompt)",
-      "cacheVariables": {"CMAKE_CXX_COMPILER": "cl"},
+      "cacheVariables": {"CMAKE_C_COMPILER": "cl", "CMAKE_CXX_COMPILER": "cl"},
       "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows"}
     },
     {
       "name": "windows-mingw", "inherits": "base",
       "displayName": "Windows x64 / MinGW (development)",
-      "cacheVariables": {"CMAKE_CXX_COMPILER": "g++"},
+      "cacheVariables": {"CMAKE_C_COMPILER": "gcc", "CMAKE_CXX_COMPILER": "g++"},
       "condition": {"type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows"}
     },
     {

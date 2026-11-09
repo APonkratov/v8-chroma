@@ -57,6 +57,29 @@ const ROLES: &[&str] = &[
     "disabled",
     "hover",
 ];
+// The indices of these roles are part of the native SyntaxColor map.
+const SYNTAX_ROLES: &[&str] = &[
+    "identifier",
+    "keyword",
+    "operator",
+    "comment",
+    "string",
+    "number",
+    "date",
+    "constant",
+    "directive",
+    "function",
+    "builtin",
+    "parameter",
+    "variable",
+    "type",
+    "query-keyword",
+    "query-function",
+    "query-parameter",
+    "query-type",
+];
+const SYNTAX_MAP_KIND: u32 = 9;
+const SYNTAX_MIN_CONTRAST: f64 = 5.0;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
@@ -98,6 +121,68 @@ struct Document {
     name: String,
     colors: BTreeMap<String, String>,
     render: BTreeMap<String, serde_json::Value>,
+    syntax: SyntaxAccents,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "kebab-case")]
+struct SyntaxAccents {
+    function: String,
+    builtin: String,
+    parameter: String,
+    variable: String,
+    r#type: String,
+    query_keyword: String,
+    query_function: String,
+}
+
+fn rgb(value: &str) -> Result<u32> {
+    ensure!(
+        value.len() == 7
+            && value.starts_with('#')
+            && value[1..].bytes().all(|c| c.is_ascii_hexdigit()),
+        "Некорректный RGB"
+    );
+    Ok(u32::from_str_radix(&value[1..], 16)?)
+}
+
+fn syntax_colors(doc: &Document) -> Result<impl Iterator<Item = (&'static str, u32)>> {
+    let colors = &doc.colors;
+    let accents = &doc.syntax;
+    let values = [
+        &colors["text"],
+        &colors["keyword"],
+        &colors["text"],
+        &colors["comment"],
+        &colors["string"],
+        &colors["number"],
+        &colors["number"],
+        &colors["directive"],
+        &colors["directive"],
+        &accents.function,
+        &accents.builtin,
+        &accents.parameter,
+        &accents.variable,
+        &accents.r#type,
+        &accents.query_keyword,
+        &accents.query_function,
+        &accents.parameter,
+        &accents.r#type,
+    ];
+    let background = rgb(&colors["editor.background"])?;
+    let text = rgb(&colors["text"])?;
+    let values = values
+        .into_iter()
+        .map(|value| {
+            Ok(readable_ink(
+                rgb(value)?,
+                text,
+                &[background],
+                SYNTAX_MIN_CONTRAST,
+            ))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    Ok(SYNTAX_ROLES.iter().copied().zip(values))
 }
 
 #[derive(Clone, Serialize)]
@@ -124,28 +209,18 @@ pub fn catalog() -> Result<Vec<Preview>> {
         .collect()
 }
 
-/// Effective colors of the default 8.3.27 BSL editor, resolved through the exact
-/// native mapping table. The renderer receives RGB values, not semantic tokens.
+/// The same role colors that the native editor uses for TextMate tokens.
 fn editor_preview(cfg: &Config) -> BTreeMap<String, String> {
-    [
-        ("keyword", 0xFF0000),
-        ("punctuation", 0xFF0000),
-        ("identifier", 0x0000FF),
-        ("builtin", 0x0000FF),
-        ("string", 0x000000),
-        ("number", 0x000000),
-        ("comment", 0x008000),
-        ("directive", 0x963200),
-    ]
-    .into_iter()
-    .map(|(token, source)| {
-        let color = cfg.maps[..cfg.map_count as usize]
-            .iter()
-            .find(|map| map.kind == 6 && map.source == source)
-            .map_or(source, |map| map.target);
-        (token.to_owned(), format!("#{color:06X}"))
-    })
-    .collect()
+    cfg.maps[..cfg.map_count as usize]
+        .iter()
+        .filter(|map| map.kind == SYNTAX_MAP_KIND)
+        .map(|map| {
+            (
+                SYNTAX_ROLES[map.source as usize].to_owned(),
+                format!("#{:06X}", map.target),
+            )
+        })
+        .collect()
 }
 
 fn source(id: &str) -> Result<&'static str> {
@@ -191,6 +266,15 @@ fn wide<const N: usize>(path: &Path) -> Result<[u16; N]> {
 }
 
 pub fn config(id: &str, target: &Path, log: &Path) -> Result<Config> {
+    build_config(id, target, log, true)
+}
+
+fn build_config(
+    id: &str,
+    target: &Path,
+    log: &Path,
+    semantic_highlighting: bool,
+) -> Result<Config> {
     let mut cfg = Config {
         size: 4760,
         version: 3,
@@ -225,13 +309,7 @@ pub fn config(id: &str, target: &Path, log: &Path) -> Result<Config> {
     let mut colors: BTreeMap<&str, u32> = doc
         .colors
         .iter()
-        .map(|(k, v)| {
-            ensure!(
-                v.len() == 7 && v.starts_with('#') && v[1..].bytes().all(|c| c.is_ascii_hexdigit()),
-                "Некорректный RGB"
-            );
-            Ok((k.as_str(), u32::from_str_radix(&v[1..], 16)?))
-        })
+        .map(|(key, value)| Ok((key.as_str(), rgb(value)?)))
         .collect::<Result<_>>()?;
     for (i, key) in BINDINGS.iter().enumerate() {
         let role = doc
@@ -251,10 +329,11 @@ pub fn config(id: &str, target: &Path, log: &Path) -> Result<Config> {
     for (role, color) in comparison_backgrounds(colors["editor.background"], colors["text"]) {
         colors.insert(role, color);
     }
-    let link = readable_link(
+    let link = readable_ink(
         colors["accent"],
         colors["text"],
-        [colors["editor.background"], colors["panel"]],
+        &[colors["editor.background"], colors["panel"]],
+        4.5,
     );
     colors.insert("link", link);
     ensure!(
@@ -308,6 +387,17 @@ pub fn config(id: &str, target: &Path, log: &Path) -> Result<Config> {
         cfg.map_count += 1;
     }
     ensure!(cfg.map_count > 0, "Пустой профиль");
+    if semantic_highlighting {
+        for (index, (_, color)) in syntax_colors(&doc)?.enumerate() {
+            ensure!(cfg.map_count < 256, "Слишком большой профиль подсветки");
+            cfg.maps[cfg.map_count as usize] = ColorMap {
+                kind: SYNTAX_MAP_KIND,
+                source: index as u32,
+                target: color,
+            };
+            cfg.map_count += 1;
+        }
+    }
     cfg.mode = 1;
     Ok(cfg)
 }
@@ -319,7 +409,17 @@ pub fn config_with_icons(
     log: &Path,
     custom_icons: bool,
 ) -> Result<Config> {
-    let mut cfg = config(id, target, log)?;
+    config_with_options(id, target, log, custom_icons, true)
+}
+
+pub fn config_with_options(
+    id: &str,
+    target: &Path,
+    log: &Path,
+    custom_icons: bool,
+    semantic_highlighting: bool,
+) -> Result<Config> {
+    let mut cfg = build_config(id, target, log, semantic_highlighting)?;
     if custom_icons && id != "diagnostic" {
         cfg.icon_mode = if id == "standard" || cfg.colors[9] == 0 {
             1
@@ -349,7 +449,7 @@ fn contrast(left: u32, right: u32) -> f64 {
 }
 
 // Retain the theme's accent where readable; otherwise move toward its text ink.
-fn readable_link(accent: u32, text: u32, backgrounds: [u32; 2]) -> u32 {
+fn readable_ink(accent: u32, text: u32, backgrounds: &[u32], minimum: f64) -> u32 {
     (0..=100)
         .map(|amount| {
             [16, 8, 0].into_iter().fold(0, |rgb, shift| {
@@ -360,7 +460,11 @@ fn readable_link(accent: u32, text: u32, backgrounds: [u32; 2]) -> u32 {
                     << shift)
             })
         })
-        .find(|color| backgrounds.iter().all(|bg| contrast(*color, *bg) >= 4.5))
+        .find(|color| {
+            backgrounds
+                .iter()
+                .all(|bg| contrast(*color, *bg) >= minimum)
+        })
         .unwrap_or(text)
 }
 
@@ -517,24 +621,67 @@ mod tests {
     fn editor_preview_and_native_syntax_use_the_same_mapping() {
         for preview in catalog().unwrap() {
             let cfg = config(&preview.id, Path::new("x"), Path::new("y")).unwrap();
-            for kind in [1, 6] {
-                let identifier = cfg.maps[..cfg.map_count as usize]
+            for (index, role) in SYNTAX_ROLES.iter().enumerate() {
+                let mapping = cfg.maps[..cfg.map_count as usize]
                     .iter()
-                    .find(|m| m.kind == kind && m.source == 0x0000FF)
+                    .find(|m| m.kind == SYNTAX_MAP_KIND && m.source == index as u32)
                     .unwrap();
-                assert_eq!(
-                    format!("#{:06X}", identifier.target),
-                    preview.colors["text"]
+                assert_eq!(format!("#{:06X}", mapping.target), preview.editor[*role]);
+                assert!(
+                    contrast(mapping.target, cfg.colors[0]) >= SYNTAX_MIN_CONTRAST,
+                    "{} {role}",
+                    preview.id
+                );
+                // Cairo's legacy remap still sees syntax ink. The shared
+                // foreground has a separate recovery path in the glyph hook.
+                if mapping.target != cfg.colors[1] {
+                    assert!(
+                        !cfg.maps[..cfg.map_count as usize].iter().any(|legacy| {
+                            matches!(legacy.kind, 5 | 6)
+                                && legacy.source == mapping.target
+                                && legacy.target != mapping.target
+                        }),
+                        "{} {role} conflicts with the Cairo color profile",
+                        preview.id
+                    );
+                }
+            }
+            for (left, right) in [
+                ("number", "string"),
+                ("variable", "number"),
+                ("variable", "parameter"),
+                ("builtin", "function"),
+                ("builtin", "number"),
+                ("type", "builtin"),
+                ("parameter", "number"),
+                ("query-keyword", "string"),
+                ("query-keyword", "query-type"),
+            ] {
+                assert_ne!(
+                    preview.editor[left], preview.editor[right],
+                    "{} {left}/{right}",
+                    preview.id
                 );
             }
-            assert_eq!(preview.editor["identifier"], preview.colors["text"]);
-            assert_eq!(preview.editor["builtin"], preview.colors["text"]);
-            assert_eq!(preview.editor["keyword"], preview.colors["keyword"]);
-            assert_eq!(preview.editor["punctuation"], preview.colors["keyword"]);
-            assert_eq!(preview.editor["string"], preview.colors["text"]);
-            assert_eq!(preview.editor["number"], preview.colors["text"]);
-            assert_eq!(preview.editor["comment"], preview.colors["comment"]);
-            assert_eq!(preview.editor["directive"], preview.colors["directive"]);
+        }
+    }
+
+    #[test]
+    fn disabling_highlighting_keeps_the_theme_and_icon_request() {
+        for id in IDS {
+            let on = config_with_options(id, Path::new("x"), Path::new("y"), true, true).unwrap();
+            let off = config_with_options(id, Path::new("x"), Path::new("y"), true, false).unwrap();
+            assert_eq!(off.mode, on.mode);
+            assert_eq!(off.colors, on.colors);
+            assert_eq!(off.icon_mode, on.icon_mode);
+            assert_eq!(off.map_count + SYNTAX_ROLES.len() as u32, on.map_count);
+            for (a, b) in off.maps[..off.map_count as usize]
+                .iter()
+                .zip(on.maps.iter())
+            {
+                assert_ne!(a.kind, SYNTAX_MAP_KIND);
+                assert_eq!((a.kind, a.source, a.target), (b.kind, b.source, b.target));
+            }
         }
     }
     #[test]
@@ -547,7 +694,14 @@ mod tests {
             )
             .unwrap();
             assert_eq!(cfg.bytes().len(), 4760);
-            assert_eq!(cfg.map_count, if *id == "diagnostic" { 0 } else { 236 });
+            assert_eq!(
+                cfg.map_count,
+                if *id == "diagnostic" {
+                    0
+                } else {
+                    236 + SYNTAX_ROLES.len() as u32
+                }
+            );
         }
     }
     #[test]

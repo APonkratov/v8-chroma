@@ -5,11 +5,12 @@ use std::{
     time::{Duration, Instant},
 };
 
-type Appearance = (String, bool, Option<(String, u32)>, Option<String>);
+type Appearance = (String, bool, bool, Option<(String, u32)>, Option<String>);
 fn appearance(settings: &Settings) -> Appearance {
     (
         settings.selected_theme.clone(),
         settings.custom_icons,
+        settings.semantic_highlighting,
         settings.editor_font.appearance(),
         settings.ui_font.appearance(),
     )
@@ -291,6 +292,11 @@ mod tests {
         assert_eq!(controller.plan(&identities, &settings).len(), 2);
         assert!(controller.plan(&identities, &settings).is_empty());
         settings.custom_icons = false;
+        assert_eq!(controller.plan(&identities, &settings).len(), 2);
+        settings.semantic_highlighting = false;
+        assert_eq!(controller.plan(&identities, &settings).len(), 2);
+        assert!(controller.plan(&identities, &settings).is_empty());
+        settings.semantic_highlighting = true;
         assert_eq!(controller.plan(&identities, &settings).len(), 2);
     }
     #[test]
