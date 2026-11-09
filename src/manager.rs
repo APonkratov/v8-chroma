@@ -203,12 +203,6 @@ struct Session {
     stage: String,
     theme: String,
     custom_icons: bool,
-    #[serde(default = "default_semantic_highlighting")]
-    semantic_highlighting: bool,
-}
-
-fn default_semantic_highlighting() -> bool {
-    true
 }
 
 fn read_session(path: &Path) -> Result<Session> {
@@ -588,7 +582,6 @@ fn attach_appearance_verified(
             stage: "initializing".into(),
             theme: theme_id.into(),
             custom_icons,
-            semantic_highlighting,
         };
         atomic_write(&state_path, &serde_json::to_vec_pretty(&saved)?)?;
         process.load_dll(dll)?;
@@ -613,7 +606,6 @@ fn attach_appearance_verified(
     saved.stage = "ready".into();
     saved.theme = theme_id.into();
     saved.custom_icons = custom_icons;
-    saved.semantic_highlighting = semantic_highlighting;
     atomic_write(&state_path, &serde_json::to_vec_pretty(saved)?)?;
     atomic_write(
         &marker_path,

@@ -324,8 +324,11 @@ DWORD WINAPI tokenizeWorker(void*) {
         Result result{job.revision, {}};
         try {
             if (!tokenizer) tokenizer = std::make_unique<TextMate>();
-            tokenizer->tokenize(job.text, result.lines);
-        } catch (...) {}
+            // An interrupted call can leave lazily compiled rules incomplete.
+            if (!tokenizer->tokenize(job.text, result.lines)) tokenizer.reset();
+        } catch (...) {
+            tokenizer.reset();
+        }
         try {
             std::lock_guard lock(state->mutex);
             auto expected = state->expected.find(id);
