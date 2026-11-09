@@ -11,6 +11,7 @@
 - Новые тонкие значки панелей, дерева конфигурации и вложенных меню — в светлом и тёмном наборах.
 - Изменение системного шрифта интерфейса конфигуратора без перезапуска: Segoe UI Variable Small по умолчанию и возврат «Как в 1С».
 - Независимый выбор установленного шрифта и размера редактора с общим предпросмотром темы и значков.
+- Расширенная подсветка модулей BSL и запросов внутри строк с переключением на стандартную.
 - Программные лигатуры в поддерживающих их шрифтах, в том числе в BSL-коде с кириллицей.
 - Подключение к уже открытым и новым конфигураторам.
 - Переключение тем без перезапуска.
@@ -25,9 +26,9 @@
 
 ### v8-chroma
 
-| Тёмная тема и шрифты | Светлая тема и шрифты | Единое автоприменение |
+| Предпросмотр Night Owl | Предпросмотр GitHub Light Default | Настройки приложения |
 |---|---|---|
-| [<img src="assets/screenshots/app-themes.jpg" alt="v8-chroma: Dracula, независимый выбор шрифтов интерфейса и редактора, размера и значков" width="280">](assets/screenshots/app-themes.jpg) | [<img src="assets/screenshots/app-themes-light.jpg" alt="v8-chroma: GitHub Light Default, шрифт интерфейса Segoe UI Variable Small и лигатуры редактора" width="280">](assets/screenshots/app-themes-light.jpg) | [<img src="assets/screenshots/app-settings.jpg" alt="v8-chroma: единое автоприменение темы, значков и шрифта" width="280">](assets/screenshots/app-settings.jpg) |
+| [<img src="assets/screenshots/app-themes.jpg" alt="v8-chroma 0.6.0: Night Owl, расширенная подсветка, два шрифта и новые значки" width="280">](assets/screenshots/app-themes.jpg) | [<img src="assets/screenshots/app-themes-light.jpg" alt="v8-chroma 0.6.0: GitHub Light Default с расширенной подсветкой и новыми значками" width="280">](assets/screenshots/app-themes-light.jpg) | [<img src="assets/screenshots/app-settings.jpg" alt="v8-chroma 0.6.0: настройки обновлений, автоприменения и автозапуска" width="280">](assets/screenshots/app-settings.jpg) |
 
 ### Значки
 
@@ -35,17 +36,19 @@
 
 ### Темы
 
+Цветные пресеты показаны с расширенной подсветкой и новыми значками. Интерфейс использует Segoe UI Variable Small, редактор — JetBrains Mono Medium 10 pt.
+
 | Ayu Dark | Darcula | Dracula |
 |---|---|---|
-| [<img src="assets/screenshots/configurator-ayu-dark.jpg" alt="Конфигуратор в теме Ayu Dark" width="280">](assets/screenshots/configurator-ayu-dark.jpg) | [<img src="assets/screenshots/configurator-darcula.jpg" alt="Конфигуратор в теме Darcula" width="280">](assets/screenshots/configurator-darcula.jpg) | [<img src="assets/screenshots/configurator-dracula.jpg" alt="Конфигуратор в теме Dracula" width="280">](assets/screenshots/configurator-dracula.jpg) |
+| [<img src="assets/screenshots/textmate/ayu-dark.jpg" alt="Конфигуратор в теме Ayu Dark" width="280">](assets/screenshots/textmate/ayu-dark.jpg) | [<img src="assets/screenshots/textmate/darcula.jpg" alt="Конфигуратор в теме Darcula" width="280">](assets/screenshots/textmate/darcula.jpg) | [<img src="assets/screenshots/textmate/dracula.jpg" alt="Конфигуратор в теме Dracula" width="280">](assets/screenshots/textmate/dracula.jpg) |
 | **GitHub Dark Default** | **GitHub Light Default** | **Monokai** |
-| [<img src="assets/screenshots/configurator-github-dark-default.jpg" alt="Конфигуратор в теме GitHub Dark Default" width="280">](assets/screenshots/configurator-github-dark-default.jpg) | [<img src="assets/screenshots/configurator-github-light-default.jpg" alt="Конфигуратор в теме GitHub Light Default" width="280">](assets/screenshots/configurator-github-light-default.jpg) | [<img src="assets/screenshots/configurator-monokai.jpg" alt="Конфигуратор в теме Monokai" width="280">](assets/screenshots/configurator-monokai.jpg) |
+| [<img src="assets/screenshots/textmate/github-dark-default.jpg" alt="Конфигуратор в теме GitHub Dark Default" width="280">](assets/screenshots/textmate/github-dark-default.jpg) | [<img src="assets/screenshots/textmate/github-light-default.jpg" alt="Конфигуратор в теме GitHub Light Default" width="280">](assets/screenshots/textmate/github-light-default.jpg) | [<img src="assets/screenshots/textmate/monokai.jpg" alt="Конфигуратор в теме Monokai" width="280">](assets/screenshots/textmate/monokai.jpg) |
 | **Night Owl** | **Noctis Minimus** | **One Dark Pro** |
-| [<img src="assets/screenshots/configurator-night-owl.jpg" alt="Конфигуратор в теме Night Owl" width="280">](assets/screenshots/configurator-night-owl.jpg) | [<img src="assets/screenshots/configurator-noctis-minimus.jpg" alt="Конфигуратор в теме Noctis Minimus" width="280">](assets/screenshots/configurator-noctis-minimus.jpg) | [<img src="assets/screenshots/configurator-one-dark-pro.jpg" alt="Конфигуратор в теме One Dark Pro" width="280">](assets/screenshots/configurator-one-dark-pro.jpg) |
+| [<img src="assets/screenshots/textmate/night-owl.jpg" alt="Конфигуратор в теме Night Owl" width="280">](assets/screenshots/textmate/night-owl.jpg) | [<img src="assets/screenshots/textmate/noctis-minimus.jpg" alt="Конфигуратор в теме Noctis Minimus" width="280">](assets/screenshots/textmate/noctis-minimus.jpg) | [<img src="assets/screenshots/textmate/one-dark-pro.jpg" alt="Конфигуратор в теме One Dark Pro" width="280">](assets/screenshots/textmate/one-dark-pro.jpg) |
 | **Shades of Purple** | **Visual Studio Dark (C/C++)** | **Visual Studio Light Modern** |
-| [<img src="assets/screenshots/configurator-shades-of-purple.jpg" alt="Конфигуратор в теме Shades of Purple" width="280">](assets/screenshots/configurator-shades-of-purple.jpg) | [<img src="assets/screenshots/configurator-visual-studio-dark.jpg" alt="Конфигуратор в теме Visual Studio Dark (C/C++)" width="280">](assets/screenshots/configurator-visual-studio-dark.jpg) | [<img src="assets/screenshots/configurator-visual-studio-light.jpg" alt="Конфигуратор в теме Visual Studio Light Modern" width="280">](assets/screenshots/configurator-visual-studio-light.jpg) |
+| [<img src="assets/screenshots/textmate/shades-of-purple.jpg" alt="Конфигуратор в теме Shades of Purple" width="280">](assets/screenshots/textmate/shades-of-purple.jpg) | [<img src="assets/screenshots/textmate/visual-studio-dark-cpp.jpg" alt="Конфигуратор в теме Visual Studio Dark (C/C++)" width="280">](assets/screenshots/textmate/visual-studio-dark-cpp.jpg) | [<img src="assets/screenshots/textmate/visual-studio-light.jpg" alt="Конфигуратор в теме Visual Studio Light Modern" width="280">](assets/screenshots/textmate/visual-studio-light.jpg) |
 | **Winter is Coming (Dark Blue)** | **Стандартная** | |
-| [<img src="assets/screenshots/configurator-winter-is-coming-dark-blue.jpg" alt="Конфигуратор в теме Winter is Coming (Dark Blue)" width="280">](assets/screenshots/configurator-winter-is-coming-dark-blue.jpg) | [<img src="assets/screenshots/configurator-standard.jpg" alt="Конфигуратор со стандартным оформлением" width="280">](assets/screenshots/configurator-standard.jpg) | |
+| [<img src="assets/screenshots/textmate/winter-is-coming-dark-blue.jpg" alt="Конфигуратор в теме Winter is Coming (Dark Blue)" width="280">](assets/screenshots/textmate/winter-is-coming-dark-blue.jpg) | [<img src="assets/screenshots/configurator-standard.jpg" alt="Конфигуратор со стандартным оформлением" width="280">](assets/screenshots/configurator-standard.jpg) | |
 
 ## Требования
 
