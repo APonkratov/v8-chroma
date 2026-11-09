@@ -5,10 +5,13 @@ use std::{
     cell::RefCell,
     time::{Duration, Instant},
 };
-use tauri::Manager;
+use tauri::{
+    Manager,
+    tray::{MouseButton, MouseButtonState, TrayIconEvent},
+};
 use tray_icon::{
-    Icon, MouseButton, MouseButtonState, TrayIcon, TrayIconBuilder, TrayIconEvent,
-    menu::{IconMenuItem, Menu, MenuEvent, MenuItem},
+    Icon, TrayIcon, TrayIconBuilder,
+    menu::{IconMenuItem, Menu, MenuItem},
 };
 use windows_sys::{
     Win32::{
@@ -115,35 +118,32 @@ pub fn setup(app: &tauri::AppHandle) -> anyhow::Result<()> {
             update,
         })
     });
-    let handle = app.clone();
-    MenuEvent::set_event_handler(Some(move |event: MenuEvent| {
-        let app = handle.clone();
-        let _ = handle.run_on_main_thread(move || match event.id.as_ref() {
-            "open" => super::show(&app),
-            "quit" => app.state::<Service>().quit(),
-            "update" => {
-                super::show(&app);
-                let _ = app.state::<Updater>().check();
-            }
-            "toggle" => {
-                let service = app.state::<Service>().inner().clone();
-                std::thread::spawn(move || {
-                    let result = service.store.load().and_then(|loaded| {
-                        service.save(v8_chroma_core::settings::SettingsPatch {
-                            auto_apply: Some(!loaded.settings.auto_apply),
-                            ..Default::default()
-                        })
-                    });
-                    if let Err(error) = result {
-                        eprintln!("{error:#}");
-                    }
+    // Tauri owns muda/tray-icon's single global handlers. Subscribe through
+    // its dispatcher so our menu and mouse callbacks receive those events.
+    app.on_menu_event(|app, event| match event.id.as_ref() {
+        "open" => super::show(app),
+        "quit" => app.state::<Service>().quit(),
+        "update" => {
+            super::show(app);
+            let _ = app.state::<Updater>().check();
+        }
+        "toggle" => {
+            let service = app.state::<Service>().inner().clone();
+            std::thread::spawn(move || {
+                let result = service.store.load().and_then(|loaded| {
+                    service.save(v8_chroma_core::settings::SettingsPatch {
+                        auto_apply: Some(!loaded.settings.auto_apply),
+                        ..Default::default()
+                    })
                 });
-            }
-            _ => {}
-        });
-    }));
-    let handle = app.clone();
-    TrayIconEvent::set_event_handler(Some(move |event: TrayIconEvent| {
+                if let Err(error) = result {
+                    eprintln!("{error:#}");
+                }
+            });
+        }
+        _ => {}
+    });
+    app.on_tray_icon_event(|app, event| {
         if matches!(
             event,
             TrayIconEvent::Click {
@@ -152,10 +152,9 @@ pub fn setup(app: &tauri::AppHandle) -> anyhow::Result<()> {
                 ..
             }
         ) {
-            let app = handle.clone();
-            let _ = handle.run_on_main_thread(move || super::show(&app));
+            super::show(app);
         }
-    }));
+    });
     Ok(())
 }
 
