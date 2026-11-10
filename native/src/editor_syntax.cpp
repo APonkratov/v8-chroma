@@ -3,6 +3,9 @@
 #include "editor_selection.h"
 #include "textmate.h"
 #include <MinHook.h>
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
 #include <algorithm>
 #include <array>
 #include <condition_variable>
@@ -135,10 +138,55 @@ struct State {
 State* state = nullptr;
 bool attempted = false;
 
+using CanvasFill = void (*)(void*, const RECT*, DWORD);
+using TextMarginFill = void (*)(void*, const void*, void*, const RECT*);
+CanvasFill realCanvasFill;
+TextMarginFill realTextMarginFill;
+const BYTE* canvasFillReturn;
+thread_local bool paintingBackground;
+
+class BackgroundFillScope {
+public:
+    explicit BackgroundFillScope(bool applies) : previous(std::exchange(paintingBackground, applies)) {}
+    ~BackgroundFillScope() { paintingBackground = previous; }
+private:
+    bool previous;
+};
+
 template<typename T> T at(const void* object, size_t offset) {
     T value{};
     if (object) std::memcpy(&value, static_cast<const char*>(object) + offset, sizeof(value));
     return value;
+}
+
+void hookedCanvasFill(void* device, const RECT* area, DWORD color) {
+#ifdef _MSC_VER
+    const auto caller = _ReturnAddress();
+#else
+    const auto caller = __builtin_return_address(0);
+#endif
+    BackgroundFillScope fill(caller == canvasFillReturn);
+    realCanvasFill(device, area, color);
+}
+
+void hookedTextMarginFill(void* owner, const void* column, void* device, const RECT* area) {
+    // Column 2 uses the editor background. Column 1 paints the marker lane.
+    constexpr size_t columnKind = 0, patternedFill = 0x3c;
+    BackgroundFillScope fill(at<DWORD>(column, columnKind) == 2 && !at<BYTE>(column, patternedFill));
+    realTextMarginFill(owner, column, device, area);
+}
+
+bool createBackgroundHooks(HMODULE windowBase, const ResolvedSyntax& found) {
+    if (!windowBase || !found.textMarginFill) return false;
+    auto* canvas = GetProcAddress(windowBase, "?fillSolidRect@wbase@@YAXPEAU_VDC@grphcs@@PEBUtagRECT@@K@Z");
+    if (!canvas || *found.canvasFillImport != reinterpret_cast<const void*>(canvas)) return false;
+    canvasFillReturn = found.canvasFillReturn;
+    if (MH_CreateHook(reinterpret_cast<void*>(canvas), reinterpret_cast<void*>(hookedCanvasFill),
+                      reinterpret_cast<void**>(&realCanvasFill)) != MH_OK) return false;
+    if (MH_CreateHook(found.textMarginFill, reinterpret_cast<void*>(hookedTextMarginFill),
+                      reinterpret_cast<void**>(&realTextMarginFill)) == MH_OK) return true;
+    MH_RemoveHook(reinterpret_cast<void*>(canvas));
+    return false;
 }
 
 void* pointer(const void* object, size_t offset = 0) { return at<void*>(object, offset); }
@@ -470,6 +518,8 @@ BOOL CALLBACK repaintWindow(HWND window, LPARAM) {
 }
 }
 
+bool editorBackgroundFill() { return paintingBackground; }
+
 void configureEditorSyntax(const ProbeConfig* config) {
     if (!state) return;
     Palette colors{};
@@ -543,6 +593,8 @@ void initializeEditorSyntax(const wchar_t* directory) {
         MH_Uninitialize();
         return;
     }
+    HMODULE windowBase = GetModuleHandleW(core83 ? L"wbase83.dll" : L"wbase85.dll");
+    const bool backgroundHooks = createBackgroundHooks(windowBase, found);
     try { state = new State; } catch (...) { MH_Uninitialize(); return; }
     HANDLE worker = CreateThread(nullptr, 0, tokenizeWorker, nullptr, 0, nullptr);
     if (!worker) { delete state; state = nullptr; MH_Uninitialize(); return; }
@@ -553,6 +605,8 @@ void initializeEditorSyntax(const wchar_t* directory) {
         WaitForSingleObject(worker, INFINITE);
         delete state;
         state = nullptr;
+    } else if (backgroundHooks) {
+        EnumWindows(repaintWindow, 0);
     }
     CloseHandle(worker);
 }
