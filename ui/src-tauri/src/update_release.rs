@@ -413,6 +413,8 @@ mod tests {
                             Err(error) => return Err(error),
                         }
                     };
+                    // Winsock inherits the listener's nonblocking mode.
+                    stream.set_nonblocking(false)?;
                     stream.set_read_timeout(Some(Duration::from_secs(2)))?;
                     let mut request = [0u8; 1024];
                     assert!(stream.read(&mut request)? > 0);
