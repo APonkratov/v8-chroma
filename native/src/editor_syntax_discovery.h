@@ -6,6 +6,9 @@ struct ResolvedSyntax {
     BYTE *clearString, *getRuns, *slot, *setRef;
     const BYTE *viewTable, *ownerTable, *sourceTable, *lexerTable;
     unsigned viewContextOffset, contextOwnerOffset;
+    const BYTE* canvasFillReturn;
+    const void* const* canvasFillImport;
+    BYTE* textMarginFill;
 };
 
 // Uses loaded image structure and routine fingerprints. No build number or

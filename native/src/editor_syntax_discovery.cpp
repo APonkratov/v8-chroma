@@ -144,5 +144,18 @@ bool discoverSyntax(HMODULE frameModule, HMODULE uiModule, HMODULE textModule, H
     result = {draw.entry, cleanup.entry, invalidateRows, onChange, saveText, readLine, clear, runs, lookup, assign,
               viewTable, ownerTable, sourceTable, lexerTable, extendedView ? 0x1e8u : 0x1b8u,
               extendedView ? 0xe0u : 0xd8u};
+    // The background is drawn once by the view and again in its text margin.
+    // Recognize both paths before enabling either override.
+    const unsigned canvasFillOffset = extendedView ? 0xcd : 0xdb;
+    auto* call = draw.entry + canvasFillOffset;
+    const auto margin = find(ui, textMarginFill);
+    if (margin.entry && margin.variant == draw.variant && call[0] == 0xff && call[1] == 0x15) {
+        auto* importSlot = relative(call, 2, 6);
+        if (frame.contains(importSlot, sizeof(void*))) {
+            result.canvasFillReturn = call + 6;
+            result.canvasFillImport = reinterpret_cast<const void* const*>(importSlot);
+            result.textMarginFill = margin.entry;
+        }
+    }
     return true;
 }

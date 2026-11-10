@@ -131,6 +131,17 @@ static PaintAlphaFn realPaintAlpha;
 static void drawThemed(void* context,DrawFn function) {
     ThemeRead guard;
     DWORD last=GetLastError();
+    if (cfg.mode && active && editorBackgroundFill() && saveContext && restoreContext) {
+        double r,g,b,a;
+        if (getRgba(getSource(context),&r,&g,&b,&a)==0 && a==1.) {
+            DWORD color=cfg.colors.glyphBackground;
+            saveContext(context);
+            realRgb(context,((color>>16)&255)/255.,((color>>8)&255)/255.,(color&255)/255.);
+            SetLastError(last); function(context); last=GetLastError();
+            restoreContext(context); SetLastError(last);
+            return;
+        }
+    }
     bool selection=(cfg.mode && active && (function==realFill || function==realFillPreserve))?
         beginEditorSelectionFill(context,cfg.colors):false;
     bool uiBand=(!selection && cfg.mode && active && (function==realFill || function==realFillPreserve))?

@@ -20,12 +20,13 @@ int wmain(int argc, wchar_t** argv) {
                 static_cast<unsigned long long>(found.paint - reinterpret_cast<BYTE*>(frame)),
                 static_cast<unsigned long long>(found.getRuns - reinterpret_cast<BYTE*>(text)));
 
-    const auto rejectChange = [&](BYTE* byte) {
+    const auto rejectChange = [&](BYTE* byte, bool backgroundOnly = false) {
         DWORD old;
         if (!VirtualProtect(byte, 1, PAGE_EXECUTE_READWRITE, &old)) return false;
         *byte ^= 1;
         ResolvedSyntax altered{};
-        const bool rejected = !discover(altered);
+        const bool recognized = discover(altered);
+        const bool rejected = backgroundOnly ? recognized && !altered.textMarginFill && !altered.canvasFillReturn : !recognized;
         *byte ^= 1;
         DWORD ignored;
         return VirtualProtect(byte, 1, old, &ignored) && rejected;
@@ -34,6 +35,10 @@ int wmain(int argc, wchar_t** argv) {
     if (!rejectChange(found.getRuns + 0x20) || !rejectChange(found.getRuns + 0x14d)) return 5;
     ResolvedSyntax restored{};
     if (!discover(restored) || restored.viewTable != found.viewTable || restored.getRuns != found.getRuns) return 6;
+    if (restored.textMarginFill) {
+        if (!restored.canvasFillReturn || !restored.canvasFillImport || !rejectChange(restored.textMarginFill, true)) return 7;
+        std::puts("Editor background paths discovered and changed margin rejected");
+    }
     std::puts("Editor ABI discovered and unsafe changes rejected");
     return 0;
 }
