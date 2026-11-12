@@ -9,9 +9,10 @@ int wmain(int argc, wchar_t** argv) {
         return LoadLibraryExW((directory + L"\\" + name).c_str(), nullptr, DONT_RESOLVE_DLL_REFERENCES);
     };
     const auto frame = load(L"frame.dll"), ui = load(L"txtedui.dll"), text = load(L"txtedt.dll"), debug = load(L"debug.dll");
+    const auto frontend = load(L"frntend.dll");
     auto core = load(L"core83.dll");
     if (!core) core = load(L"core85.dll");
-    if (!frame || !ui || !text || !core || !debug) return 3;
+    if (!frame || !ui || !text || !core || !debug || !frontend) return 3;
     const auto discover = [&](ResolvedSyntax& out) { return discoverSyntax(frame, ui, text, core, debug, out); };
     ResolvedSyntax found{};
     if (!discover(found)) { std::puts("Editor ABI not recognized"); return 4; }
@@ -40,5 +41,20 @@ int wmain(int argc, wchar_t** argv) {
         std::puts("Editor background paths discovered and changed margin rejected");
     }
     std::puts("Editor ABI discovered and unsafe changes rejected");
+    ResolvedComparisonSyntax comparison{};
+    if (!discoverComparisonSyntax(frame, ui, frontend, restored, comparison)) {
+        std::puts("Comparison ABI not recognized");
+        return 8;
+    }
+    auto* displacement = comparison.setForeground + 0x15;
+    DWORD protection;
+    if (!VirtualProtect(displacement, 1, PAGE_EXECUTE_READWRITE, &protection)) return 9;
+    *displacement ^= 1;
+    ResolvedComparisonSyntax altered{};
+    const bool recognized = discoverComparisonSyntax(frame, ui, frontend, restored, altered);
+    *displacement ^= 1;
+    DWORD ignored;
+    if (!VirtualProtect(displacement, 1, protection, &ignored) || recognized) return 10;
+    std::puts("Comparison ABI discovered and changed color setter call rejected");
     return 0;
 }

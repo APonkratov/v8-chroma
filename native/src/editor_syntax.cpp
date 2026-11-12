@@ -92,7 +92,25 @@ struct CacheLock {
 };
 
 struct Replacement { Ref original, overlay; };
-struct View { void* manager; void* source; };
+struct View {
+    void* manager;
+    void* source;
+    void* context;
+    void* key() const { return source ? source : manager; }
+};
+
+using FormatLine = void (*)(void*, void*);
+using SetForeground = void (*)(void*, uint64_t, uint64_t, DWORD);
+using TextComparison = void (*)(void*, const void*, const void*, const void*, const void*);
+struct Comparison {
+    FormatLine formatLine;
+    SetForeground setForeground;
+    VoidCall structured;
+    TextComparison text;
+    const void *layoutTable, *differenceTable, *lexerTable;
+    unsigned differenceOffset, contextViewOffset;
+} comparison{};
+thread_local bool openingModuleComparison;
 
 using Palette = std::array<COLORREF, SyntaxRoleCount>;
 struct ThemeState {
@@ -105,13 +123,15 @@ struct Job { uint64_t revision; std::wstring text; };
 struct Result { uint64_t revision; SyntaxLines lines; };
 
 struct Document {
-    void* source;
+    View binding;
     uint64_t id;
     uint64_t revision = 0, themeRevision = 0;
     ULONGLONG due = 0;
     bool seen = false;
     std::wstring snapshot;
     SyntaxLines lines;
+    std::vector<size_t> lineStarts;
+    Palette comparisonColors{};
     std::map<Runs*, Replacement> patches;
     size_t paintedRows = 0;
 };
@@ -124,13 +144,16 @@ struct State {
     std::map<uint64_t, Job> jobs;
     std::map<uint64_t, Result> results;
     std::map<uint64_t, uint64_t> expected;
-    // The three hooks and timer own the native editor state on one GUI thread.
+    // The editor hooks and timer own the native view state on one GUI thread.
     volatile LONG guiThread = 0;
     UINT_PTR timer = 0;
     uint64_t nextId = 0;
     bool updating = false;
     std::map<void*, View> views;
     std::map<void*, Document> documents;
+    // The same native difference control also renders arbitrary text files.
+    // Keep the module origin for the lifetime of its view across mode switches.
+    std::map<void*, void*> comparisonViews;
 };
 
 // ThemeProbe is pinned. Keep this state alive through process teardown so a
@@ -204,8 +227,8 @@ size_t cacheSize(void* deque) { return at<size_t>(deque, 0x20); }
 void restore(Document& doc) {
     if (doc.patches.empty()) return;
     {
-        CacheLock lock(doc.source);
-        auto* deque = static_cast<char*>(doc.source) + 0x30;
+        CacheLock lock(doc.binding.source);
+        auto* deque = static_cast<char*>(doc.binding.source) + 0x30;
         const size_t count = cacheSize(deque);
         for (size_t row = 0; row < count; ++row) {
             auto** slot = api.slot(deque, row);
@@ -220,6 +243,11 @@ bool boundary(std::wstring_view text, size_t position) {
     if (!position || position >= text.size()) return true;
     return !(text[position - 1] >= 0xd800 && text[position - 1] <= 0xdbff &&
              text[position] >= 0xdc00 && text[position] <= 0xdfff);
+}
+
+std::wstring_view trimLine(std::wstring_view line) {
+    while (!line.empty() && (line.back() == L'\r' || line.back() == L'\n')) line.remove_suffix(1);
+    return line;
 }
 
 bool split(const Runs& original, const std::vector<SyntaxSpan>& spans, std::wstring_view line,
@@ -270,14 +298,13 @@ void patchRow(Document& doc, void* manager, int row, const std::vector<SyntaxSpa
     NativeString input;
     struct Clear { NativeString& value; ~Clear() { api.clearString(&value); } } clear{input};
     if (!api.getLine(manager, row, &input)) return;
-    auto line = input.value();
-    while (!line.empty() && (line.back() == L'\r' || line.back() == L'\n')) line.remove_suffix(1);
+    const auto line = trimLine(input.value());
     if (line.empty()) return;
     Ref original;
-    api.getRuns(doc.source, row, &input, &original.ptr);
+    api.getRuns(doc.binding.source, row, &input, &original.ptr);
     if (!original.ptr) return;
-    CacheLock lock(doc.source);
-    auto* deque = static_cast<char*>(doc.source) + 0x30;
+    CacheLock lock(doc.binding.source);
+    auto* deque = static_cast<char*>(doc.binding.source) + 0x30;
     if (static_cast<size_t>(row) >= cacheSize(deque)) return;
     auto** slot = api.slot(deque, row);
     if (*slot != original.ptr) return;
@@ -300,40 +327,53 @@ void redraw(Document& doc, size_t newRows) {
     const size_t count = std::max(doc.paintedRows, newRows);
     doc.paintedRows = newRows;
     if (count) for (const auto& [view, binding] : state->views) {
-        if (binding.source == doc.source && checkedPointer(view) == api.viewTable) api.invalidate(view, 0, count);
+        if (binding.key() == doc.binding.key() && checkedPointer(view) == api.viewTable) api.invalidate(view, 0, count);
     }
 }
 
 void apply(Document& doc, void* manager, const ThemeState& theme) {
-    restore(doc);
-    if (theme.enabled) {
+    if (!doc.binding.source) {
+        doc.comparisonColors = theme.colors;
+        redraw(doc, theme.enabled ? doc.lines.size() : 0);
+    } else {
+        restore(doc);
         for (size_t i = 0; i < doc.lines.size(); ++i) {
             if (!doc.lines[i].empty()) patchRow(doc, manager, static_cast<int>(i + 1), doc.lines[i], theme.colors);
         }
+        redraw(doc, doc.patches.empty() ? 0 : doc.lines.size());
     }
-    redraw(doc, doc.patches.empty() ? 0 : doc.lines.size());
     doc.themeRevision = theme.revision;
 }
 
-View bindingFor(void* view) {
+View nativeBinding(void* view) {
     if (checkedPointer(view) != api.viewTable) return {};
-    auto* owner = checkedPointer(checkedPointer(view, api.viewContextOffset), api.contextOwnerOffset);
+    auto* context = checkedPointer(view, api.viewContextOffset);
+    auto* owner = checkedPointer(context, api.contextOwnerOffset);
     if (checkedPointer(owner) != api.ownerTable) return {};
     // Two editor facets independently point at the current text manager.
     auto* manager = checkedPointer(checkedPointer(owner, 0x3d8), 0xc8);
     if (!manager || manager != checkedPointer(checkedPointer(owner, 0x3d0), 0xe8)) return {};
-    auto* source = checkedPointer(manager, 0x228);
-    if (checkedPointer(source) != api.sourceTable || checkedPointer(checkedPointer(source, 0x58)) != api.lexerTable) return {};
-    return {manager, source};
+    return {manager, checkedPointer(manager, 0x228), context};
+}
+
+View bindingFor(void* view) {
+    const auto binding = nativeBinding(view);
+    if (binding.source) {
+        if (checkedPointer(binding.source) != api.sourceTable) return {};
+        const auto lexer = checkedPointer(checkedPointer(binding.source, 0x58));
+        return lexer && (lexer == api.lexerTable || lexer == comparison.lexerTable) ? binding : View{};
+    }
+    const auto compared = state->comparisonViews.find(view);
+    return compared != state->comparisonViews.end() && compared->second == binding.context ? binding : View{};
 }
 
 void forget(void* view) {
     auto found = state->views.find(view);
     if (found == state->views.end()) return;
-    void* source = found->second.source;
+    const auto binding = found->second;
     state->views.erase(found);
-    for (const auto& entry : state->views) if (entry.second.source == source) return;
-    auto doc = state->documents.find(source);
+    for (const auto& entry : state->views) if (entry.second.key() == binding.key()) return;
+    auto doc = state->documents.find(binding.key());
     restore(doc->second);
     {
         std::lock_guard lock(state->mutex);
@@ -342,7 +382,7 @@ void forget(void* view) {
         state->expected.erase(doc->second.id);
     }
     state->documents.erase(doc);
-    method<RefCall>(source, 2)(source);
+    if (binding.source) method<RefCall>(binding.source, 2)(binding.source);
     if (state->documents.empty() && state->timer) {
         KillTimer(nullptr, state->timer);
         state->timer = 0;
@@ -394,6 +434,24 @@ void queue(Document& doc) {
     state->jobsReady.notify_one();
 }
 
+void indexLines(Document& doc) {
+    doc.lineStarts.clear();
+    doc.lineStarts.push_back(0);
+    for (size_t i = 0; i < doc.snapshot.size(); ++i) {
+        const auto ch = doc.snapshot[i];
+        if (ch != L'\r' && ch != L'\n') continue;
+        if (ch == L'\r' && i + 1 < doc.snapshot.size() && doc.snapshot[i + 1] == L'\n') ++i;
+        doc.lineStarts.push_back(i + 1);
+    }
+}
+
+std::wstring_view snapshotLine(const Document& doc, size_t row) {
+    if (row >= doc.lineStarts.size()) return {};
+    const auto start = doc.lineStarts[row];
+    const auto end = row + 1 < doc.lineStarts.size() ? doc.lineStarts[row + 1] : doc.snapshot.size();
+    return trimLine(std::wstring_view(doc.snapshot).substr(start, end - start));
+}
+
 void update(Document& doc, void* manager, const ThemeState& theme, ULONGLONG now) {
     if (doc.due && now < doc.due) return;
     if (doc.due || !doc.seen) {
@@ -404,6 +462,7 @@ void update(Document& doc, void* manager, const ThemeState& theme, ULONGLONG now
             doc.snapshot = std::move(text);
             ++doc.revision;
             doc.lines.clear();
+            if (!doc.binding.source) indexLines(doc);
             restore(doc);
             redraw(doc, 0);
             queue(doc);
@@ -447,34 +506,42 @@ void CALLBACK tick(HWND, UINT, UINT_PTR timer, DWORD) {
         for (auto it = state->views.begin(); it != state->views.end();) {
             const auto [view, previous] = *it++;
             const auto current = bindingFor(view);
-            if (current.manager != previous.manager || current.source != previous.source) forget(view);
+            if (current.manager != previous.manager || current.source != previous.source ||
+                current.context != previous.context) forget(view);
         }
-        for (auto& [source, doc] : state->documents) {
-            auto view = std::find_if(state->views.begin(), state->views.end(), [&](const auto& pair) { return pair.second.source == source; });
+        for (auto& [key, doc] : state->documents) {
+            auto view = std::find_if(state->views.begin(), state->views.end(), [&](const auto& pair) { return pair.second.key() == key; });
             if (view != state->views.end()) update(doc, view->second.manager, theme, now);
         }
     } catch (...) {}
     state->updating = false;
 }
 
-void observe(void* view) {
+bool claimGuiThread() {
     const LONG thread = static_cast<LONG>(GetCurrentThreadId());
     const LONG gui = InterlockedCompareExchange(&state->guiThread, 0, 0);
-    if (gui && gui != thread) return;
+    if (gui) return gui == thread;
+    GUITHREADINFO info{};
+    info.cbSize = sizeof(info);
+    if (!GetGUIThreadInfo(static_cast<DWORD>(thread), &info)) return false;
+    const LONG previous = InterlockedCompareExchange(&state->guiThread, thread, 0);
+    return !previous || previous == thread;
+}
+
+void observe(void* view) {
+    const LONG gui = InterlockedCompareExchange(&state->guiThread, 0, 0);
+    if (gui && gui != static_cast<LONG>(GetCurrentThreadId())) return;
     if (state->updating || state->views.count(view)) return;
     { std::lock_guard lock(state->mutex); if (!state->theme.enabled) return; }
     const auto binding = bindingFor(view);
-    GUITHREADINFO guiInfo{};
-    guiInfo.cbSize = sizeof(guiInfo);
-    if (!binding.source || !GetGUIThreadInfo(static_cast<DWORD>(thread), &guiInfo)) return;
-    if (InterlockedCompareExchange(&state->guiThread, thread, 0) != 0 && state->guiThread != thread) return;
-    auto known = state->documents.find(binding.source);
+    if (!binding.manager || !claimGuiThread()) return;
+    auto known = state->documents.find(binding.key());
     if (known == state->documents.end() && state->documents.size() >= maxDocuments) return;
     if (!state->timer) state->timer = SetTimer(nullptr, 0, 60, tick);
     if (!state->timer) return;
     if (known == state->documents.end()) {
-        state->documents.try_emplace(binding.source, Document{binding.source, ++state->nextId});
-        method<RefCall>(binding.source, 1)(binding.source);
+        state->documents.try_emplace(binding.key(), Document{binding, ++state->nextId});
+        if (binding.source) method<RefCall>(binding.source, 1)(binding.source);
     }
     state->views.emplace(view, binding);
 }
@@ -491,7 +558,10 @@ LRESULT hookedPaint(void* view) {
 }
 
 void hookedClose(void* view) {
-    if (static_cast<DWORD>(state->guiThread) == GetCurrentThreadId()) forget(view);
+    if (static_cast<DWORD>(state->guiThread) == GetCurrentThreadId()) {
+        state->comparisonViews.erase(view);
+        forget(view);
+    }
     api.close(view);
 }
 
@@ -499,8 +569,98 @@ void hookedChange(void* manager, int kind, const void* change, uint64_t paramete
     api.change(manager, kind, change, parameter);
     if (static_cast<DWORD>(state->guiThread) != GetCurrentThreadId() || (kind != 3 && kind != 5 && kind != 7)) return;
     for (const auto& [view, binding] : state->views) {
-        if (binding.manager == manager) state->documents.at(binding.source).due = GetTickCount64() + debounce;
+        if (binding.manager == manager) state->documents.at(binding.key()).due = GetTickCount64() + debounce;
     }
+}
+
+class ModuleComparisonScope {
+public:
+    ModuleComparisonScope() : previous(std::exchange(openingModuleComparison, true)) {}
+    ~ModuleComparisonScope() { openingModuleComparison = previous; }
+private:
+    bool previous;
+};
+
+void hookedStructuredComparison(void* controller) {
+    ModuleComparisonScope scope;
+    comparison.structured(controller);
+}
+
+void hookedTextComparison(void* controller, const void* left, const void* right,
+                          const void* leftName, const void* rightName) {
+    ModuleComparisonScope scope;
+    comparison.text(controller, left, right, leftName, rightName);
+}
+
+void hookedFormatLine(void* context, void* layout) {
+    comparison.formatLine(context, layout);
+    try {
+        if (openingModuleComparison && checkedPointer(layout) == comparison.layoutTable &&
+            checkedPointer(checkedPointer(context, comparison.differenceOffset)) == comparison.differenceTable &&
+            claimGuiThread()) {
+            auto* view = checkedPointer(context, comparison.contextViewOffset);
+            const auto binding = nativeBinding(view);
+            if (binding.manager && binding.context == context && !binding.source) {
+                state->comparisonViews.insert_or_assign(view, context);
+                observe(view);
+                const auto doc = state->documents.find(binding.key());
+                if (doc != state->documents.end()) doc->second.due = GetTickCount64() + debounce;
+            }
+        }
+        if (static_cast<DWORD>(state->guiThread) != GetCurrentThreadId() || state->comparisonViews.empty()) return;
+        auto* view = checkedPointer(context, comparison.contextViewOffset);
+        const auto bound = state->views.find(view);
+        if (bound == state->views.end() || bound->second.context != context || bound->second.source ||
+            checkedPointer(layout) != comparison.layoutTable) return;
+        const auto& doc = state->documents.at(bound->second.key());
+        const auto row = at<size_t>(layout, 0x30);
+        if (row >= doc.paintedRows || row >= doc.lines.size()) return;
+        const auto* text = at<const NativeString*>(layout, 0x38);
+        if (!text) return;
+        const auto line = trimLine(text->value());
+        if (line.empty() || line != snapshotLine(doc, row)) return;
+        // The native formatter has already applied diff backgrounds and other
+        // styles. Its foreground setter splits the same layout ranges in place.
+        for (const auto& span : doc.lines[row]) {
+            const auto end = span.start + span.length;
+            if (end > line.size() || !boundary(line, span.start) || !boundary(line, end)) continue;
+            comparison.setForeground(layout, span.start, end, doc.comparisonColors[span.role]);
+        }
+    } catch (...) {}
+}
+
+void createComparisonHooks(const ResolvedComparisonSyntax& found) {
+    const struct {
+        void* target;
+        void* hook;
+        void** original;
+    } hooks[] = {
+        {found.formatLine, reinterpret_cast<void*>(hookedFormatLine), reinterpret_cast<void**>(&comparison.formatLine)},
+        {found.refreshStructuredComparison, reinterpret_cast<void*>(hookedStructuredComparison), reinterpret_cast<void**>(&comparison.structured)},
+        {found.openTextComparison, reinterpret_cast<void*>(hookedTextComparison), reinterpret_cast<void**>(&comparison.text)},
+    };
+    size_t count = 0;
+    for (const auto& hook : hooks) {
+        if (MH_CreateHook(hook.target, hook.hook, hook.original) != MH_OK) {
+            while (count) MH_RemoveHook(hooks[--count].target);
+            return;
+        }
+        ++count;
+    }
+    comparison.setForeground = reinterpret_cast<SetForeground>(found.setForeground);
+    comparison.layoutTable = found.layoutTable;
+    comparison.differenceTable = found.differenceTable;
+    comparison.lexerTable = found.frontendLexerTable;
+    comparison.differenceOffset = found.differenceOffset;
+    comparison.contextViewOffset = found.contextViewOffset;
+}
+
+bool installedModule(HMODULE module, const wchar_t* directory, const wchar_t* name) {
+    if (!module) return false;
+    wchar_t path[MAX_PATH], expected[MAX_PATH];
+    const DWORD length = GetModuleFileNameW(module, path, MAX_PATH);
+    return length && length < MAX_PATH && swprintf(expected, MAX_PATH, L"%ls\\%ls", directory, name) >= 0 &&
+           !_wcsicmp(path, expected);
 }
 
 template<typename T> T resolve(HMODULE module, const char* name) {
@@ -559,10 +719,7 @@ void initializeEditorSyntax(const wchar_t* directory) {
     }
     attempted = true;
     for (const auto& module : modules) {
-        wchar_t path[MAX_PATH], expected[MAX_PATH];
-        DWORD length = GetModuleFileNameW(module.handle, path, MAX_PATH);
-        if (!length || length >= MAX_PATH || swprintf(expected, MAX_PATH, L"%ls\\%ls", directory, module.name) < 0 ||
-            _wcsicmp(path, expected)) return;
+        if (!installedModule(module.handle, directory, module.name)) return;
     }
     const auto frame = modules[0].handle, ui = modules[1].handle, text = modules[2].handle;
     const auto core = modules[3].handle, nuke = modules[4].handle, debug = modules[5].handle;
@@ -595,6 +752,10 @@ void initializeEditorSyntax(const wchar_t* directory) {
     }
     HMODULE windowBase = GetModuleHandleW(core83 ? L"wbase83.dll" : L"wbase85.dll");
     const bool backgroundHooks = createBackgroundHooks(windowBase, found);
+    const HMODULE frontend = GetModuleHandleW(L"frntend.dll");
+    ResolvedComparisonSyntax foundComparison{};
+    if (installedModule(frontend, directory, L"frntend.dll") &&
+        discoverComparisonSyntax(frame, ui, frontend, found, foundComparison)) createComparisonHooks(foundComparison);
     try { state = new State; } catch (...) { MH_Uninitialize(); return; }
     HANDLE worker = CreateThread(nullptr, 0, tokenizeWorker, nullptr, 0, nullptr);
     if (!worker) { delete state; state = nullptr; MH_Uninitialize(); return; }

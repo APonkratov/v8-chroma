@@ -11,7 +11,15 @@ struct ResolvedSyntax {
     BYTE* textMarginFill;
 };
 
+struct ResolvedComparisonSyntax {
+    BYTE *formatLine, *setForeground, *refreshStructuredComparison, *openTextComparison;
+    const BYTE *layoutTable, *differenceTable, *frontendLexerTable;
+    unsigned differenceOffset, contextViewOffset;
+};
+
 // Uses loaded image structure and routine fingerprints. No build number or
 // fixed module RVA is required. An incomplete or ambiguous match is rejected.
 bool discoverSyntax(HMODULE frame, HMODULE ui, HMODULE text, HMODULE core,
                     HMODULE debug, ResolvedSyntax& result);
+bool discoverComparisonSyntax(HMODULE frame, HMODULE ui, HMODULE frontend,
+                              const ResolvedSyntax& editor, ResolvedComparisonSyntax& result);
