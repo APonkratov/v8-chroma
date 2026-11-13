@@ -97,6 +97,12 @@ bool callAt(BYTE* function, unsigned offset, BYTE* target) {
     auto* call = function + offset;
     return *call == 0xe8 && relative(call, 1, 5) == target;
 }
+
+bool adjustsTo(const Image& image, BYTE* thunk, int adjustment, BYTE* target) {
+    const Pattern entry{0x48, 0x83, 0xe9, adjustment, 0xe9, -1, -1, -1, -1};
+    return target && image.contains(thunk, entry.size) && entry.at({thunk, entry.size}, 0) &&
+           relative(thunk + 4, 1, 5) == target;
+}
 }
 
 bool discoverSyntax(HMODULE frameModule, HMODULE uiModule, HMODULE textModule, HMODULE coreModule,
@@ -119,9 +125,7 @@ bool discoverSyntax(HMODULE frameModule, HMODULE uiModule, HMODULE textModule, H
     const auto lexerTable = release ? table(debug, {{3, find(debug, lexerQuery).entry}, {5, find(debug, lexerStyle).entry}}, [&](auto candidate) {
         // BSL and another lexer share the parsing methods. The release thunk
         // identifies which implementation owns this interface.
-        auto* thunk = candidate[2];
-        const Pattern entry{0x48,0x83,0xe9,8,0xe9,-1,-1,-1,-1};
-        return debug.contains(thunk, entry.size) && entry.at({thunk, entry.size}, 0) && relative(thunk + 4, 1, 5) == release;
+        return adjustsTo(debug, candidate[2], 8, release);
     }) : nullptr;
     const auto runs = find(text, getRuns).entry;
     const auto lookup = find(text, slot).entry;
@@ -157,5 +161,49 @@ bool discoverSyntax(HMODULE frameModule, HMODULE uiModule, HMODULE textModule, H
             result.textMarginFill = margin.entry;
         }
     }
+    return true;
+}
+
+const BYTE* discoverFrontendLexer(HMODULE frontendModule) {
+    const Image frontend(frontendModule);
+    const auto release = find(frontend, frontendLexerRelease).entry;
+    if (!release) return nullptr;
+    return table(frontend, {{3, find(frontend, frontendLexerQuery).entry},
+                            {5, find(frontend, frontendLexerStyle).entry}}, [&](auto candidate) {
+        return adjustsTo(frontend, candidate[2], 0x28, release);
+    });
+}
+
+bool discoverComparisonSyntax(HMODULE frameModule, HMODULE uiModule, HMODULE frontendModule,
+                              unsigned contextOwnerOffset, ResolvedComparisonSyntax& result) {
+    const Image frame(frameModule), ui(uiModule), frontend(frontendModule);
+    if (!frame.nt || !ui.nt || !frontend.nt) return false;
+    if (contextOwnerOffset != 0xd8 && contextOwnerOffset != 0xe0) return false;
+    const unsigned variant = contextOwnerOffset == 0xe0 ? 1 : 0;
+    const auto format = find(ui, formatLine);
+    const auto ink = find(frame, setForeground);
+    const auto split = find(frame, splitLayoutRange);
+    const auto decorator = find(ui, difference);
+    if (!format.entry || !ink.entry || !split.entry || !decorator.entry ||
+        format.variant != variant || ink.variant != variant || split.variant != variant ||
+        decorator.variant != variant || !callAt(ink.entry, 0x14, split.entry)) return false;
+
+    const auto layout = table(frame, {{5, ink.entry}}, [&](auto candidate) {
+        const Pattern row{0x48, 0x8b, 0x41, 0x30, 0xc3}, text{0x48, 0x8b, 0x41, 0x38, 0xc3};
+        return frame.code(candidate[3]) && frame.contains(candidate[3], row.size) &&
+               row.at({candidate[3], row.size}, 0) &&
+               frame.code(candidate[4]) && frame.contains(candidate[4], text.size) &&
+               text.at({candidate[4], text.size}, 0);
+    });
+    const auto diff = table(ui, {{4, decorator.entry}}, [&](auto candidate) {
+        const auto release = ui.function(candidate[2]);
+        return release.data == candidate[2] && matches(release, differenceRelease[0]);
+    });
+    const auto structured = find(frontend, refreshStructuredComparison).entry;
+    const auto text = find(frontend, openTextComparison).entry;
+    if (!layout || !diff || !structured || !text) return false;
+
+    result = {format.entry, ink.entry, structured, text, layout, diff,
+              variant ? 0x180u : 0x178u, contextOwnerOffset + 0x10u};
     return true;
 }
