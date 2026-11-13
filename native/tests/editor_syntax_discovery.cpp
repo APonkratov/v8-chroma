@@ -41,8 +41,9 @@ int wmain(int argc, wchar_t** argv) {
         std::puts("Editor background paths discovered and changed margin rejected");
     }
     std::puts("Editor ABI discovered and unsafe changes rejected");
+    const auto lexer = discoverFrontendLexer(frontend);
     ResolvedComparisonSyntax comparison{};
-    if (!discoverComparisonSyntax(frame, ui, frontend, restored, comparison)) {
+    if (!lexer || !discoverComparisonSyntax(frame, ui, frontend, restored.contextOwnerOffset, comparison)) {
         std::puts("Comparison ABI not recognized");
         return 8;
     }
@@ -51,10 +52,11 @@ int wmain(int argc, wchar_t** argv) {
     if (!VirtualProtect(displacement, 1, PAGE_EXECUTE_READWRITE, &protection)) return 9;
     *displacement ^= 1;
     ResolvedComparisonSyntax altered{};
-    const bool recognized = discoverComparisonSyntax(frame, ui, frontend, restored, altered);
+    const bool recognized = discoverComparisonSyntax(frame, ui, frontend, restored.contextOwnerOffset, altered);
+    const bool sameLexer = discoverFrontendLexer(frontend) == lexer;
     *displacement ^= 1;
     DWORD ignored;
-    if (!VirtualProtect(displacement, 1, protection, &ignored) || recognized) return 10;
-    std::puts("Comparison ABI discovered and changed color setter call rejected");
+    if (!VirtualProtect(displacement, 1, protection, &ignored) || recognized || !sameLexer) return 10;
+    std::puts("Comparison ABI discovered and changed color setter rejected independently of the lexer");
     return 0;
 }

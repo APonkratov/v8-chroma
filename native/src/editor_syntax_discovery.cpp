@@ -164,11 +164,22 @@ bool discoverSyntax(HMODULE frameModule, HMODULE uiModule, HMODULE textModule, H
     return true;
 }
 
+const BYTE* discoverFrontendLexer(HMODULE frontendModule) {
+    const Image frontend(frontendModule);
+    const auto release = find(frontend, frontendLexerRelease).entry;
+    if (!release) return nullptr;
+    return table(frontend, {{3, find(frontend, frontendLexerQuery).entry},
+                            {5, find(frontend, frontendLexerStyle).entry}}, [&](auto candidate) {
+        return adjustsTo(frontend, candidate[2], 0x28, release);
+    });
+}
+
 bool discoverComparisonSyntax(HMODULE frameModule, HMODULE uiModule, HMODULE frontendModule,
-                              const ResolvedSyntax& editor, ResolvedComparisonSyntax& result) {
+                              unsigned contextOwnerOffset, ResolvedComparisonSyntax& result) {
     const Image frame(frameModule), ui(uiModule), frontend(frontendModule);
     if (!frame.nt || !ui.nt || !frontend.nt) return false;
-    const unsigned variant = editor.viewContextOffset == 0x1e8 ? 1 : 0;
+    if (contextOwnerOffset != 0xd8 && contextOwnerOffset != 0xe0) return false;
+    const unsigned variant = contextOwnerOffset == 0xe0 ? 1 : 0;
     const auto format = find(ui, formatLine);
     const auto ink = find(frame, setForeground);
     const auto split = find(frame, splitLayoutRange);
@@ -188,16 +199,11 @@ bool discoverComparisonSyntax(HMODULE frameModule, HMODULE uiModule, HMODULE fro
         const auto release = ui.function(candidate[2]);
         return release.data == candidate[2] && matches(release, differenceRelease[0]);
     });
-    const auto release = find(frontend, frontendLexerRelease).entry;
-    const auto lexer = table(frontend, {{3, find(frontend, frontendLexerQuery).entry},
-                                       {5, find(frontend, frontendLexerStyle).entry}}, [&](auto candidate) {
-        return adjustsTo(frontend, candidate[2], 0x28, release);
-    });
     const auto structured = find(frontend, refreshStructuredComparison).entry;
     const auto text = find(frontend, openTextComparison).entry;
-    if (!layout || !diff || !lexer || !structured || !text) return false;
+    if (!layout || !diff || !structured || !text) return false;
 
-    result = {format.entry, ink.entry, structured, text, layout, diff, lexer,
-              variant ? 0x180u : 0x178u, editor.contextOwnerOffset + 0x10u};
+    result = {format.entry, ink.entry, structured, text, layout, diff,
+              variant ? 0x180u : 0x178u, contextOwnerOffset + 0x10u};
     return true;
 }

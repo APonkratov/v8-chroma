@@ -8,6 +8,7 @@
 #endif
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <condition_variable>
 #include <cstring>
 #include <map>
@@ -107,9 +108,10 @@ struct Comparison {
     SetForeground setForeground;
     VoidCall structured;
     TextComparison text;
-    const void *layoutTable, *differenceTable, *lexerTable;
+    const void *layoutTable, *differenceTable;
     unsigned differenceOffset, contextViewOffset;
 } comparison{};
+std::atomic<const BYTE*> frontendLexerTable{nullptr};
 thread_local bool openingModuleComparison;
 
 using Palette = std::array<COLORREF, SyntaxRoleCount>;
@@ -361,7 +363,7 @@ View bindingFor(void* view) {
     if (binding.source) {
         if (checkedPointer(binding.source) != api.sourceTable) return {};
         const auto lexer = checkedPointer(checkedPointer(binding.source, 0x58));
-        return lexer && (lexer == api.lexerTable || lexer == comparison.lexerTable) ? binding : View{};
+        return lexer && (lexer == api.lexerTable || lexer == frontendLexerTable.load()) ? binding : View{};
     }
     const auto compared = state->comparisonViews.find(view);
     return compared != state->comparisonViews.end() && compared->second == binding.context ? binding : View{};
@@ -507,7 +509,11 @@ void CALLBACK tick(HWND, UINT, UINT_PTR timer, DWORD) {
             const auto [view, previous] = *it++;
             const auto current = bindingFor(view);
             if (current.manager != previous.manager || current.source != previous.source ||
-                current.context != previous.context) forget(view);
+                current.context != previous.context) {
+                forget(view);
+                // A zero row count invalidates the whole view, including its layout cache.
+                if (current.manager && checkedPointer(view) == api.viewTable) api.invalidate(view, 0, 0);
+            }
         }
         for (auto& [key, doc] : state->documents) {
             auto view = std::find_if(state->views.begin(), state->views.end(), [&](const auto& pair) { return pair.second.key() == key; });
@@ -647,12 +653,19 @@ void createComparisonHooks(const ResolvedComparisonSyntax& found) {
         }
         ++count;
     }
+    // Publish every trampoline and its metadata before enabling any of the
+    // hooks. If MinHook can only enable a prefix, each detour is still valid.
     comparison.setForeground = reinterpret_cast<SetForeground>(found.setForeground);
     comparison.layoutTable = found.layoutTable;
     comparison.differenceTable = found.differenceTable;
-    comparison.lexerTable = found.frontendLexerTable;
     comparison.differenceOffset = found.differenceOffset;
     comparison.contextViewOffset = found.contextViewOffset;
+    for (const auto& hook : hooks) MH_QueueEnableHook(hook.target);
+    if (MH_ApplyQueued() != MH_OK) {
+        for (const auto& hook : hooks) MH_QueueDisableHook(hook.target);
+        // Keep the trampolines alive for detours that may already be running.
+        MH_ApplyQueued();
+    }
 }
 
 bool installedModule(HMODULE module, const wchar_t* directory, const wchar_t* name) {
@@ -675,6 +688,23 @@ BOOL CALLBACK repaintWindow(HWND window, LPARAM) {
     GetWindowThreadProcessId(window, &process);
     if (process == GetCurrentProcessId()) RedrawWindow(window, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN);
     return TRUE;
+}
+
+// Called by the theme writer under the lifecycle lock, after base hooks are
+// active. A missing DLL can be retried without rediscovering the base editor.
+void initializeComparisonSyntax(const wchar_t* directory) {
+    static bool comparisonAttempted = false;
+    if (comparisonAttempted) return;
+    const HMODULE frontend = GetModuleHandleW(L"frntend.dll");
+    if (!frontend) return;
+    comparisonAttempted = true;
+    if (!installedModule(frontend, directory, L"frntend.dll")) return;
+
+    frontendLexerTable.store(discoverFrontendLexer(frontend));
+    ResolvedComparisonSyntax found{};
+    if (discoverComparisonSyntax(GetModuleHandleW(L"frame.dll"), GetModuleHandleW(L"txtedui.dll"),
+                                 frontend, api.contextOwnerOffset, found)) createComparisonHooks(found);
+    if (frontendLexerTable.load()) EnumWindows(repaintWindow, 0);
 }
 }
 
@@ -704,7 +734,10 @@ void configureEditorSyntax(const ProbeConfig* config) {
 }
 
 void initializeEditorSyntax(const wchar_t* directory) {
-    if (attempted) return;
+    if (attempted) {
+        if (state) initializeComparisonSyntax(directory);
+        return;
+    }
     const bool core83 = GetModuleHandleW(L"core83.dll") != nullptr;
     const bool core85 = GetModuleHandleW(L"core85.dll") != nullptr;
     if (core83 == core85) return;
@@ -752,10 +785,6 @@ void initializeEditorSyntax(const wchar_t* directory) {
     }
     HMODULE windowBase = GetModuleHandleW(core83 ? L"wbase83.dll" : L"wbase85.dll");
     const bool backgroundHooks = createBackgroundHooks(windowBase, found);
-    const HMODULE frontend = GetModuleHandleW(L"frntend.dll");
-    ResolvedComparisonSyntax foundComparison{};
-    if (installedModule(frontend, directory, L"frntend.dll") &&
-        discoverComparisonSyntax(frame, ui, frontend, found, foundComparison)) createComparisonHooks(foundComparison);
     try { state = new State; } catch (...) { MH_Uninitialize(); return; }
     HANDLE worker = CreateThread(nullptr, 0, tokenizeWorker, nullptr, 0, nullptr);
     if (!worker) { delete state; state = nullptr; MH_Uninitialize(); return; }
@@ -766,8 +795,9 @@ void initializeEditorSyntax(const wchar_t* directory) {
         WaitForSingleObject(worker, INFINITE);
         delete state;
         state = nullptr;
-    } else if (backgroundHooks) {
-        EnumWindows(repaintWindow, 0);
+    } else {
+        initializeComparisonSyntax(directory);
+        if (backgroundHooks) EnumWindows(repaintWindow, 0);
     }
     CloseHandle(worker);
 }
