@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 
 KINDS = {'text': 1, 'background': 2, 'brush': 3, 'pen': 4,
-         'cairo-rgb': 5, 'cairo-rgba': 6, 'color-stop': 7, 'mesh': 8}
+         'cairo-rgb': 5, 'cairo-rgba': 6, 'color-stop': 7, 'mesh': 8, 'cairo-ink': 10}
 ROLES = ('editor.background', 'text', 'panel', 'border', 'selection.background',
          'selection.text', 'line', 'comment', 'keyword', 'string', 'number',
          'directive', 'accent', 'error', 'warning', 'disabled', 'hover')

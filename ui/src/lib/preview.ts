@@ -2,10 +2,10 @@ export type ThemePreview = {id:string;name:string;dark:boolean;colors:Record<str
 
 const references = import.meta.glob<string>('../../../assets/screenshots/configurator-*.jpg', {eager:true,query:'?url',import:'default'});
 
-export function stockReference(themeId:string):string {
+export function stockReference({id, dark}: Pick<ThemePreview, 'id' | 'dark'>):string {
   const name:Record<string,string> = {
-    'github-dark-default':'github-dark-default','github-light-default':'github-light-default',
     'visual-studio-dark-cpp':'visual-studio-dark','visual-studio-light':'visual-studio-light',
   };
-  return references[`../../../assets/screenshots/configurator-${name[themeId] ?? themeId}.jpg`];
+  const image = (key: string) => references[`../../../assets/screenshots/configurator-${key}.jpg`];
+  return image(name[id] ?? id) ?? image(dark ? 'github-dark-default' : 'github-light-default');
 }

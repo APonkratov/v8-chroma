@@ -1,0 +1,45 @@
+{
+  "format_version": 1,
+  "id": "noctis-lux",
+  "name": "Noctis Lux",
+  "colors": {
+    "editor.background": "#FEF8EC",
+    "text": "#005661",
+    "panel": "#F9F1E1",
+    "border": "#F0E7D1",
+    "selection.background": "#D8EEEC",
+    "selection.text": "#005661",
+    "line": "#DAEEEE",
+    "comment": "#5C6D6D",
+    "keyword": "#B53E68",
+    "string": "#007A47",
+    "number": "#5842FF",
+    "directive": "#006EB2",
+    "accent": "#007A8A",
+    "error": "#CF3400",
+    "warning": "#986322",
+    "disabled": "#666D6E",
+    "hover": "#F2EDDE"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": false
+  },
+  "syntax": {
+    "function": "#0095A8",
+    "builtin": "#A88C00",
+    "parameter": "#FA8900",
+    "variable": "#FA8900",
+    "type": "#0094F0",
+    "query-keyword": "#FF5792",
+    "query-function": "#00BDD6"
+  }
+}

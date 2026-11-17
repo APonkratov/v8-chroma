@@ -33,13 +33,27 @@ async function initializeTextMate(bsl, sdbl) {
     };
     // The upstream grammar recognizes the constructor itself. Preserve the
     // name following it as a distinct type scope in both BSL dialects.
-    grammars['source.bsl'].repository.miscellaneous.patterns.unshift({
+    const moduleGrammar = grammars['source.bsl'];
+    moduleGrammar.repository.miscellaneous.patterns.unshift({
         match: '(?i:(?<![\\w.])(Новый|New)[ \\t]+([\\p{L}_][\\p{L}\\p{N}_]*))',
         captures: {
             '1': { name: 'storage.type.bsl' },
             '2': { name: 'support.type.bsl' },
         },
     });
+    // Recognize local calls and object/module methods after the more specific
+    // keyword, constructor and built-in rules. String and query grammars
+    // do not include this fallback.
+    const call = {
+        name: 'entity.name.function.call.bsl',
+        match: '(?<![\\p{L}\\p{N}_])[\\p{L}_][\\p{L}\\p{N}_]*(?=[ \\t]*\\()',
+    };
+    for (const rule of moduleGrammar.patterns) {
+        if (rule.patterns?.some(pattern => pattern.include === '#miscellaneous')) {
+            rule.patterns.push(call);
+        }
+    }
+    moduleGrammar.patterns.push(call);
     const registry = new tm.Registry({
         onigLib: Promise.resolve({
             createOnigScanner: nativeScanner,

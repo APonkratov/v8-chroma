@@ -1,6 +1,6 @@
 #pragma once
 #include <windows.h>
-enum ApiKind { Text=1, Background, Brush, Pen, CairoRgb, CairoRgba, ColorStop, MeshColor, SyntaxColor };
+enum ApiKind { Text=1, Background, Brush, Pen, CairoRgb, CairoRgba, ColorStop, MeshColor, SyntaxColor, CairoInk };
 enum SyntaxRole : DWORD {
     Identifier, Keyword, Operator, Comment, String, Number, Date, Constant, Directive,
     Function, Builtin, Parameter, Variable, Type, QueryKeyword, QueryFunction,

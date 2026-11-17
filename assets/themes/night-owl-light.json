@@ -1,0 +1,45 @@
+{
+  "format_version": 1,
+  "id": "night-owl-light",
+  "name": "Night Owl Light",
+  "colors": {
+    "editor.background": "#FBFBFB",
+    "text": "#403F53",
+    "panel": "#F0F0F0",
+    "border": "#D9D9D9",
+    "selection.background": "#E0E0E0",
+    "selection.text": "#403F53",
+    "line": "#F0F0F0",
+    "comment": "#696D7A",
+    "keyword": "#974BC1",
+    "string": "#A75554",
+    "number": "#AA0982",
+    "directive": "#974BC1",
+    "accent": "#416AC1",
+    "error": "#C1413D",
+    "warning": "#876A01",
+    "disabled": "#617077",
+    "hover": "#F0F0F0"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": false
+  },
+  "syntax": {
+    "function": "#0C969B",
+    "builtin": "#4876D6",
+    "parameter": "#7986E7",
+    "variable": "#403F53",
+    "type": "#111111",
+    "query-keyword": "#994CC3",
+    "query-function": "#4876D6"
+  }
+}

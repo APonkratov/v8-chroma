@@ -1,0 +1,45 @@
+{
+  "format_version": 1,
+  "id": "visual-studio-light-cpp",
+  "name": "Visual Studio Light (C/C++)",
+  "colors": {
+    "editor.background": "#FFFFFF",
+    "text": "#000000",
+    "panel": "#F3F3F3",
+    "border": "#E7E7E7",
+    "selection.background": "#ADD6FF",
+    "selection.text": "#000000",
+    "line": "#EEEEEE",
+    "comment": "#007E00",
+    "keyword": "#8F08C4",
+    "string": "#A31515",
+    "number": "#087C52",
+    "directive": "#6C6C6C",
+    "accent": "#0072BF",
+    "error": "#CD3131",
+    "warning": "#926802",
+    "disabled": "#227189",
+    "hover": "#E8E8E8"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": false
+  },
+  "syntax": {
+    "function": "#74531F",
+    "builtin": "#0070C1",
+    "parameter": "#808080",
+    "variable": "#1F377F",
+    "type": "#2B91AF",
+    "query-keyword": "#8F08C4",
+    "query-function": "#74531F"
+  }
+}

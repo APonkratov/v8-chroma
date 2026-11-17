@@ -45,8 +45,29 @@ Visual Studio Light Modern: microsoft/vscode, commit
 ab8f31f0c0b1a4dd86d8dbee1248542f5806574d; MIT.
 Copyright (c) 2015 - present Microsoft Corporation.
 Full license: palettes/light-sources/vscode-LICENSE.txt.
-Source URLs, immutable revisions, hashes and adaptation notes for both light
-themes are retained in palettes/light-sources/provenance.json.
+Sources and revisions for GitHub Light Default and Visual Studio Light Modern
+are retained in palettes/light-sources/provenance.json.
+
+Additional light palettes are adapted from the original sources below.
+Source URLs, revisions, file hashes, roles and contrast adjustments are in
+palettes/light-sources/port-provenance.json. EDT Themes is a reference for
+matching theme roles to 1C; palette values are resolved from the original sources.
+
+- Ayu Light (Bordered): ayu-theme/vscode-ayu 1.5.0, 7f438df22446f02e79cdfc2f3771b0b273f34654.
+  Copyright (c) 2016 Ike Kurghinyan. MIT; palettes/edt/licenses/ayu-LICENSE.txt.
+- Night Owl Light: sdras/night-owl-vscode-theme 2.1.1, cc291eba7976b20d7c66bde6883c27b902196b07.
+  Copyright (c) 2018 Sarah Drasner. MIT; palettes/edt/licenses/night-owl-LICENSE.txt.
+- Noctis Hibernus, Lilac and Lux: liviuschera/noctis 10.43.3, 4a82370b2c064e36726c23e94f27ed3782bd6ecd.
+  Copyright (c) 2018 Liviu Schera. MIT; palettes/edt/licenses/noctis-LICENSE.txt.
+- Visual Studio Light (C/C++): microsoft/vscode-cpptools Themes 2.1.0, 3c14e3155a42976f765828b5ca2bbd9154a9aa54.
+  Copyright (c) Microsoft Corporation. All rights reserved.
+  MIT; palettes/edt/licenses/visual-studio-dark-cpp-LICENSE.txt.
+  UI defaults: microsoft/vscode, f725241620f540a7f750649713e710561fbabac8.
+  Copyright (c) 2015 - present Microsoft Corporation.
+  MIT; palettes/light-sources/vscode-LICENSE.txt.
+- Winter is Coming (Light): johnpapa/vscode-winteriscoming 1.5.0, 260547834cb6ac37dd5b8bb5842cc1c8d3164946.
+  Copyright (c) 2015-2017 JohnPapa.net, LLC. MIT; palettes/edt/licenses/winter-is-coming-LICENSE.txt.
+
 No downloaded theme JavaScript, JAR code, fonts or icons are executed/bundled
 as part of the theme picker. Upstream source files are retained as reference data.
 

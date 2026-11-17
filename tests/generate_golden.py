@@ -38,6 +38,15 @@ for path in sorted((ROOT / 'assets/themes').glob('*.json')):
             break
     else:
         colors['link']=colors['text']
+    for text_weight in range(101):
+        grid = sum((((colors['line'] >> bit & 255)*(100-text_weight)
+                     +(colors['text'] >> bit & 255)*text_weight+50)//100) << bit
+                   for bit in (16,8,0))
+        if contrast(grid,colors['selection.background']) >= 1.1:
+            colors['sheet.grid']=grid
+            break
+    else:
+        colors['sheet.grid']=colors['text']
     for role,tint in [('compare.changed',0x00B8C4),('compare.local',0xE99A49),('compare.file',0x55AA66)]:
         for amount in range(25,-1,-1):
             color = sum((((colors['editor.background'] >> shift & 255)*(100-amount)
@@ -49,10 +58,14 @@ for path in sorted((ROOT / 'assets/themes').glob('*.json')):
     mappings = load_profile(ROOT / 'assets/profile.properties', theme)
     for role_id, source in enumerate(SYNTAX_SOURCES):
         rgb = theme.syntax[source] if source in theme.syntax else colors[source]
+        dark = theme.render['window.dark']
+        toward = colors['text'] if dark else 0
         for text_weight in range(101):
             ink = sum((((rgb >> bit & 255)*(100-text_weight)
-                       +(colors['text'] >> bit & 255)*text_weight+50)//100) << bit for bit in (16, 8, 0))
-            if contrast(ink, colors['editor.background']) >= 5.0:
+                       +(toward >> bit & 255)*text_weight+50)//100) << bit for bit in (16, 8, 0))
+            if dark and contrast(ink, colors['editor.background']) >= 5.0:
+                break
+            if not dark and contrast(ink, colors['editor.background']) >= 6.0 and contrast(ink, colors['line']) >= 5.5:
                 break
         mappings.append((9, role_id, ink))
     cfg = make_config(theme, mappings, Path(r'C:\Platform'), Path(r'C:\Logs\colors.csv'))
@@ -80,5 +93,5 @@ if args.check:
     if json.loads(manifest.read_text(encoding='utf-8')) != report:
         raise SystemExit('Protocol fixture manifest differs')
 else:
-    manifest.write_text(json.dumps(report, indent=2), encoding='utf-8')
+    manifest.write_text(json.dumps(report, indent=2), encoding='utf-8', newline='\n')
 print(f'{"Verified" if args.check else "Generated"} {len(report)} independent protocol fixtures')

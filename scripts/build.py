@@ -169,7 +169,8 @@ def release(tag, toolchain):
         cli = directory / "v8-chroma-cli.exe"
         shutil.copy2(binaries[1], cli)
         themes = json.loads(run(cli, "themes", cwd=directory, capture=True))
-        if len(themes) != 13:
+        expected = {path.stem for path in (ROOT / "assets/themes").glob("*.json")}
+        if len(themes) != len(expected) or set(themes) != expected:
             raise ValueError("Copied CLI catalog failed")
         profile = directory / "profile"
         run(cli, "--config-dir", profile, "settings", "set", "--theme", "monokai", "--auto-apply", "off", cwd=directory)

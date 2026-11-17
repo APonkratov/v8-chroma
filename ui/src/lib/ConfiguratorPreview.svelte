@@ -15,7 +15,7 @@
       directive: colors.directive,
     };
   });
-  const reference = $derived(stockReference(theme.id));
+  const reference = $derived(stockReference(theme));
   const commands = [
     {icon:'new',label:'Создать'},{icon:'open',label:'Открыть'},{icon:'save',label:'Сохранить'},
     {icon:'copy',label:'Копировать'},{icon:'print',label:'Печать'},
@@ -54,7 +54,7 @@
         <div style={fontStyle} class="preview-numbers" aria-hidden="true">1<br/>2<br/>3<br/>4<br/>5<br/>6<br/>7<br/>8<br/>9</div>
         <pre style={fontStyle} style:color={editor.identifier}><span style:color={editor.comment}>// Проверка оформления</span>
 <span style:color={editor.keyword}>Процедура</span> <span style:color={editor.function}>ПроверитьТему</span>(<span style:color={editor.parameter}>Порог</span>)
-    <span style:color={editor.variable}>Тема</span> = <span style:color={editor.string}>"{theme.name}"</span>;
+    <span style:color={editor.variable}>Тема</span> = <span style:color={editor.function}>ПолучитьТему</span>(<span style:color={editor.string}>"{theme.name}"</span>);
     <span style:color={editor.variable}>Запрос</span> = <span style:color={editor.keyword}>Новый</span> <span style:color={editor.type}>Запрос</span>;
     Запрос.Текст = <span style:color={editor.string}>"</span><span style:color={editor['query-keyword']}>ВЫБРАТЬ</span> <span style:color={editor.number}>1</span><span style:color={editor.string}>"</span>;
     <span style:color={editor.keyword}>Если</span> <span style:color={editor.number}>42</span> &gt; Порог <span style:color={editor.keyword}>Тогда</span>
