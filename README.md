@@ -7,7 +7,7 @@
 
 ## Возможности
 
-- 13 светлых и тёмных пресетов и стандартное оформление.
+- 20 пресетов (9 светлых, 11 тёмных) и стандартное оформление.
 - Новые тонкие значки панелей, дерева конфигурации и вложенных меню — в светлом и тёмном наборах.
 - Изменение системного шрифта интерфейса конфигуратора без перезапуска: Segoe UI Variable Small по умолчанию и возврат «Как в 1С».
 - Независимый выбор установленного шрифта и размера редактора с общим предпросмотром темы и значков.
@@ -104,18 +104,28 @@ GUI проверяет новые версии при запуске и кажд
 ## Темы
 
 - Ayu Dark
+- Ayu Light (Bordered)
 - Darcula
 - Dracula
 - GitHub Dark Default
 - GitHub Light Default
 - Monokai
 - Night Owl
+- Night Owl Light
+- Noctis Hibernus
+- Noctis Lilac
+- Noctis Lux
 - Noctis Minimus
 - One Dark Pro
 - Shades of Purple
 - Visual Studio Dark (C/C++)
 - Visual Studio Light Modern
+- Visual Studio Light (C/C++)
 - Winter Is Coming Dark Blue
+- Winter is Coming (Light)
+
+Светлые темы перенесены из оригинальных палитр. Цвета текста корректируются,
+когда им не хватает контраста. [Источники и отличия](docs/light-palettes.md).
 
 Редактор модулей использует грамматики TextMate для BSL и вложенных запросов.
 Темы отдельно окрашивают объявления функций, параметры, переменные, имена

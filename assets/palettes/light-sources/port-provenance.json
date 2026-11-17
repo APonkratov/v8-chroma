@@ -1,0 +1,310 @@
+{
+  "contrast": "Opaque colors use rounded sRGB compositing on the named surface. Foregrounds below 4.5:1 on any listed surface are darkened by the smallest common sRGB channel scale (steps of 0.001). The main text also covers native search and spreadsheet selection.",
+  "syntax_adaptation": "When contrast correction leaves two BSL categories visually close, use a second accent from the same original palette. The source scopes below identify those colors.",
+  "themes": {
+    "github-light-default": {
+      "source": "See provenance.json: GitHub Theme 6.3.5 and Primer 7.10.0",
+      "roles_updated": {
+        "line": {"source_role": "editor.lineHighlightBackground", "value": "#EAEEF280", "over": "editor.background"},
+        "comment": {"source_role": "tokenColors: comment (scale.gray[5])", "value": "#6E7781"}
+      },
+      "contrast_adjustments": {
+        "comment": {"to": "#69727C", "on": ["editor.background", "line"]}
+      }
+    },
+    "ayu-light": {
+      "source": "https://github.com/ayu-theme/vscode-ayu/blob/7f438df22446f02e79cdfc2f3771b0b273f34654/ayu-light.json",
+      "source_sha256": "3d748e7a3666978e34fbab2830ce3c311da24a8b38d7a955fe833ca1d536f646",
+      "roles": {
+        "editor.background": {"source_role": "editor.background", "value": "#FCFCFC"},
+        "text": {"source_role": "editor.foreground", "value": "#5C6166"},
+        "panel": {"source_role": "sideBar.background", "value": "#F8F9FA"},
+        "border": {"source_role": "editorGroup.border", "value": "#6B7D8F1F", "over": "panel"},
+        "selection.background": {"source_role": "editor.selectionBackground", "value": "#035BD626", "over": "editor.background"},
+        "selection.text": {"source_role": "editor.foreground", "value": "#5C6166"},
+        "line": {"source_role": "editor.lineHighlightBackground", "value": "#828E9F1A", "over": "editor.background"},
+        "comment": {"source_role": "tokenColors: comment", "value": "#ADAEB1"},
+        "keyword": {"source_role": "tokenColors: keyword", "value": "#FA8532"},
+        "string": {"source_role": "tokenColors: string", "value": "#86B300"},
+        "number": {"source_role": "tokenColors: constant.numeric", "value": "#A37ACC"},
+        "directive": {"source_role": "tokenColors: storage", "value": "#FA8532"},
+        "accent": {"source_role": "textLink.foreground", "value": "#F29718"},
+        "error": {"source_role": "errorForeground", "value": "#E65050"},
+        "warning": {"source_role": "editorWarning.foreground", "value": "#F29718"},
+        "disabled": {"source_role": "disabledForeground", "value": "#828E9F80", "over": "panel"},
+        "hover": {"source_role": "editorHoverWidget.background", "value": "#FAFAFA"}
+      },
+      "contrast_adjustments": {
+        "comment": {"to": "#6E6E70", "on": ["editor.background", "line"]},
+        "keyword": {"to": "#A85922", "on": ["editor.background", "line"]},
+        "string": {"to": "#5A7800", "on": ["editor.background", "line"]},
+        "number": {"to": "#8160A1", "on": ["editor.background", "line"]},
+        "directive": {"to": "#A85922", "on": ["editor.background", "line"]},
+        "accent": {"to": "#A36510", "on": ["editor.background", "panel"]},
+        "error": {"to": "#C84646", "on": ["panel"]},
+        "warning": {"to": "#A36510", "on": ["panel"]},
+        "disabled": {"to": "#707379", "on": ["editor.background", "panel", "hover"]}
+      },
+      "syntax_sources": {
+        "function": {"value": "#22A4E6", "source_role": "Entity name / entity.name"},
+        "builtin": {"value": "#F07171", "source_role": "Library function / support.function"},
+        "parameter": {"value": "#4CBF99", "source_role": "Regular Expressions and Escape Characters / constant.other"},
+        "variable": {"value": "#5C6166", "source_role": "Variable / variable"},
+        "type": {"value": "#55B4D4", "source_role": "Library class/type / support.type"},
+        "query-keyword": {"value": "#FA8532", "source_role": "Keyword / keyword"},
+        "query-function": {"value": "#EBA400", "source_role": "Function name / entity.name.function"}
+      }
+    },
+    "night-owl-light": {
+      "source": "https://github.com/sdras/night-owl-vscode-theme/blob/cc291eba7976b20d7c66bde6883c27b902196b07/themes/Night%20Owl-Light-color-theme.json",
+      "source_sha256": "366bafde28045d2e6f0287ac2ff9b35e5d056ae61865af762cc5bd9565476360",
+      "roles": {
+        "editor.background": {"source_role": "editor.background", "value": "#FBFBFB"},
+        "text": {"source_role": "editor.foreground", "value": "#403F53"},
+        "panel": {"source_role": "sideBar.background", "value": "#F0F0F0"},
+        "border": {"source_role": "panel.border", "value": "#D9D9D9"},
+        "selection.background": {"source_role": "editor.selectionBackground", "value": "#E0E0E0"},
+        "selection.text": {"source_role": "editor.foreground", "value": "#403F53"},
+        "line": {"source_role": "editor.lineHighlightBackground", "value": "#F0F0F0"},
+        "comment": {"source_role": "tokenColors: comment", "value": "#989FB1"},
+        "keyword": {"source_role": "tokenColors: keyword", "value": "#994CC3"},
+        "string": {"source_role": "tokenColors: string.quoted", "value": "#C96765"},
+        "number": {"source_role": "tokenColors: constant.numeric", "value": "#AA0982"},
+        "directive": {"source_role": "tokenColors: storage", "value": "#994CC3"},
+        "accent": {"source_role": "tokenColors: Library (function & constant)", "value": "#4876D6"},
+        "error": {"source_role": "editorError.foreground", "value": "#E64D49"},
+        "warning": {"source_role": "editorWarning.foreground", "value": "#DAAA01"},
+        "disabled": {"source_role": "editorLineNumber.foreground", "value": "#90A7B2"},
+        "hover": {"source_role": "editorHoverWidget.background", "value": "#F0F0F0"}
+      },
+      "contrast_adjustments": {
+        "comment": {"to": "#696D7A", "on": ["editor.background", "line"]},
+        "keyword": {"to": "#974BC1", "on": ["editor.background", "line"]},
+        "string": {"to": "#A75554", "on": ["editor.background", "line"]},
+        "directive": {"to": "#974BC1", "on": ["editor.background", "line"]},
+        "accent": {"to": "#416AC1", "on": ["editor.background", "panel"]},
+        "error": {"to": "#C1413D", "on": ["panel"]},
+        "warning": {"to": "#876A01", "on": ["panel"]},
+        "disabled": {"to": "#617077", "on": ["editor.background", "panel", "hover"]}
+      },
+      "syntax_sources": {
+        "function": {"value": "#0C969B", "source_role": "C++ Functions / entity.name.function.preprocessor.cpp"},
+        "builtin": {"value": "#4876D6", "source_role": "Library (function & constant) / support.function"},
+        "parameter": {"value": "#7986E7", "source_role": "JavaScript Variable Parameter Function / variable.parameter.function.js"},
+        "variable": {"value": "#403F53", "source_role": "JavaScript Variables / variable.other.js"},
+        "type": {"value": "#111111", "source_role": "Class name / entity.name.class"},
+        "query-keyword": {"value": "#994CC3", "source_role": "Keyword / keyword"},
+        "query-function": {"value": "#4876D6", "source_role": "Support Function / support.function"}
+      }
+    },
+    "winter-is-coming-light": {
+      "source": "https://github.com/johnpapa/vscode-winteriscoming/blob/260547834cb6ac37dd5b8bb5842cc1c8d3164946/themes/WinterIsComing-light-color-theme.json",
+      "source_sha256": "07cf9830fa9af9c9a0bce8f682d2ef13f8c624d3aa726d653d8baf412dd73839",
+      "roles": {
+        "editor.background": {"source_role": "editor.background", "value": "#FFFFFF"},
+        "text": {"source_role": "editor.foreground", "value": "#236EBF"},
+        "panel": {"source_role": "sideBar.background", "value": "#F3F3F3"},
+        "border": {"source_role": "editorGroup.border", "value": "#219FD544", "over": "panel"},
+        "selection.background": {"source_role": "editor.selectionBackground", "value": "#CEE1F0"},
+        "selection.text": {"source_role": "editor.foreground", "value": "#236EBF"},
+        "line": {"source_role": "editor.lineHighlightBackground", "value": "#EFF2EF"},
+        "comment": {"source_role": "tokenColors: comment", "value": "#357B42"},
+        "keyword": {"source_role": "tokenColors: keyword", "value": "#0991B6"},
+        "string": {"source_role": "tokenColors: string.quoted", "value": "#A44185"},
+        "number": {"source_role": "tokenColors: constant.numeric", "value": "#174781"},
+        "directive": {"source_role": "tokenColors: storage", "value": "#DA5221"},
+        "accent": {"source_role": "textLink.foreground", "value": "#236EBF"},
+        "error": {"source_role": "errorForeground", "value": "#EF5350"},
+        "warning": {"source_role": "terminal.ansiYellow", "value": "#C5A332"},
+        "disabled": {"source_role": "editorLineNumber.foreground", "value": "#2F86D2"},
+        "hover": {"source_role": "editorHoverWidget.background", "value": "#FFF"}
+      },
+      "contrast_adjustments": {
+        "text": {"to": "#2063AD", "on": ["editor.background", "panel", "hover", "line", "selection.background"]},
+        "selection.text": {"to": "#2063AD", "on": ["selection.background"]},
+        "keyword": {"to": "#077896", "on": ["editor.background", "line"]},
+        "directive": {"to": "#BE481D", "on": ["editor.background", "line"]},
+        "error": {"to": "#C24341", "on": ["panel"]},
+        "warning": {"to": "#846D22", "on": ["panel"]},
+        "disabled": {"to": "#2873B4", "on": ["editor.background", "panel", "hover"]}
+      },
+      "syntax_sources": {
+        "function": {"value": "#B1108E", "source_role": "Function name / entity.name.function"},
+        "builtin": {"value": "#08134A", "source_role": "Library function / support.function"},
+        "parameter": {"value": "#FA841D", "source_role": "Variable Property Other object property / variable.other.object.property"},
+        "variable": {"value": "#828282", "source_role": "JavaScript Variable Other ReadWrite / variable.other.readwrite.js"},
+        "type": {"value": "#DC3EB7", "source_role": "Library class/type / support.type"},
+        "query-keyword": {"value": "#0991B6", "source_role": "Keywords and Storage types / keyword"},
+        "query-function": {"value": "#08134A", "source_role": "Library function / support.function"}
+      }
+    },
+    "noctis-lux": {
+      "source": "https://github.com/liviuschera/noctis/blob/4a82370b2c064e36726c23e94f27ed3782bd6ecd/themes/lux.json",
+      "source_sha256": "adfc405f421f039cf908b7e8402ee300e303698ba7475bd3206803bec0f95534",
+      "roles": {
+        "editor.background": {"source_role": "editor.background", "value": "#FEF8EC"},
+        "text": {"source_role": "editor.foreground", "value": "#005661"},
+        "panel": {"source_role": "sideBar.background", "value": "#F9F1E1"},
+        "border": {"source_role": "editorGroup.border", "value": "#F0E7D1"},
+        "selection.background": {"source_role": "editor.selectionBackground", "value": "#ADE2EB77", "over": "editor.background"},
+        "selection.text": {"source_role": "editor.foreground", "value": "#005661"},
+        "line": {"source_role": "editor.lineHighlightBackground", "value": "#D1EBEFCC", "over": "editor.background"},
+        "comment": {"source_role": "tokenColors: COMMENT", "value": "#8CA6A6"},
+        "keyword": {"source_role": "tokenColors: KEYWORD", "value": "#FF5792"},
+        "string": {"source_role": "tokenColors: STRING", "value": "#00B368"},
+        "number": {"source_role": "tokenColors: NUMBER", "value": "#5842FF"},
+        "directive": {"source_role": "tokenColors: MISC", "value": "#0094F0"},
+        "accent": {"source_role": "textLink.foreground", "value": "#00C6E0"},
+        "error": {"source_role": "errorForeground", "value": "#FF4000"},
+        "warning": {"source_role": "editorWarning.foreground", "value": "#E69533"},
+        "disabled": {"source_role": "editorLineNumber.foreground", "value": "#A0ABAC"},
+        "hover": {"source_role": "editorHoverWidget.background", "value": "#F2EDDE"}
+      },
+      "contrast_adjustments": {
+        "comment": {"to": "#5C6D6D", "on": ["editor.background", "line"]},
+        "keyword": {"to": "#B53E68", "on": ["editor.background", "line"]},
+        "string": {"to": "#007A47", "on": ["editor.background", "line"]},
+        "directive": {"to": "#006EB2", "on": ["editor.background", "line"]},
+        "accent": {"to": "#007A8A", "on": ["editor.background", "panel"]},
+        "error": {"to": "#CF3400", "on": ["panel"]},
+        "warning": {"to": "#986322", "on": ["panel"]},
+        "disabled": {"to": "#666D6E", "on": ["editor.background", "panel", "hover"]}
+      },
+      "syntax_sources": {
+        "function": {"value": "#0095A8", "source_role": "FUNCTION / entity.name.function"},
+        "builtin": {"value": "#A88C00", "source_role": "CONSTANT / support.constant"},
+        "parameter": {"value": "#FA8900", "source_role": "VARIABLE / variable.parameter"},
+        "variable": {"value": "#FA8900", "source_role": "VARIABLE / variable.other"},
+        "type": {"value": "#0094F0", "source_role": "MISC / entity.name.type.class"},
+        "query-keyword": {"value": "#FF5792", "source_role": "KEYWORD / keyword.control"},
+        "query-function": {"value": "#00BDD6", "source_role": "SUPPORT / support.function"}
+      }
+    },
+    "noctis-hibernus": {
+      "source": "https://github.com/liviuschera/noctis/blob/4a82370b2c064e36726c23e94f27ed3782bd6ecd/themes/hibernus.json",
+      "source_sha256": "53aaa4864b08e54f3c26fedf5ae669a1fea7555132ad99b216c1aa2368887999",
+      "roles": {
+        "editor.background": {"source_role": "editor.background", "value": "#F4F6F6"},
+        "text": {"source_role": "editor.foreground", "value": "#005661"},
+        "panel": {"source_role": "sideBar.background", "value": "#E7F2F3"},
+        "border": {"source_role": "editorGroup.border", "value": "#D0EDF1"},
+        "selection.background": {"source_role": "editor.selectionBackground", "value": "#ADE2EB77", "over": "editor.background"},
+        "selection.text": {"source_role": "editor.foreground", "value": "#005661"},
+        "line": {"source_role": "editor.lineHighlightBackground", "value": "#D1EBEFCC", "over": "editor.background"},
+        "comment": {"source_role": "tokenColors: COMMENT", "value": "#8CA6A6"},
+        "keyword": {"source_role": "tokenColors: KEYWORD", "value": "#FF5792"},
+        "string": {"source_role": "tokenColors: STRING", "value": "#00B368"},
+        "number": {"source_role": "tokenColors: NUMBER", "value": "#5842FF"},
+        "directive": {"source_role": "tokenColors: MISC", "value": "#0094F0"},
+        "accent": {"source_role": "textLink.foreground", "value": "#00C6E0"},
+        "error": {"source_role": "errorForeground", "value": "#FF4000"},
+        "warning": {"source_role": "editorWarning.foreground", "value": "#E69533"},
+        "disabled": {"source_role": "editorLineNumber.foreground", "value": "#A0ABAC"},
+        "hover": {"source_role": "editorHoverWidget.background", "value": "#E0EFF1"}
+      },
+      "contrast_adjustments": {
+        "comment": {"to": "#5B6C6C", "on": ["editor.background", "line"]},
+        "keyword": {"to": "#B43E67", "on": ["editor.background", "line"]},
+        "string": {"to": "#007947", "on": ["editor.background", "line"]},
+        "directive": {"to": "#006DB1", "on": ["editor.background", "line"]},
+        "accent": {"to": "#007888", "on": ["editor.background", "panel"]},
+        "error": {"to": "#CD3400", "on": ["panel"]},
+        "warning": {"to": "#976222", "on": ["panel"]},
+        "disabled": {"to": "#656C6D", "on": ["editor.background", "panel", "hover"]}
+      },
+      "syntax_sources": {
+        "function": {"value": "#0095A8", "source_role": "FUNCTION / entity.name.function"},
+        "builtin": {"value": "#A88C00", "source_role": "CONSTANT / support.constant"},
+        "parameter": {"value": "#FA8900", "source_role": "VARIABLE / variable.parameter"},
+        "variable": {"value": "#FA8900", "source_role": "VARIABLE / variable.other"},
+        "type": {"value": "#0094F0", "source_role": "MISC / entity.name.type.class"},
+        "query-keyword": {"value": "#FF5792", "source_role": "KEYWORD / keyword.control"},
+        "query-function": {"value": "#00BDD6", "source_role": "SUPPORT / support.function"}
+      }
+    },
+    "noctis-lilac": {
+      "source": "https://github.com/liviuschera/noctis/blob/4a82370b2c064e36726c23e94f27ed3782bd6ecd/themes/lilac.json",
+      "source_sha256": "e93a8c483d4b61fd6e4476b83166c6c408ba47c10ad24149130eb28b11078e70",
+      "roles": {
+        "editor.background": {"source_role": "editor.background", "value": "#F2F1F8"},
+        "text": {"source_role": "editor.foreground", "value": "#0C006B"},
+        "panel": {"source_role": "sideBar.background", "value": "#EDECF8"},
+        "border": {"source_role": "editorGroup.border", "value": "#D4D0F1"},
+        "selection.background": {"source_role": "editor.selectionBackground", "value": "#B4ADEB77", "over": "editor.background"},
+        "selection.text": {"source_role": "editor.foreground", "value": "#0C006B"},
+        "line": {"source_role": "editor.lineHighlightBackground", "value": "#D5D2EF99", "over": "editor.background"},
+        "comment": {"source_role": "tokenColors: COMMENT", "value": "#9995B7"},
+        "keyword": {"source_role": "tokenColors: KEYWORD", "value": "#FF5792"},
+        "string": {"source_role": "tokenColors: STRING", "value": "#00B368"},
+        "number": {"source_role": "tokenColors: NUMBER", "value": "#5842FF"},
+        "directive": {"source_role": "tokenColors: MISC", "value": "#0094F0"},
+        "accent": {"source_role": "textLink.foreground", "value": "#00C6E0"},
+        "error": {"source_role": "errorForeground", "value": "#FF4000"},
+        "warning": {"source_role": "editorWarning.foreground", "value": "#E69533"},
+        "disabled": {"source_role": "editorLineNumber.foreground", "value": "#9D9AB1"},
+        "hover": {"source_role": "editorHoverWidget.background", "value": "#DEDBF5"}
+      },
+      "contrast_adjustments": {
+        "comment": {"to": "#646178", "on": ["editor.background", "line"]},
+        "keyword": {"to": "#AB3A62", "on": ["editor.background", "line"]},
+        "string": {"to": "#007343", "on": ["editor.background", "line"]},
+        "number": {"to": "#5641FA", "on": ["editor.background", "line"]},
+        "directive": {"to": "#0067A8", "on": ["editor.background", "line"]},
+        "accent": {"to": "#007787", "on": ["editor.background", "panel"]},
+        "error": {"to": "#CA3300", "on": ["panel"]},
+        "warning": {"to": "#956021", "on": ["panel"]},
+        "disabled": {"to": "#62606F", "on": ["editor.background", "panel", "hover"]}
+      },
+      "syntax_sources": {
+        "function": {"value": "#0095A8", "source_role": "FUNCTION / entity.name.function"},
+        "builtin": {"value": "#A88C00", "source_role": "CONSTANT / support.constant"},
+        "parameter": {"value": "#FA8900", "source_role": "VARIABLE / variable.parameter"},
+        "variable": {"value": "#FA8900", "source_role": "VARIABLE / variable.other"},
+        "type": {"value": "#0094F0", "source_role": "MISC / entity.name.type.class"},
+        "query-keyword": {"value": "#FF5792", "source_role": "KEYWORD / keyword.control"},
+        "query-function": {"value": "#00BDD6", "source_role": "SUPPORT / support.function"}
+      }
+    },
+    "visual-studio-light-cpp": {
+      "source": "https://github.com/microsoft/vscode-cpptools/blob/3c14e3155a42976f765828b5ca2bbd9154a9aa54/Themes/themes/cpptools_light_vs_new.json",
+      "source_sha256": "7d332b83da3a2005dfa9055fbe8c09678c292494efe23971d706164032b65d08",
+      "roles": {
+        "editor.background": {"source_role": "editor.background", "value": "#FFFFFF"},
+        "text": {"source_role": "editor.foreground", "value": "#000000"},
+        "panel": {"source_role": "editorSuggestWidget.background", "value": "#F3F3F3"},
+        "border": {"source_role": "VS Code: editorGroup.border (Light default)", "value": "#E7E7E7"},
+        "selection.background": {"source_role": "VS Code: editor.selectionBackground (Light default)", "value": "#ADD6FF"},
+        "selection.text": {"source_role": "editor.foreground", "value": "#000000"},
+        "line": {"source_role": "VS Code: editor.lineHighlightBorder (Light default)", "value": "#EEEEEE"},
+        "comment": {"source_role": "tokenColors: comment", "value": "#008000"},
+        "keyword": {"source_role": "tokenColors: C/C++ Control flow / Special keywords", "value": "#8F08C4"},
+        "string": {"source_role": "tokenColors: string", "value": "#A31515"},
+        "number": {"source_role": "tokenColors: constant.numeric", "value": "#098658"},
+        "directive": {"source_role": "tokenColors: keyword.control.directive", "value": "#808080"},
+        "accent": {"source_role": "activityBarBadge.background", "value": "#007ACC"},
+        "error": {"source_role": "tokenColors: invalid", "value": "#CD3131"},
+        "warning": {"source_role": "VS Code: editorWarning.foreground (Light default)", "value": "#BF8803"},
+        "disabled": {"source_role": "editorLineNumber.foreground", "value": "#2B91AF"},
+        "hover": {"source_role": "list.hoverBackground", "value": "#E8E8E8"}
+      },
+      "contrast_adjustments": {
+        "comment": {"to": "#007E00", "on": ["editor.background", "line"]},
+        "number": {"to": "#087C52", "on": ["editor.background", "line"]},
+        "directive": {"to": "#6C6C6C", "on": ["editor.background", "line"]},
+        "accent": {"to": "#0072BF", "on": ["editor.background", "panel"]},
+        "warning": {"to": "#926802", "on": ["panel"]},
+        "disabled": {"to": "#227189", "on": ["editor.background", "panel", "hover"]}
+      },
+      "ui_defaults": ["https://github.com/microsoft/vscode/blob/f725241620f540a7f750649713e710561fbabac8/src/vs/workbench/common/theme.ts", "https://github.com/microsoft/vscode/blob/f725241620f540a7f750649713e710561fbabac8/src/vs/platform/theme/common/colors/editorColors.ts", "https://github.com/microsoft/vscode/blob/f725241620f540a7f750649713e710561fbabac8/src/vs/editor/common/core/editorColorRegistry.ts"],
+      "syntax_sources": {
+        "function": {"value": "#74531F", "source_role": "Function declarations / entity.name.function"},
+        "builtin": {"value": "#0070C1", "source_role": "Constants and enums / variable.other.constant"},
+        "parameter": {"value": "#808080", "source_role": "variable.parameter"},
+        "variable": {"value": "#1F377F", "source_role": "Variable and parameter name / variable"},
+        "type": {"value": "#2B91AF", "source_role": "Types declaration and references / support.type"},
+        "query-keyword": {"value": "#8F08C4", "source_role": "C/C++ Control flow / Special keywords"},
+        "query-function": {"value": "#74531F", "source_role": "Function declarations / support.function"}
+      }
+    }
+  }
+}

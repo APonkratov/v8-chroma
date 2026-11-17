@@ -59,8 +59,8 @@ extern "C" __declspec(dllexport) BOOL graphics_probe(const ProbeConfig* cfg) {
     cairo_set_source_rgb(&c,255./255.,250./255.,217./255.);
     saved=c; cairo_show_glyphs(&c,&rendered,1);
     DWORD ink=expected(cfg,CairoRgb,0xFFFAD9);
-    // The two bundled light themes must draw a dark caption, not their pale hover fill.
-    if (cfg->mode && (strcmp(cfg->themeId,"visual-studio-light")==0 || strcmp(cfg->themeId,"github-light-default")==0))
+    // Light themes draw a dark caption instead of their pale hover fill.
+    if (cfg->mode && !cfg->colors.darkCaption && ink!=0xFFFAD9)
         ink=cfg->colors.glyphForeground;
     valid &= colorIs(rendered,ink) && rendered.a==1. && same(c,saved);
     cairo_mesh_pattern_set_corner_color_rgba(&c,2,245./255.,242./255.,221./255.,.75);

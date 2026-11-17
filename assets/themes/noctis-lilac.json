@@ -1,0 +1,45 @@
+{
+  "format_version": 1,
+  "id": "noctis-lilac",
+  "name": "Noctis Lilac",
+  "colors": {
+    "editor.background": "#F2F1F8",
+    "text": "#0C006B",
+    "panel": "#EDECF8",
+    "border": "#D4D0F1",
+    "selection.background": "#D5D1F2",
+    "selection.text": "#0C006B",
+    "line": "#E1DEF3",
+    "comment": "#646178",
+    "keyword": "#AB3A62",
+    "string": "#007343",
+    "number": "#5641FA",
+    "directive": "#0067A8",
+    "accent": "#007787",
+    "error": "#CA3300",
+    "warning": "#956021",
+    "disabled": "#62606F",
+    "hover": "#DEDBF5"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": false
+  },
+  "syntax": {
+    "function": "#0095A8",
+    "builtin": "#A88C00",
+    "parameter": "#FA8900",
+    "variable": "#FA8900",
+    "type": "#0094F0",
+    "query-keyword": "#FF5792",
+    "query-function": "#00BDD6"
+  }
+}

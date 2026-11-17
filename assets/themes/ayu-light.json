@@ -1,0 +1,45 @@
+{
+  "format_version": 1,
+  "id": "ayu-light",
+  "name": "Ayu Light (Bordered)",
+  "colors": {
+    "editor.background": "#FCFCFC",
+    "text": "#5C6166",
+    "panel": "#F8F9FA",
+    "border": "#E7EAED",
+    "selection.background": "#D7E4F6",
+    "selection.text": "#5C6166",
+    "line": "#F0F1F3",
+    "comment": "#6E6E70",
+    "keyword": "#A85922",
+    "string": "#5A7800",
+    "number": "#8160A1",
+    "directive": "#A85922",
+    "accent": "#A36510",
+    "error": "#C84646",
+    "warning": "#A36510",
+    "disabled": "#707379",
+    "hover": "#FAFAFA"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": false
+  },
+  "syntax": {
+    "function": "#22A4E6",
+    "builtin": "#F07171",
+    "parameter": "#4CBF99",
+    "variable": "#5C6166",
+    "type": "#55B4D4",
+    "query-keyword": "#FA8532",
+    "query-function": "#EBA400"
+  }
+}

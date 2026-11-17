@@ -63,8 +63,12 @@ static DWORD record(DWORD kind, DWORD rgb, DWORD alpha,bool browser=false) {
     DWORD mapped = rgb;
     if (InterlockedCompareExchange(&active, 0, 0)) {
         if (cfg.mode == 1) {
-            for (DWORD i=0; i<cfg.mapCount; ++i)
-                if (cfg.maps[i].kind == kind && cfg.maps[i].source == rgb) { mapped = cfg.maps[i].target; break; }
+            for (DWORD i=0; i<cfg.mapCount; ++i) {
+                const auto& entry=cfg.maps[i];
+                bool applies=entry.kind==kind ||
+                    (entry.kind==CairoInk && (kind==CairoRgb || kind==CairoRgba));
+                if (applies && entry.source==rgb) { mapped=entry.target; break; }
+            }
             if (browser && rgb==fromColor(GetSysColor(COLOR_HIGHLIGHT))) mapped=cfg.colors.selectionBackground;
             if (browser && (rgb==0x0000EE || rgb==0x0000FF || rgb==0x000080 || rgb==0x00008B || rgb==0x551A8B || rgb==0x800080)) {
                 // Reuse the existing profile's accent binding, keeping protocol v2.
@@ -414,7 +418,7 @@ static DWORD validateConfig(void* argument) {
         (incoming->mode && c.glyphBackground==c.selectionBackground && c.glyphForeground!=c.selectionForeground)) return ERROR_INVALID_PARAMETER;
     for (DWORD i=0;i<incoming->mapCount;++i) {
         const auto &map=incoming->maps[i];
-        if (map.kind<Text || map.kind>SyntaxColor || map.source>0xFFFFFF || map.target>0xFFFFFF ||
+        if (map.kind<Text || map.kind>CairoInk || map.source>0xFFFFFF || map.target>0xFFFFFF ||
             (map.kind==SyntaxColor && map.source>=SyntaxRoleCount)) return ERROR_INVALID_PARAMETER;
         for (DWORD j=0;j<i;++j)
             if (incoming->maps[j].kind==map.kind && incoming->maps[j].source==map.source) return ERROR_INVALID_PARAMETER;

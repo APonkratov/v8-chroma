@@ -18,6 +18,7 @@ int wmain(int argc,wchar_t** argv) {
                 background=cfg.maps[j].target; foundBackground=true;
             }
         if (!foundBackground) { printf("Missing changed-block mapping: %s\n",cfg.themeId); return 8; }
+        unsigned pairs=0;
         for (DWORD j=0;j<cfg.mapCount;++j) {
             const auto& entry=cfg.maps[j];
             if (entry.kind!=CairoRgba) continue;
@@ -29,12 +30,14 @@ int wmain(int argc,wchar_t** argv) {
             if (ChromaContrast::ratio(ink,background)<4.5 || (alreadyReadable && ink!=entry.target)) {
                 printf("Unreadable syntax: %s source %06lX\n",cfg.themeId,entry.source); return 5;
             }
-            ++tested; corrected += ink!=entry.target;
+            ++pairs; corrected += ink!=entry.target;
         }
+        if (pairs!=6) { printf("Incomplete syntax mappings: %s\n",cfg.themeId); return 7; }
+        tested+=pairs;
     }
     // The exact pair reported by CodeRabbit, rather than a text-color-only test.
     DWORD comment=ChromaContrast::readableInk(0x6272A4,0x1E4E5A,0xF8F8F2);
     if (comment==0x6272A4 || ChromaContrast::ratio(comment,0x1E4E5A)<4.5) return 6;
     printf("Changed-block syntax contrast: %u pairs, %u adjusted, Dracula comment %06lX: PASS\n",tested,corrected,comment);
-    return tested>=13*6?0:7;
+    return tested?0:7;
 }

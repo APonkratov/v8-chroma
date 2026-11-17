@@ -34,5 +34,6 @@ add_custom_command(OUTPUT "${SYNTAX_HEADER}"
     DEPENDS ${SYNTAX_INPUTS} ../scripts/embed_textmate.py
     VERBATIM)
 add_library(textmate STATIC src/textmate.cpp "${SYNTAX_HEADER}")
+set_property(SOURCE src/textmate.cpp APPEND PROPERTY OBJECT_DEPENDS "${SYNTAX_HEADER}")
 target_include_directories(textmate PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_link_libraries(textmate PRIVATE qjs onig)

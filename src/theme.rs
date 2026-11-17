@@ -12,21 +12,41 @@ const PROFILE: &str = include_str!("../assets/profile.properties");
     feature = "windows-engine"
 ))]
 pub const DLL: &[u8] = include_bytes!("../assets/ThemeProbe.dll");
-pub const IDS: &[&str] = &[
+macro_rules! presets {
+    ($($id:literal),+ $(,)?) => {
+        pub const IDS: &[&str] = &[$($id),+];
+
+        fn source(id: &str) -> Result<&'static str> {
+            match id {
+                $($id => Ok(include_str!(concat!("../assets/themes/", $id, ".json"))),)+
+                _ => bail!("Неизвестная тема: {id}"),
+            }
+        }
+    };
+}
+
+presets!(
     "ayu-dark",
+    "ayu-light",
     "darcula",
     "dracula",
     "github-dark-default",
     "github-light-default",
     "monokai",
     "night-owl",
+    "night-owl-light",
+    "noctis-hibernus",
+    "noctis-lilac",
+    "noctis-lux",
     "noctis-minimus",
     "one-dark-pro",
     "shades-of-purple",
     "visual-studio-dark-cpp",
     "visual-studio-light",
+    "visual-studio-light-cpp",
     "winter-is-coming-dark-blue",
-];
+    "winter-is-coming-light",
+);
 const BINDINGS: &[&str] = &[
     "glyph.background",
     "glyph.foreground",
@@ -79,7 +99,10 @@ const SYNTAX_ROLES: &[&str] = &[
     "query-type",
 ];
 const SYNTAX_MAP_KIND: u32 = 9;
+const CAIRO_INK_MAP_KIND: u32 = 10;
 const SYNTAX_MIN_CONTRAST: f64 = 5.0;
+const LIGHT_SYNTAX_MIN_CONTRAST: f64 = 6.0;
+const LIGHT_LINE_MIN_CONTRAST: f64 = 5.5;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
@@ -170,17 +193,21 @@ fn syntax_colors(doc: &Document) -> Result<impl Iterator<Item = (&'static str, u
         &accents.r#type,
     ];
     let background = rgb(&colors["editor.background"])?;
-    let text = rgb(&colors["text"])?;
+    let dark_backgrounds = [(background, SYNTAX_MIN_CONTRAST)];
+    let light_backgrounds = [
+        (background, LIGHT_SYNTAX_MIN_CONTRAST),
+        (rgb(&colors["line"])?, LIGHT_LINE_MIN_CONTRAST),
+    ];
+    let (fallback, backgrounds): (_, &[_]) = if doc.render["window.dark"].as_bool() == Some(false) {
+        // Keep light-theme ink hues while leaving contrast for thin glyphs
+        // on both the normal editor surface and the highlighted line.
+        (0, &light_backgrounds)
+    } else {
+        (rgb(&colors["text"])?, &dark_backgrounds)
+    };
     let values = values
         .into_iter()
-        .map(|value| {
-            Ok(readable_ink(
-                rgb(value)?,
-                text,
-                &[background],
-                SYNTAX_MIN_CONTRAST,
-            ))
-        })
+        .map(|value| Ok(readable_ink(rgb(value)?, fallback, backgrounds)))
         .collect::<Result<Vec<_>>>()?;
     Ok(SYNTAX_ROLES.iter().copied().zip(values))
 }
@@ -221,28 +248,6 @@ fn editor_preview(cfg: &Config) -> BTreeMap<String, String> {
             )
         })
         .collect()
-}
-
-fn source(id: &str) -> Result<&'static str> {
-    macro_rules! presets { ($($id:literal),*) => { match id {
-        $($id => Ok(include_str!(concat!("../assets/themes/", $id, ".json"))),)*
-        _ => bail!("Неизвестная тема: {id}"),
-    } }; }
-    presets!(
-        "ayu-dark",
-        "darcula",
-        "dracula",
-        "github-dark-default",
-        "github-light-default",
-        "monokai",
-        "night-owl",
-        "noctis-minimus",
-        "one-dark-pro",
-        "shades-of-purple",
-        "visual-studio-dark-cpp",
-        "visual-studio-light",
-        "winter-is-coming-dark-blue"
-    )
 }
 
 fn wide<const N: usize>(path: &Path) -> Result<[u16; N]> {
@@ -332,10 +337,15 @@ fn build_config(
     let link = readable_ink(
         colors["accent"],
         colors["text"],
-        &[colors["editor.background"], colors["panel"]],
-        4.5,
+        &[(colors["editor.background"], 4.5), (colors["panel"], 4.5)],
     );
     colors.insert("link", link);
+    let grid = readable_grid(
+        colors["line"],
+        colors["selection.background"],
+        colors["text"],
+    );
+    colors.insert("sheet.grid", grid);
     ensure!(
         cfg.colors[0] != cfg.colors[2] || cfg.colors[1] == cfg.colors[3],
         "Неоднозначные цвета глифов"
@@ -363,11 +373,16 @@ fn build_config(
             .trim()
             .split_once('.')
             .ok_or_else(|| anyhow::anyhow!("Некорректный mapping"))?;
-        let kind = kinds
-            .iter()
-            .position(|k| *k == kind)
-            .ok_or_else(|| anyhow::anyhow!("Неизвестный API"))? as u32
-            + 1;
+        let kind = match kind {
+            "cairo-ink" => CAIRO_INK_MAP_KIND,
+            _ => {
+                kinds
+                    .iter()
+                    .position(|k| *k == kind)
+                    .ok_or_else(|| anyhow::anyhow!("Неизвестный API"))? as u32
+                    + 1
+            }
+        };
         ensure!(
             rgb.len() == 6 && rgb.bytes().all(|c| c.is_ascii_hexdigit()),
             "Некорректный source RGB"
@@ -448,22 +463,31 @@ fn contrast(left: u32, right: u32) -> f64 {
     (left.max(right) + 0.05) / (left.min(right) + 0.05)
 }
 
-// Retain the theme's accent where readable; otherwise move toward its text ink.
-fn readable_ink(accent: u32, text: u32, backgrounds: &[u32], minimum: f64) -> u32 {
+fn mix_rgb(from: u32, to: u32, amount: u32) -> u32 {
+    [16, 8, 0].into_iter().fold(0, |rgb, shift| {
+        let a = (from >> shift) & 255;
+        let b = (to >> shift) & 255;
+        rgb | (((a * (100 - amount) + b * amount + 50) / 100) << shift)
+    })
+}
+
+// The editor's line and selection can be almost identical (e.g. Noctis).
+// Preserve both and adjust only the grid ink used in spreadsheet cells.
+fn readable_grid(line: u32, selection: u32, text: u32) -> u32 {
     (0..=100)
-        .map(|amount| {
-            [16, 8, 0].into_iter().fold(0, |rgb, shift| {
-                rgb | (((((accent >> shift) & 255) * (100 - amount)
-                    + ((text >> shift) & 255) * amount
-                    + 50)
-                    / 100)
-                    << shift)
-            })
-        })
+        .map(|amount| mix_rgb(line, text, amount))
+        .find(|color| contrast(*color, selection) >= 1.1)
+        .unwrap_or(text)
+}
+
+// Retain the theme's accent where readable; otherwise move toward its text ink.
+fn readable_ink(accent: u32, text: u32, backgrounds: &[(u32, f64)]) -> u32 {
+    (0..=100)
+        .map(|amount| mix_rgb(accent, text, amount))
         .find(|color| {
             backgrounds
                 .iter()
-                .all(|bg| contrast(*color, *bg) >= minimum)
+                .all(|&(bg, minimum)| contrast(*color, bg) >= minimum)
         })
         .unwrap_or(text)
 }
@@ -476,15 +500,7 @@ fn comparison_backgrounds(background: u32, text: u32) -> [(&'static str, u32); 3
         ("compare.file", 0x55AA66),
     ]
     .map(|(role, tint)| {
-        let mix = |amount: u32| {
-            [16, 8, 0].into_iter().fold(0, |rgb, shift| {
-                rgb | (((((background >> shift) & 255) * (100 - amount)
-                    + ((tint >> shift) & 255) * amount
-                    + 50)
-                    / 100)
-                    << shift)
-            })
-        };
+        let mix = |amount| mix_rgb(background, tint, amount);
         let amount = (0..=25)
             .rev()
             .find(|amount| contrast(mix(*amount), text) >= 4.5)
@@ -525,7 +541,7 @@ mod tests {
                     );
                 }
             }
-            assert_eq!(target(0xE5E5E5), color("line"));
+            assert_eq!(target(0xDCDCDC), color("line"));
             let areas = (250..255)
                 .map(|r| (r << 16) | (r << 8) | (r - 8))
                 .chain(0xFFFFF7..=0xFFFFFC);
@@ -539,6 +555,9 @@ mod tests {
                 "{} grid must remain visible over selected cells",
                 theme.id
             );
+            if contrast(color("line"), color("selection.background")) >= 1.1 {
+                assert_eq!(target(0xE5E5E5), color("line"), "{}", theme.id);
+            }
             if theme.id == "shades-of-purple" {
                 assert!(contrast(target(0xE7E5D6), target(0xF7F5E6)) >= 1.2);
             }
@@ -609,7 +628,7 @@ mod tests {
     #[test]
     fn preview_catalog_matches_native_palettes() {
         let catalog = catalog().unwrap();
-        assert_eq!(catalog.len(), 13);
+        assert_eq!(catalog.len(), 20);
         assert_eq!(catalog.iter().filter(|t| t.dark).count(), 11);
         for preview in catalog {
             let cfg = config(&preview.id, Path::new("x"), Path::new("y")).unwrap();
@@ -618,9 +637,84 @@ mod tests {
         }
     }
     #[test]
+    fn cached_caption_colors_follow_live_theme_changes() {
+        let palette = catalog().unwrap();
+        for theme in &palette {
+            let cfg = config(&theme.id, Path::new("x"), Path::new("y")).unwrap();
+            for prior in &palette {
+                let ink = u32::from_str_radix(&prior.colors["text"][1..], 16).unwrap();
+                // White glyphs are handled contextually to preserve white fills.
+                if ink == 0xFFFFFF {
+                    continue;
+                }
+                for kind in [5, 6] {
+                    assert!(
+                        cfg.maps[..cfg.map_count as usize]
+                            .iter()
+                            .any(|m| (m.kind == kind || m.kind == CAIRO_INK_MAP_KIND)
+                                && m.source == ink
+                                && m.target == cfg.colors[1]),
+                        "cached caption after switching from {} to {}",
+                        prior.id,
+                        theme.id
+                    );
+                }
+            }
+        }
+    }
+    #[test]
+    fn imported_light_roles_keep_contrast_on_their_designer_surfaces() {
+        for theme in catalog()
+            .unwrap()
+            .into_iter()
+            .filter(|t| !t.dark && t.id != "visual-studio-light")
+        {
+            let color = |role: &str| u32::from_str_radix(&theme.colors[role][1..], 16).unwrap();
+            for (roles, surfaces) in [
+                (
+                    &["keyword", "string", "number", "comment", "directive"][..],
+                    &["editor.background", "line"][..],
+                ),
+                (
+                    &["text"][..],
+                    &[
+                        "editor.background",
+                        "line",
+                        "panel",
+                        "hover",
+                        "selection.background",
+                    ][..],
+                ),
+                (&["selection.text"][..], &["selection.background"][..]),
+                (&["accent"][..], &["editor.background", "panel"][..]),
+                (&["error", "warning"][..], &["panel"][..]),
+                (
+                    &["disabled"][..],
+                    &["editor.background", "panel", "hover"][..],
+                ),
+            ] {
+                for role in roles {
+                    for surface in surfaces {
+                        assert!(
+                            contrast(color(role), color(surface)) >= 4.5,
+                            "{}: {role} on {surface}",
+                            theme.id
+                        );
+                    }
+                }
+            }
+        }
+    }
+    #[test]
     fn editor_preview_and_native_syntax_use_the_same_mapping() {
         for preview in catalog().unwrap() {
             let cfg = config(&preview.id, Path::new("x"), Path::new("y")).unwrap();
+            let line = rgb(&preview.colors["line"]).unwrap();
+            let minimum = if preview.dark {
+                SYNTAX_MIN_CONTRAST
+            } else {
+                LIGHT_SYNTAX_MIN_CONTRAST
+            };
             for (index, role) in SYNTAX_ROLES.iter().enumerate() {
                 let mapping = cfg.maps[..cfg.map_count as usize]
                     .iter()
@@ -628,16 +722,23 @@ mod tests {
                     .unwrap();
                 assert_eq!(format!("#{:06X}", mapping.target), preview.editor[*role]);
                 assert!(
-                    contrast(mapping.target, cfg.colors[0]) >= SYNTAX_MIN_CONTRAST,
-                    "{} {role}",
+                    contrast(mapping.target, cfg.colors[0]) >= minimum,
+                    "{} {role} on the editor background",
                     preview.id
                 );
+                if !preview.dark {
+                    assert!(
+                        contrast(mapping.target, line) >= LIGHT_LINE_MIN_CONTRAST,
+                        "{} {role} on the highlighted line",
+                        preview.id
+                    );
+                }
                 // Cairo's legacy remap still sees syntax ink. The shared
                 // foreground has a separate recovery path in the glyph hook.
                 if mapping.target != cfg.colors[1] {
                     assert!(
                         !cfg.maps[..cfg.map_count as usize].iter().any(|legacy| {
-                            matches!(legacy.kind, 5 | 6)
+                            matches!(legacy.kind, 5 | 6 | CAIRO_INK_MAP_KIND)
                                 && legacy.source == mapping.target
                                 && legacy.target != mapping.target
                         }),
@@ -657,10 +758,56 @@ mod tests {
                 ("query-keyword", "string"),
                 ("query-keyword", "query-type"),
             ] {
+                // The imported themes may intentionally share an upstream
+                // style between roles (such as Noctis variables and parameters).
+                if matches!(
+                    (preview.id.as_str(), left, right),
+                    (
+                        "noctis-hibernus" | "noctis-lilac" | "noctis-lux",
+                        "variable",
+                        "parameter"
+                    )
+                ) {
+                    continue;
+                }
                 assert_ne!(
                     preview.editor[left], preview.editor[right],
                     "{} {left}/{right}",
                     preview.id
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn light_syntax_accents_do_not_collapse_after_contrast_correction() {
+        for (id, pairs) in [
+            (
+                "ayu-light",
+                &[("function", "keyword"), ("parameter", "number")][..],
+            ),
+            (
+                "night-owl-light",
+                &[("function", "keyword"), ("function", "builtin")][..],
+            ),
+            ("noctis-hibernus", &[("function", "builtin")][..]),
+            ("noctis-lilac", &[("function", "builtin")][..]),
+            ("noctis-lux", &[("function", "builtin")][..]),
+            ("visual-studio-light-cpp", &[("function", "builtin")][..]),
+            ("winter-is-coming-light", &[("function", "parameter")][..]),
+        ] {
+            let cfg = config(id, Path::new("x"), Path::new("y")).unwrap();
+            let editor = editor_preview(&cfg);
+            for &(left, right) in pairs {
+                let a = rgb(&editor[left]).unwrap();
+                let b = rgb(&editor[right]).unwrap();
+                // The conflicting colors used to differ by only a few RGB
+                // steps. Leave room for antialiasing on thin editor strokes.
+                assert!(
+                    [0, 8, 16]
+                        .into_iter()
+                        .any(|shift| { ((a >> shift) & 255).abs_diff((b >> shift) & 255) >= 48 }),
+                    "{id}: {left}/{right}"
                 );
             }
         }
@@ -699,7 +846,7 @@ mod tests {
                 if *id == "diagnostic" {
                     0
                 } else {
-                    236 + SYNTAX_ROLES.len() as u32
+                    230 + SYNTAX_ROLES.len() as u32
                 }
             );
         }

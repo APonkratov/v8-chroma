@@ -168,11 +168,11 @@ extern "C" __declspec(dllexport) BOOL chrome_probe(const ProbeConfig* cfg) {
     // Spreadsheet headers emit individual RGB scanlines. Mapping only FCFAEB
     // creates a dark band through the number; every band must share one fill.
     auto rectangle=load<void(*)(void*,double,double,double,double)>(m,"cairo_rectangle");
-    DWORD hover=0,line=0;
+    DWORD hover=0,grid=0;
     for (unsigned i=0;i<cfg->mapCount;++i) {
         auto map=cfg->maps[i];
         if (map.kind==CairoRgb && map.source==0xFFFAD9) hover=map.target;
-        if (map.kind==CairoRgba && map.source==0xE6E6E6) line=map.target;
+        if (map.kind==CairoRgb && map.source==0xE5E5E5) grid=map.target;
     }
     const DWORD normalBands[]={0xF7F5E6,0xF8F6E7,0xF9F7E8,0xFAF8E9,0xFBF9EA,
         0xFCFAEB,0xFDFBEC,0xFEFCED,0xFFFDEE,0xFFFEEF,0xFFFFF0};
@@ -190,7 +190,9 @@ extern "C" __declspec(dllexport) BOOL chrome_probe(const ProbeConfig* cfg) {
         ok &= ((uint32_t*)bytes(surface))[(y+selected*11)*80+40]==(0xFF000000|expected);
     }
     cairo_set_source_rgb(ctx,229./255.,229./255.,229./255.); cairo_paint(ctx); flush(surface);
-    ok &= ((uint32_t*)bytes(surface))[0]==(0xFF000000|(cfg->mode?line:0xE5E5E5));
+    DWORD gridPixel=((uint32_t*)bytes(surface))[0];
+    ok &= gridPixel==(0xFF000000|(cfg->mode?grid:0xE5E5E5));
+    if (cfg->mode) ok &= ChromaContrast::ratio(gridPixel, cfg->colors.selectionBackground)>=1.1;
     // Named MXL areas have their own near-white scanlines. Range selection is
     // a solid RGB D3D9EF brush. Check actual pixels and proportional-font labels.
     const DWORD areaBands[]={0xFAFAF2,0xFBFBF3,0xFCFCF4,0xFDFDF5,0xFEFEF6,
@@ -259,7 +261,8 @@ extern "C" __declspec(dllexport) BOOL chrome_probe(const ProbeConfig* cfg) {
     // MDI windows cache caption ink obtained from GetSysColor before the switch.
     // Include distinct foregrounds from every bundled palette, RGB and RGBA.
     const DWORD cachedInk[]={0xBFBDB6,0xA9B7C6,0xF8F8F2,0xE6EDF3,0x1F2328,
-        0xD6DEEB,0xC5CDD3,0xABB2BF,0xDADADA,0x3B3B3B,0xA7DBF7};
+        0xD6DEEB,0xC5CDD3,0xABB2BF,0xDADADA,0x3B3B3B,0xA7DBF7,
+        0x5C6166,0x403F53,0x005661,0x0C006B,0x2063AD};
     for (DWORD c:cachedInk) for (unsigned alpha=0;alpha<2;++alpha) {
         double r=((c>>16)&255)/255.,g=((c>>8)&255)/255.,b=(c&255)/255.;
         if (alpha) cairo_set_source_rgba(ctx,r,g,b,1.);

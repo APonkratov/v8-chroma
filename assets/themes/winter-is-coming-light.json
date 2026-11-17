@@ -1,0 +1,45 @@
+{
+  "format_version": 1,
+  "id": "winter-is-coming-light",
+  "name": "Winter is Coming (Light)",
+  "colors": {
+    "editor.background": "#FFFFFF",
+    "text": "#2063AD",
+    "panel": "#F3F3F3",
+    "border": "#BBDDEB",
+    "selection.background": "#CEE1F0",
+    "selection.text": "#2063AD",
+    "line": "#EFF2EF",
+    "comment": "#357B42",
+    "keyword": "#077896",
+    "string": "#A44185",
+    "number": "#174781",
+    "directive": "#BE481D",
+    "accent": "#236EBF",
+    "error": "#C24341",
+    "warning": "#846D22",
+    "disabled": "#2873B4",
+    "hover": "#FFFFFF"
+  },
+  "render": {
+    "glyph.background": "editor.background",
+    "glyph.foreground": "text",
+    "glyph.selection.background": "selection.background",
+    "glyph.selection.foreground": "selection.text",
+    "raster.background": "panel",
+    "raster.foreground": "text",
+    "window.caption": "panel",
+    "window.text": "text",
+    "window.border": "border",
+    "window.dark": false
+  },
+  "syntax": {
+    "function": "#B1108E",
+    "builtin": "#08134A",
+    "parameter": "#FA841D",
+    "variable": "#828282",
+    "type": "#DC3EB7",
+    "query-keyword": "#0991B6",
+    "query-function": "#08134A"
+  }
+}
