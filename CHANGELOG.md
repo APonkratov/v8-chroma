@@ -2,6 +2,8 @@
 
 ## Не выпущено
 
+## 0.7.0 — 2026-11-17
+
 - Добавлены семь светлых тем с расширенной подсветкой: Ayu Light (Bordered),
   Night Owl Light, Noctis Hibernus, Lilac и Lux, Visual Studio Light (C/C++)
   и Winter is Coming (Light).
